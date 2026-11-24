@@ -44,6 +44,38 @@ footer{color:var(--muted);font-size:11px;text-align:center;padding:24px}
  .statgrid{grid-template-columns:repeat(3,1fr)}
  .stat b{font-size:19px}
 }
+
+/* Mobile repair: keep the expanded boat details out of the outer boat grid */
+@media screen and (max-width: 700px) {
+  #boats .boat .boatgrid { display:grid !important; grid-template-columns:repeat(2,minmax(0,1fr)) !important; }
+  #boats .boat .boatgrid > details.wide {
+    display:block !important;
+    grid-column:1 / -1 !important;
+    width:100% !important;
+    min-width:0 !important;
+    max-width:100% !important;
+    justify-self:stretch !important;
+  }
+  #boats .boat .boatgrid > details.wide > .boatgrid {
+    display:grid !important;
+    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+    width:100% !important;
+    gap:12px !important;
+  }
+  #boats .boat .boatgrid > details.wide .field { min-width:0 !important; width:100% !important; }
+  #boats .boat .boatgrid > details.wide .field label {
+    display:block !important; min-height:2.8em !important; font-size:13px !important;
+    line-height:1.4 !important; overflow-wrap:normal !important; word-break:keep-all !important;
+  }
+  #boats .boat .boatgrid > details.wide input,
+  #boats .boat .boatgrid > details.wide select {
+    width:100% !important; min-height:46px !important; font-size:16px !important;
+  }
+  #boats .boat .boatgrid > details.wide summary {
+    display:block !important; width:100% !important; font-size:16px !important;
+    line-height:1.5 !important; padding:12px 0 !important; white-space:normal !important;
+  }
+}
 </style>
 </head>
 <body>
