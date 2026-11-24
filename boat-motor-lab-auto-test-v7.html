@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#090d14">
+<title>BOAT MOTOR LAB v6</title>
+<style>
+:root{color-scheme:dark;--bg:#090d14;--panel:#121a26;--panel2:#182333;--line:#2a394d;--muted:#93a2b7;--text:#eef4fc;--blue:#42a5ff;--green:#43d19e;--gold:#f4c45e;--red:#ff7373}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+header{padding:18px 16px 14px;background:#0d1420;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+.brand{font-weight:900;letter-spacing:.08em;font-size:19px}.brand span{color:var(--blue)}.sub{font-size:11px;color:var(--muted);letter-spacing:.12em}
+nav{display:flex;gap:8px;margin-top:14px;overflow:auto}nav button,.btn{border:1px solid var(--line);background:#172233;color:var(--text);border-radius:10px;padding:10px 13px;font-weight:700;white-space:nowrap}
+nav button.active,.btn.primary{background:#145da0;border-color:#287fc9}
+main{max-width:1100px;margin:auto;padding:16px}
+h1{font-size:23px;margin:8px 0 4px}h2{font-size:17px;margin:0 0 12px}
+.muted{color:var(--muted)}.small{font-size:12px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:15px;margin:13px 0}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.field label{display:block;color:var(--muted);font-size:12px;margin:0 0 5px}
+input,select,textarea{width:100%;min-width:0;background:#0b121c;color:var(--text);border:1px solid #34445a;border-radius:9px;padding:10px;font:inherit}
+input:focus,select:focus,textarea:focus{outline:2px solid #287fc9;border-color:transparent}
+.boat{border:1px solid var(--line);border-radius:12px;padding:12px;margin:10px 0;background:#0e1622}
+.boathead{display:flex;align-items:center;gap:9px;margin-bottom:10px;font-weight:800}
+.lane{width:27px;height:27px;border-radius:7px;display:grid;place-items:center;color:#08101a;font-weight:900}
+.l1{background:#fff}.l2{background:#222;color:#fff}.l3{background:#e84b4b;color:#fff}.l4{background:#4d8df0;color:#fff}.l5{background:#f4d34f}.l6{background:#3cc98a}
+.boatgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.btn{cursor:pointer}.btn.secondary{background:#17202d}.btn.danger{border-color:#773d49;color:#ff9ca5;background:#29151b}
+.statgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.stat{background:#0c1420;border:1px solid var(--line);padding:12px;border-radius:11px}.stat b{display:block;font-size:23px;color:var(--blue)}.stat span{font-size:11px;color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px 7px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}th{color:var(--muted);font-weight:600}
+.tablewrap{overflow:auto}.notice{border-left:3px solid var(--gold);padding:9px 11px;background:#211d13;color:#f6dfaa;border-radius:7px;font-size:12px}
+.hidden{display:none!important}.tag{display:inline-block;padding:3px 7px;border-radius:6px;background:#17334d;color:#9bd2ff;font-size:11px}
+.empty{padding:22px;text-align:center;color:var(--muted)}
+footer{color:var(--muted);font-size:11px;text-align:center;padding:24px}
+@media(min-width:760px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}.boatgrid{grid-template-columns:repeat(4,minmax(0,1fr))}.boat{padding:15px}.wide{grid-column:span 2}}
+@media(max-width:420px){main{padding:11px}.boatgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.statgrid{grid-template-columns:repeat(3,1fr)}.stat b{font-size:19px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">BOAT <span>MOTOR</span> LAB <small style="font-size:10px;color:var(--muted)">v6 TEST</small></div>
+  <div class="sub">MOTOR PERFORMANCE & RACE HISTORY</div>
+  <nav>
+    <button class="active" data-tab="entry">レース入力</button>
+    <button data-tab="history">記録一覧</button>
+    <button data-tab="analysis">モーター分析</button>
+    <button data-tab="backup">保存・移行</button>
+  </nav>
+</header>
+<main>
+<section id="entry">
+  <h1>レースデータ入力</h1><div class="muted small">展示後に入力 → レース終了後に結果を追加入力</div>
+  <div class="panel">
+    <h2>レース基本情報</h2>
+    <div class="grid">
+      <div class="field"><label>競艇場</label><select id="venue"></select></div>
+      <div class="field"><label>開催日</label><input id="raceDate" type="date"></div>
+      <div class="field"><label>レース番号</label><select id="raceNo"></select></div>
+      <div class="field"><label>風向</label><select id="windDir"><option value="">未入力</option><option>向かい風</option><option>追い風</option><option>左横風</option><option>右横風</option></select></div>
+      <div class="field"><label>風速（m）</label><input id="wind" type="number" min="0" step=".1" placeholder="例：3"></div>
+      <div class="field"><label>波高（cm）</label><input id="wave" type="number" min="0" step="1" placeholder="例：5"></div>
+      <div class="field"><label>気温（℃）</label><input id="temp" type="number" step=".1"></div>
+      <div class="field"><label>水面・潮汐など</label><input id="water" placeholder="例：干潮・うねりあり"></div>
+    </div>
+  </div>
+  <div class="panel">
+    <h2>出走表・直前情報を自動取得</h2>
+    <p class="small muted">選択した日付・競艇場・レース番号の公開データを読み込み、選手名・モーター番号・展示タイム・展示ST・気象情報を入力欄へ反映します。</p>
+    <div class="actions"><button class="btn primary" id="fetchRace">選択レースのデータを取得</button></div>
+    <p class="small muted" id="fetchMsg" aria-live="polite">取得前です。取得データは確認してから保存してください。</p>
+    <div class="notice">非公式APIを利用します。更新遅延・欠損・誤りがあり得ます。取得できない項目は空欄のままです。公式情報と照合してください。</div>
+  </div>
+  <div class="panel">
+    <h2>6艇まとめて入力 <span class="tag">展示後</span></h2>
+    <div class="muted small">タイムは公式表示に合わせて入力。分からない項目は空欄でOK。</div>
+    <div id="boats"></div>
+  </div>
+  <div class="panel">
+    <h2>レース後の結果入力</h2>
+    <div class="muted small">着順・実際のST・進入コースを入力。結果未確定のままでも展示データを保存できます。</div>
+    <div id="results"></div>
+  </div>
+  <div class="panel">
+    <h2>メモ</h2><textarea id="memo" rows="2" placeholder="気づいたこと、展示と本番の違いなど"></textarea>
+    <div class="actions"><button class="btn primary" id="save">このレースを保存</button><button class="btn secondary" id="clear">入力をクリア</button></div>
+    <p class="small muted" id="saveMsg" aria-live="polite"></p>
+  </div>
+  <div class="notice">分析は登録された数値の比較による推定です。プロペラ調整の実施内容を直接判定するものではありません。選手差・水面差も考慮して確認してください。</div>
+</section>
+
+<section id="history" class="hidden">
+  <h1>記録一覧</h1><div class="muted small">保存したレースデータ。レースを選ぶと内容を入力画面へ読み込めます。</div>
+  <div class="panel"><div class="actions"><button class="btn secondary" id="refreshHistory">一覧を更新</button></div><div id="historyList"></div></div>
+</section>
+
+<section id="analysis" class="hidden">
+  <h1>モーター分析</h1><div class="muted small">モーター指標と選手成績を分けて集計。モーター番号は競艇場ごとに区別し、展示Fは通常ST平均に含めません。</div>
+  <div class="panel"><h2>登録状況</h2><div class="statgrid" id="stats"></div></div>
+  <div class="panel"><h2>モーター別 展示データ</h2><div id="motorTable"></div></div>
+  <div class="panel"><h2>選手別 成績データ</h2><div id="racerTable"></div><p class="small muted">こちらは保存された本番結果の集計です。選手の能力を因果的に判定するものではなく、モーター評価とは別に確認するための参考値です。</p></div>
+  <div class="panel"><h2>読み方</h2><p class="small muted">平均タイムは小さいほど速い傾向です。展示STの平均は数値STのみで計算し、F.表記は平均から除外して別カウントします。モーター番号は競艇場ごとに別集計です。選手成績はモーター性能とは別表で確認してください。出走数が少ない場合や水面・気象条件が異なる場合は単純比較できません。</p></div>
+</section>
+
+<section id="backup" class="hidden">
+  <h1>保存・データ移行</h1>
+  <div class="panel">
+    <h2>この端末への保存</h2>
+    <p class="small muted">現在の試作版は、このブラウザの端末内にデータを保存します。GitHub Pagesに公開しただけでは、別端末との自動共有はされません。</p>
+    <div class="actions"><button class="btn primary" id="export">データを書き出す</button><label class="btn secondary" for="importFile">バックアップを読み込む</label><input id="importFile" type="file" accept="application/json" class="hidden"></div>
+    <p class="small muted" id="backupMsg" aria-live="polite"></p>
+  </div>
+  <div class="notice">クラウド同期はまだ未接続です。複数端末で同じデータを使う段階で、クラウド保存機能を追加します。大切な記録は定期的にバックアップしてください。</div>
+  <div class="panel"><h2>データ件数</h2><div id="backupCount" class="muted">0レース</div></div>
+</section>
+</main>
+<footer>BOAT MOTOR LAB v7 · 試作版 / データは入力者の確認を前提とした分析用記録です</footer>
+<script>
+const venues=['桐生','戸田','江戸川','平和島','多摩川','浜名湖','蒲郡','常滑','津','三国','びわこ','住之江','尼崎','鳴門','丸亀','児島','宮島','徳山','下関','若松','芦屋','福岡','唐津','大村'];
+const $=id=>document.getElementById(id);
+const DBKEY='boatMotorLab_races_v1';
+let races=[];
+try{races=JSON.parse(localStorage.getItem(DBKEY)||'[]')}catch(e){races=[]}
+let editingRaceId=null;
+let editingRaceKey=null;
+const raceKey=r=>`${r.venue||''}::${r.date||''}::${r.raceNo||''}`;
+const lanes=['白','黒','赤','青','黄','緑'];
+function field(label,key,placeholder='',type='number',step='.01'){return `<div class="field"><label>${label}</label><input data-k="${key}" type="${type}" ${type==='number'?`step="${step}"`:''} placeholder="${placeholder}"></div>`}
+function buildBoats(){
+ $('boats').innerHTML=Array.from({length:6},(_,i)=>`<div class="boat"><div class="boathead"><span class="lane l${i+1}">${i+1}</span>${lanes[i]}コース想定</div><div class="boatgrid">
+ ${field('選手名','racer','選手名','text')}${field('モーター番号','motor','番号','text')}
+ ${field('展示タイム（秒）','exhibition','例：6.78')}${field('周回タイム（秒）','lap','例：37.20')}
+ ${field('直線タイム（秒）','straight','例：7.20')}${field('回り足タイム（秒）','turn','例：5.60')}
+ ${field('展示ST','exSt','例：0.12 または F.05','text') }
+ <div class="field"><label>展示気配（主観）</label><select data-k="feel"><option value="">未評価</option><option value="1">1・弱い</option><option value="2">2・やや弱い</option><option value="3">3・普通</option><option value="4">4・良い</option><option value="5">5・かなり良い</option></select></div>
+ </div></div>`).join('');
+ $('results').innerHTML=Array.from({length:6},(_,i)=>`<div class="boat"><div class="boathead"><span class="lane l${i+1}">${i+1}</span>${i+1}号艇・レース後</div><div class="boatgrid">
+ <div class="field"><label>着順</label><select data-r="${i}" data-k="rank"><option value="">未入力</option>${[1,2,3,4,5,6,'欠'].map(x=>`<option>${x}</option>`).join('')}</select></div>
+ ${field('本番ST','actualSt','例：0.15 または F.05','text')}
+ <div class="field"><label>実際の進入コース</label><select data-r="${i}" data-k="course"><option value="">未入力</option>${[1,2,3,4,5,6].map(x=>`<option>${x}</option>`).join('')}</select></div>
+ </div></div>`).join('');
+}
+buildBoats();
+$('venue').innerHTML=venues.map(v=>`<option>${v}</option>`).join('');
+$('raceNo').innerHTML=Array.from({length:12},(_,i)=>`<option>${i+1}R</option>`).join('');
+$('raceDate').value=new Date().toLocaleDateString('sv-SE');
+document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
+function showTab(tab){document.querySelectorAll('main section').forEach(s=>s.classList.toggle('hidden',s.id!==tab));document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));if(tab==='history')renderHistory();if(tab==='analysis')renderAnalysis();if(tab==='backup')$('backupCount').textContent=races.length+'レース';window.scrollTo(0,0)}
+const stadiumCodes={'桐生':1,'戸田':2,'江戸川':3,'平和島':4,'多摩川':5,'浜名湖':6,'蒲郡':7,'常滑':8,'津':9,'三国':10,'びわこ':11,'住之江':12,'尼崎':13,'鳴門':14,'丸亀':15,'児島':16,'宮島':17,'徳山':18,'下関':19,'若松':20,'芦屋':21,'福岡':22,'唐津':23,'大村':24};
+function setIf(el,value){if(value!==undefined&&value!==null&&value!=='')el.value=String(value)}
+function formatST(value){
+ if(value===undefined||value===null||value==='')return '';
+ let n=Number(value);
+ if(!Number.isFinite(n))return String(value);
+ // API stores false starts as negative values (e.g. -0.10).
+ // Show the official-style F notation rather than a misleading negative ST.
+ return n<0 ? `F.${Math.round(Math.abs(n)*100).toString().padStart(2,'0')}` : n.toFixed(2);
+}
+$('fetchRace').onclick=async()=>{
+ const venue=$('venue').value,date=$('raceDate').value,raceNo=parseInt($('raceNo').value,10),stadium=stadiumCodes[venue];
+ if(!date){$('fetchMsg').textContent='開催日を選択してください。';return}
+ if(!stadium||!raceNo){$('fetchMsg').textContent='競艇場またはレース番号を確認してください。';return}
+ const compact=date.replaceAll('-',''),year=date.slice(0,4),url=`https://boatraceopenapi.github.io/api/v1/${year}/${compact}.json`;
+ if(!confirm('取得を実行します。選手名・モーター番号・展示タイム・展示ST・気象・レース結果の欄は、今回の取得内容で更新されます。周回・直線・回り足・展示気配・メモはそのまま残します。よろしいですか？'))return;
+ const btn=$('fetchRace');btn.disabled=true;btn.textContent='取得中…';$('fetchMsg').textContent='公開データを読み込んでいます。';
+ // Clear API-managed fields first so data from a previously selected race cannot remain by mistake.
+ $('boats').querySelectorAll('.boat').forEach(el=>el.querySelectorAll('[data-k="racer"],[data-k="motor"],[data-k="exhibition"],[data-k="exSt"]').forEach(x=>x.value=''));
+ $('results').querySelectorAll('.boat').forEach(el=>el.querySelectorAll('[data-k="rank"],[data-k="actualSt"],[data-k="course"]').forEach(x=>x.value=''));
+ ['wind','wave','temp'].forEach(k=>$(k).value='');$('windDir').value='';
+ try{
+  const response=await fetch(url,{cache:'no-store'});
+  if(!response.ok)throw new Error(response.status===404?'この日付のデータはまだ公開されていないか、対象外です。':`データ取得エラー（${response.status}）`);
+  const data=await response.json();
+  const race=data?.programs?.stadiums?.[String(stadium)]?.races?.[String(raceNo)];
+  if(!race)throw new Error('選択した競艇場・レースのデータが見つかりません。開催日や開催状況を確認してください。');
+  const preview=race.preview||{},result=race.result||{},base=race.racers||{},preR=preview.racers||{},resR=result.racers||{};
+  const boatEls=$('boats').querySelectorAll('.boat'),resultEls=$('results').querySelectorAll('.boat');let entryFilled=0,resultFilled=0,weatherFilled=0;
+  for(let i=0;i<6;i++){
+   const key=String(i+1),b=base[key]||{},pr=preR[key]||{},rr=resR[key]||{},el=boatEls[i];
+   const vals={racer:b.name,motor:b.motor_number,exhibition:pr.exhibition_time,exSt:formatST(pr.start_timing)};
+   el.querySelectorAll('[data-k]').forEach(x=>{if(vals[x.dataset.k]!==undefined&&vals[x.dataset.k]!==null&&vals[x.dataset.k]!==''){x.value=String(vals[x.dataset.k]);entryFilled++}});
+   const rel=resultEls[i];rel.querySelectorAll('[data-k]').forEach(x=>{
+    if(x.dataset.k==='rank'&&Number.isInteger(Number(rr.place_number))&&rr.place_number>=1&&rr.place_number<=6){x.value=String(rr.place_number);resultFilled++}
+    if(x.dataset.k==='actualSt'&&rr.start_timing!==undefined&&rr.start_timing!==null){x.value=formatST(rr.start_timing);resultFilled++}
+    if(x.dataset.k==='course'&&rr.course_number!==undefined&&rr.course_number!==null){x.value=String(rr.course_number);resultFilled++}
+   });
+  }
+  for(const [key,value] of [['wind',preview.wind_speed],['wave',preview.wave_height],['temp',preview.air_temperature]]){if(value!==undefined&&value!==null&&value!==''){$(key).value=String(value);weatherFilled++}}
+  const dir=preview.wind_direction_number_source||preview.wind_direction_number_source_text||'';
+  if(dir.includes('向かい')){$('windDir').value='向かい風';weatherFilled++}else if(dir.includes('追い')){$('windDir').value='追い風';weatherFilled++}else if(dir.includes('左')){$('windDir').value='左横風';weatherFilled++}else if(dir.includes('右')){$('windDir').value='右横風';weatherFilled++}
+  const resultMessage=resultFilled>0?`レース結果 ${resultFilled}/18項目`:'レース結果は未公開、または取得対象データがありません';
+  $('fetchMsg').textContent=`取得完了：${venue} ${date} ${raceNo}R。出走表・展示 ${entryFilled}/24項目、気象 ${weatherFilled}/4項目、${resultMessage}。未公開・欠損項目は空欄です。内容を確認してから保存してください。`;
+ }catch(err){$('fetchMsg').textContent=`取得できませんでした：${err.message} 手入力は引き続き利用できます。`}
+ finally{btn.disabled=false;btn.textContent='選択レースのデータを取得'}
+};
+function collect(){
+ const boats=[...$('boats').querySelectorAll('.boat')].map((el,i)=>{let o={lane:i+1};el.querySelectorAll('[data-k]').forEach(x=>o[x.dataset.k]=x.value);return o});
+ const results=[...$('results').querySelectorAll('.boat')].map((el,i)=>{let o={lane:i+1};el.querySelectorAll('[data-k]').forEach(x=>o[x.dataset.k]=x.value);return o});
+ return {id:editingRaceId||Date.now().toString(),venue:$('venue').value,date:$('raceDate').value,raceNo:$('raceNo').value,windDir:$('windDir').value,wind:$('wind').value,wave:$('wave').value,temp:$('temp').value,water:$('water').value,boats,results,memo:$('memo').value,updatedAt:new Date().toISOString()};
+}
+function persist(){localStorage.setItem(DBKEY,JSON.stringify(races))}
+$('save').onclick=()=>{
+ let r=collect();
+ if(!r.date){$('saveMsg').textContent='開催日を入力してください';return}
+ // If a loaded record's venue/date/race number changed, treat it as a new race.
+ if(editingRaceId&&editingRaceKey!==raceKey(r)){editingRaceId=null;editingRaceKey=null;r.id=Date.now().toString()}
+ let ix=editingRaceId?races.findIndex(x=>x.id===editingRaceId):-1;
+ if(ix>=0){races[ix]=r;persist();$('saveMsg').textContent=`更新しました：${r.venue} ${r.date} ${r.raceNo}（合計${races.length}レース）`;}
+ else {
+  const duplicate=races.findIndex(x=>raceKey(x)===raceKey(r));
+  if(duplicate>=0){
+   if(!confirm('同じ競艇場・日付・レース番号の記録が既にあります。既存の記録を上書きしますか？'))return;
+   r.id=races[duplicate].id;races[duplicate]=r;editingRaceId=r.id;editingRaceKey=raceKey(r);persist();$('saveMsg').textContent=`既存記録を更新しました：${r.venue} ${r.date} ${r.raceNo}（合計${races.length}レース）`;
+  }else{r.id=Date.now().toString();races.push(r);editingRaceId=r.id;editingRaceKey=raceKey(r);persist();$('saveMsg').textContent=`保存しました：${r.venue} ${r.date} ${r.raceNo}（合計${races.length}レース）`;}
+ }
+};
+$('clear').onclick=()=>{if(!confirm('入力欄をクリアしますか？保存済みデータは消えません。'))return;editingRaceId=null;editingRaceKey=null;document.querySelectorAll('#entry input,#entry textarea').forEach(x=>{if(x.type!=='date')x.value=''});document.querySelectorAll('#entry select').forEach(x=>x.selectedIndex=0);$('raceDate').value=new Date().toLocaleDateString('sv-SE');$('saveMsg').textContent='入力欄をクリアしました。次の保存は新しいレースとして登録されます。'};
+function renderHistory(){
+ if(!races.length){$('historyList').innerHTML='<div class="empty">まだ保存されたレースはありません。</div>';return}
+ $('historyList').innerHTML='<div class="tablewrap"><table><thead><tr><th>日付</th><th>競艇場</th><th>R</th><th>入力艇数</th><th></th></tr></thead><tbody>'+[...races].reverse().map(r=>`<tr><td>${r.date||''}</td><td>${r.venue}</td><td>${r.raceNo}</td><td>${(r.boats||[]).filter(b=>b.motor||b.racer||b.exhibition).length}/6</td><td><button class="btn secondary" onclick="loadRace('${r.id}')">開く</button></td></tr>`).join('')+'</tbody></table></div>';
+}
+window.loadRace=id=>{let r=races.find(x=>x.id===id);if(!r)return;editingRaceId=r.id;editingRaceKey=raceKey(r);showTab('entry');$('venue').value=r.venue;$('raceDate').value=r.date;$('raceNo').value=r.raceNo;$('windDir').value=r.windDir||'';['wind','wave','temp','water','memo'].forEach(k=>$(k).value=r[k]||'');(r.boats||[]).forEach((b,i)=>{let el=$('boats').querySelectorAll('.boat')[i];el.querySelectorAll('[data-k]').forEach(x=>x.value=b[x.dataset.k]||'')});(r.results||[]).forEach((b,i)=>{let el=$('results').querySelectorAll('.boat')[i];el.querySelectorAll('[data-k]').forEach(x=>x.value=b[x.dataset.k]||'')});$('saveMsg').textContent='過去の記録を読み込みました。保存すると、この記録を更新します。'};
+function numericST(value){
+ const s=String(value??'').trim().toUpperCase();
+ if(!s)return null;
+ // F.07 / F07 / F-0.07 are false starts, never regular numeric ST.
+ if(/^F(?:\.|-|\s)?\d/.test(s))return null;
+ const n=Number(s);return Number.isFinite(n)?n:null;
+}
+function isFalseStart(value){return /^F(?:\.|-|\s)?\d/i.test(String(value??'').trim());}
+function renderAnalysis(){
+ const motors={},racers={};
+ races.forEach(r=>{
+  (r.boats||[]).forEach(b=>{
+   const motor=String(b.motor||'').trim();
+   if(motor){
+    const id=`${r.venue||'競艇場未設定'}::${motor}`;
+    const m=motors[id]||(motors[id]={venue:r.venue||'未設定',motor,count:0,ex:[],lap:[],straight:[],turn:[],st:[],fCount:0,wins:0,rankCount:0});
+    m.count++;
+    [['exhibition','ex'],['lap','lap'],['straight','straight'],['turn','turn']].forEach(([src,dst])=>{const n=Number(String(b[src]??'').trim());if(String(b[src]??'').trim()!==''&&Number.isFinite(n))m[dst].push(n)});
+    if(isFalseStart(b.exSt))m.fCount++;
+    else {const st=numericST(b.exSt);if(st!==null)m.st.push(st)}
+    const res=(r.results||[]).find(x=>String(x.lane)===String(b.lane));
+    if(res&&String(res.rank)==='1')m.wins++;
+   }
+   const racer=String(b.racer||'').trim();
+   if(racer){
+    const a=racers[racer]||(racers[racer]={starts:0,wins:0,places:[],st:[],fCount:0});
+    const res=(r.results||[]).find(x=>String(x.lane)===String(b.lane));
+    if(res){
+     if(String(res.rank||'').trim()){
+      if(/^\d+$/.test(String(res.rank))){const rank=Number(res.rank);if(rank>=1&&rank<=6){a.starts++;a.places.push(rank);if(rank===1)a.wins++}}
+     }
+     if(isFalseStart(res.actualSt))a.fCount++;
+     else {const st=numericST(res.actualSt);if(st!==null)a.st.push(st)}
+    }
+   }
+  });
+ });
+ const vals=Object.values(motors);
+ const totalF=vals.reduce((n,m)=>n+m.fCount,0);
+ $('stats').innerHTML=[['保存レース',races.length],['登録モーター',vals.length],['展示F回数',totalF]].map(x=>`<div class="stat"><b>${x[1]}</b><span>${x[0]}</span></div>`).join('');
+ const rows=Object.values(motors).map(m=>({...m,avg:m.ex.length?m.ex.reduce((a,b)=>a+b,0)/m.ex.length:null})).sort((a,b)=>a.venue.localeCompare(b.venue,'ja')||a.motor.localeCompare(b.motor,'ja', {numeric:true}));
+ $('motorTable').innerHTML=rows.length?'<div class="tablewrap"><table><thead><tr><th>競艇場</th><th>モーター</th><th>記録数</th><th>平均展示</th><th>平均周回</th><th>平均直線</th><th>平均回り足</th><th>通常ST平均</th><th>展示F</th><th>1着</th></tr></thead><tbody>'+rows.map(m=>`<tr><td>${m.venue}</td><td>${m.motor}</td><td>${m.count}</td><td>${avg(m.ex)}</td><td>${avg(m.lap)}</td><td>${avg(m.straight)}</td><td>${avg(m.turn)}</td><td>${avg(m.st)}</td><td>${m.fCount}</td><td>${m.wins}</td></tr>`).join('')+'</tbody></table></div>':'<div class="empty">モーター番号と展示データを保存すると、ここに集計されます。</div>';
+ const racerRows=Object.entries(racers).map(([name,a])=>({name,...a,avgRank:a.places.length?a.places.reduce((x,y)=>x+y,0)/a.places.length:null})).sort((a,b)=>b.wins-a.wins||((a.avgRank??99)-(b.avgRank??99)));
+ $('racerTable').innerHTML=racerRows.length?'<div class="tablewrap"><table><thead><tr><th>選手</th><th>着順記録数</th><th>1着</th><th>平均着順</th><th>本番ST平均</th><th>本番F</th></tr></thead><tbody>'+racerRows.map(a=>`<tr><td>${a.name}</td><td>${a.starts}</td><td>${a.wins}</td><td>${a.avgRank===null?'—':a.avgRank.toFixed(2)}</td><td>${avg(a.st)}</td><td>${a.fCount}</td></tr>`).join('')+'</tbody></table></div>':'<div class="empty">選手名とレース結果を保存すると、ここに集計されます。</div>';
+}
+function avg(a){return a.length?(a.reduce((x,y)=>x+y,0)/a.length).toFixed(2):'—'}
+$('refreshHistory').onclick=renderHistory;
+$('export').onclick=()=>{const payload={app:'BOAT MOTOR LAB',version:3,exportedAt:new Date().toISOString(),raceCount:races.length,races};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='boat-motor-lab-backup.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);$('backupMsg').textContent=`バックアップを書き出しました（${races.length}レース）。ファイルアプリ等に保存されたことを確認してください。`;};
+$('importFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const data=JSON.parse(await f.text());const incoming=Array.isArray(data)?data:data.races;if(!Array.isArray(incoming))throw Error('invalid backup');if(!confirm(`${incoming.length}レースを確認します。現在の記録に追加しますか？同じ競艇場・日付・レース番号の記録は重複登録しません。`))return;let added=0,skipped=0;const keys=new Set(races.map(r=>raceKey(r)));const ids=new Set(races.map(r=>String(r.id??'')));for(const source of incoming){if(!source||typeof source!=='object'||!Array.isArray(source.boats)) {skipped++;continue;}const key=raceKey(source);const id=String(source.id??'');if(keys.has(key)|| (id&&ids.has(id))){skipped++;continue;}const copy={...source,id:id&&!ids.has(id)?id:`${Date.now()}-${added}-${Math.random().toString(36).slice(2,8)}`};races.push(copy);keys.add(key);ids.add(String(copy.id));added++;}persist();renderHistory();$('backupCount').textContent=races.length+'レース';$('backupMsg').textContent=`読み込み完了：追加${added}件／重複・形式不備でスキップ${skipped}件（合計${races.length}レース）`;}catch(err){$('backupMsg').textContent='ファイルを読み込めませんでした。正しいBOAT MOTOR LABバックアップを選んでください。'}e.target.value=''};
+</script>
+</body></html>
