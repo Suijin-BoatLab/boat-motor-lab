@@ -156,7 +156,7 @@ footer{color:var(--muted);font-size:11px;text-align:center;padding:24px}
     </div>
     <div id="cloudSignedIn" class="hidden">
       <p class="small" id="cloudUser"></p>
-      <div class="actions"><button class="btn primary" id="cloudSync">今すぐ同期</button><button class="btn secondary" id="cloudLogout">ログアウト</button></div>
+      <div class="actions"><button class="btn primary" id="cloudSync">今すぐ同期</button><button class="btn secondary" id="cloudTest">保存テスト（自動削除）</button><button class="btn secondary" id="cloudLogout">ログアウト</button></div>
     </div>
     <p class="small muted" id="cloudStatus" aria-live="polite">クラウド未接続。端末内の記録と自動バックアップはこれまで通り維持されます。</p>
   </div>
@@ -593,7 +593,67 @@ $('cloudLogin').onclick=async()=>{
  }catch(err){cloudStatus('送信できませんでした：'+err.message)}
  finally{$('cloudLogin').disabled=false}
 };
+
+async function cloudStorageSelfTest(){
+ if(!cloudClient||!cloudUser){cloudStatus('先にログインしてください。');return}
+ if(cloudBusy)return;
+ cloudBusy=true;const btn=$('cloudTest');btn.disabled=true;
+ const testDate='2099-12-31',testVenue='常滑',testRaceNo='11R';
+ let recordId=null,cleanupOk=false;
+ const sample={id:'cloud-self-test',venue:testVenue,date:testDate,raceNo:testRaceNo,windDir:'追い風',wind:'3',wave:'2',temp:'18',waterTemp:'16',weather:'晴',water:'安定',memo:'自動保存テスト'};
+ sample.boats=Array.from({length:6},(_,i)=>({lane:i+1}));
+ Object.assign(sample.boats[0],{racer:'保存テスト選手',registration:'9999',racerClass:'A1',branch:'長野',nationalWin:'7.77',national2:'66.6',national3:'77.7',localWin:'6.66',local2:'55.5',local3:'66.6',motor:'99',motor2:'44.4',motor3:'55.5',boatNo:'88',boat2:'33.3',boat3:'44.4',weight:'52.0',weightAdj:'0.5',tilt:'-0.5',propeller:'テスト',parts:'ピストン×2',exhibition:'6.66',lap:'37.00',straight:'7.00',turn:'5.50',exSt:'F.03'});
+ sample.results=Array.from({length:6},(_,i)=>({lane:i+1}));
+ sample.results[0]={lane:1,rank:'1',actualSt:'F.02',course:'1'};
+ try{
+  const {data:prior,error:priorErr}=await cloudClient.from('race_records').select('id').eq('user_id',cloudUser.id).eq('venue_code',cloudVenueCode(testVenue)).eq('race_date',testDate).eq('race_no',11).maybeSingle();
+  if(priorErr)throw priorErr;
+  if(prior)throw new Error('テスト用の日付に既存レコードがあるため中止しました。既存データは変更していません。');
+  cloudStatus('テスト用データを一時保存しています…');
+  await cloudUploadRace(sample);
+  const {data:row,error:readErr}=await cloudClient.from('race_records').select('id,race_entries(*)').eq('user_id',cloudUser.id).eq('venue_code',cloudVenueCode(testVenue)).eq('race_date',testDate).eq('race_no',11).single();
+  if(readErr)throw readErr;
+  recordId=row.id;
+  const e=(row.race_entries||[]).find(x=>x.lane===1);
+  const checks={
+   racer_national_win_rate:e?.racer_national_win_rate===7.77,
+   racer_national_place2_rate:e?.racer_national_place2_rate===66.6,
+   racer_national_place3_rate:e?.racer_national_place3_rate===77.7,
+   racer_local_win_rate:e?.racer_local_win_rate===6.66,
+   racer_local_place2_rate:e?.racer_local_place2_rate===55.5,
+   racer_local_place3_rate:e?.racer_local_place3_rate===66.6,
+   motor_place2_rate:e?.motor_place2_rate===44.4,
+   motor_place3_rate:e?.motor_place3_rate===55.5,
+   boat_place2_rate:e?.boat_place2_rate===33.3,
+   boat_place3_rate:e?.boat_place3_rate===44.4,
+   weight_adjustment:e?.weight_adjustment===0.5,
+   exhibition_F:e?.exhibition_st_raw==='F.03'&&e?.exhibition_st===null&&e?.exhibition_st_is_f===true,
+   actual_F:e?.actual_st_raw==='F.02'&&e?.actual_st===null&&e?.actual_st_is_f===true
+  };
+  const failed=Object.entries(checks).filter(([,v])=>!v).map(([k])=>k);
+  if(failed.length)throw new Error('保存値の不一致：'+failed.join('、'));
+  cloudStatus('保存テスト成功。追加11項目とF判定を確認しました。テストデータを削除しています…');
+ }catch(err){cloudStatus('保存テスト：'+(err.message||'失敗'))}
+ finally{
+  try{
+   if(!recordId){
+    const {data:found}=await cloudClient.from('race_records').select('id').eq('user_id',cloudUser.id).eq('venue_code',cloudVenueCode(testVenue)).eq('race_date',testDate).eq('race_no',11).maybeSingle();
+    recordId=found?.id||null;
+   }
+   if(recordId){
+    const {error:e1}=await cloudClient.from('race_entries').delete().eq('race_id',recordId).eq('user_id',cloudUser.id);
+    if(e1)throw e1;
+    const {error:e2}=await cloudClient.from('race_records').delete().eq('id',recordId).eq('user_id',cloudUser.id);
+    if(e2)throw e2;
+   }
+   cleanupOk=true;
+  }catch(cleanErr){cloudStatus('注意：テスト後の自動削除に失敗しました。保存・移行の記録一覧で2099-12-31 常滑11Rを確認してください。'+(cleanErr.message||''))}
+  if(cleanupOk)cloudStatus('保存テスト完了：追加項目・F判定とも正常。テストデータは自動削除済みです。');
+  cloudBusy=false;btn.disabled=false;
+ }
+}
 $('cloudSync').onclick=cloudSync;
+$('cloudTest').onclick=cloudStorageSelfTest;
 $('cloudLogout').onclick=async()=>{
  const {error}=await cloudClient.auth.signOut();
  if(error)cloudStatus('ログアウトできません：'+error.message);
