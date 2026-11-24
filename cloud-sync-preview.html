@@ -246,7 +246,7 @@ $('fetchRace').onclick=async()=>{
  if(!confirm('取得を実行します。選手情報・勝率・モーター／ボート成績・展示タイム・展示ST・体重・チルト・部品交換・気象・レース結果を取得できた範囲で更新します。周回・直線・回り足・展示気配・メモはそのまま残します。よろしいですか？'))return;
  const btn=$('fetchRace');btn.disabled=true;btn.textContent='取得中…';$('fetchMsg').textContent='公開データを読み込んでいます。';
  // Clear API-managed fields first so data from a previously selected race cannot remain by mistake.
- $('boats').querySelectorAll('.boat').forEach(el=>el.querySelectorAll('[data-k="racer"],[data-k="motor"],[data-k="exhibition"],[data-k="exSt"]').forEach(x=>x.value=''));
+ $('boats').querySelectorAll('.boat').forEach(el=>el.querySelectorAll('[data-k="racer"],[data-k="motor"],[data-k="registration"],[data-k="racerClass"],[data-k="branch"],[data-k="nationalWin"],[data-k="national2"],[data-k="national3"],[data-k="localWin"],[data-k="local2"],[data-k="local3"],[data-k="motor2"],[data-k="motor3"],[data-k="boatNo"],[data-k="boat2"],[data-k="boat3"],[data-k="weight"],[data-k="weightAdj"],[data-k="tilt"],[data-k="propeller"],[data-k="parts"],[data-k="exhibition"],[data-k="exSt"]').forEach(x=>x.value=''));
  $('results').querySelectorAll('.boat').forEach(el=>el.querySelectorAll('[data-k="rank"],[data-k="actualSt"],[data-k="course"]').forEach(x=>x.value=''));
  ['wind','wave','temp','waterTemp','weather'].forEach(k=>$(k).value='');$('windDir').value='';
  try{
