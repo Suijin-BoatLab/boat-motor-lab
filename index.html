@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#09111b">
+<title>BOAT MOTOR LAB</title>
+<style>
+:root{color-scheme:dark;--bg:#09111b;--panel:#121f2d;--line:#26394b;--text:#edf5fc;--muted:#9aafc2;--cyan:#42d9e8;--green:#48d5a0}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN",Meiryo,sans-serif}
+header{padding:22px 17px 15px;background:#0c1723;border-bottom:1px solid var(--line)}.brand{font-size:11px;letter-spacing:.2em;color:var(--cyan);font-weight:800}h1{font-size:22px;margin:6px 0}.sub{font-size:12px;color:var(--muted)}
+main{max-width:900px;margin:auto;padding:16px}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.card,.panel{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:13px}.card small{font-size:11px;color:var(--muted)}.card b{display:block;font-size:24px;margin-top:5px}.tabs{display:flex;gap:7px;margin:15px 0;overflow:auto}.tabs button,button{border:1px solid var(--line);border-radius:9px;background:#1a2b3c;color:var(--text);padding:10px 13px;font-weight:700}.tabs button.active,.primary{background:#16414a;border-color:#267c88;color:#c5fbff}.panel{margin:12px 0}.panel h2{font-size:16px;margin:0 0 10px}.muted{color:var(--muted);font-size:12px;line-height:1.6}.tablewrap{overflow:auto}table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;padding:10px 7px;border-bottom:1px solid var(--line);white-space:nowrap}th{color:var(--muted);font-weight:600}.good{color:var(--green)}.tag{font-size:11px;color:var(--green);border:1px solid #276b58;border-radius:99px;padding:4px 7px}.hidden{display:none}select,input{background:#0b1520;color:var(--text);border:1px solid #34495d;border-radius:8px;padding:10px;width:100%;margin:5px 0 10px}label{font-size:12px;color:var(--muted)}.note{background:#241f17;border-left:3px solid #e9ae5d;padding:10px;border-radius:6px;font-size:12px;color:#f4d8ae;line-height:1.6}.bar{height:7px;background:#26394b;border-radius:8px;overflow:hidden}.bar span{display:block;height:100%;background:var(--cyan)}@media(max-width:520px){.stats{grid-template-columns:repeat(3,1fr)}.card{padding:10px}.card b{font-size:20px}}
+</style>
+</head>
+<body>
+<header><div class="brand">BOAT MOTOR LAB / ANALYTICS</div><h1>モーター成長・機力分析</h1><div class="sub">全国24場対応を目指す開発版</div></header>
+<main>
+<div class="stats">
+<div class="card"><small>登録レース</small><b id="races">0</b></div>
+<div class="card"><small>登録モーター</small><b id="motors">0</b></div>
+<div class="card"><small>成長候補</small><b id="growth">0</b></div>
+</div>
+<div class="tabs">
+<button class="active" data-tab="rank">成長ランキング</button>
+<button data-tab="detail">個別履歴</button>
+<button data-tab="about">開発状況</button>
+</div>
+<section id="rank">
+<div class="panel"><h2>モーター成長ランキング</h2><p class="muted">現在は操作確認用の架空データです。実際の競艇データはまだ接続していません。</p><div id="ranking"></div></div>
+</section>
+<section id="detail" class="hidden">
+<div class="panel"><h2>モーター個別履歴</h2><label for="motorSelect">モーターを選択</label><select id="motorSelect"></select><div id="history"></div></div>
+</section>
+<section id="about" class="hidden">
+<div class="panel"><h2>現在の開発状況</h2><p class="muted">画面の基本形を用意しました。次にデータ取得元の利用条件と接続方法を確認し、過去データの蓄積・分析機能を追加します。</p><ul class="muted"><li>1周タイム</li><li>回り足タイム</li><li>直線タイム</li><li>展示タイム</li><li>出走表・モーター番号・選手情報</li><li>レース結果・ST・水面条件</li></ul><div class="note">このファイル単体ではクラウド保存や自動データ取得は行いません。公開URLとデータ連携は次の工程です。</div></div>
+</section>
+</main>
+<script>
+const data=[
+{venue:"住之江",motor:"12",date:"1/4",racer:"選手A",one:36.93,turn:5.53,line:8.07,ex:6.92,finish:3},
+{venue:"住之江",motor:"12",date:"1/8",racer:"選手B",one:36.90,turn:5.50,line:8.04,ex:6.88,finish:1},
+{venue:"住之江",motor:"12",date:"1/13",racer:"選手C",one:36.87,turn:5.48,line:8.02,ex:6.85,finish:2},
+{venue:"住之江",motor:"12",date:"1/18",racer:"選手D",one:36.84,turn:5.45,line:7.99,ex:6.82,finish:1},
+{venue:"住之江",motor:"12",date:"1/22",racer:"選手E",one:36.82,turn:5.43,line:7.98,ex:6.80,finish:2},
+{venue:"鳴門",motor:"35",date:"1/3",racer:"選手G",one:37.10,turn:5.90,line:8.12,ex:6.91,finish:5},
+{venue:"鳴門",motor:"35",date:"1/10",racer:"選手H",one:37.02,turn:5.85,line:8.08,ex:6.87,finish:3},
+{venue:"鳴門",motor:"35",date:"1/17",racer:"選手I",one:36.98,turn:5.82,line:8.04,ex:6.83,finish:2},
+{venue:"鳴門",motor:"35",date:"1/24",racer:"選手J",one:36.94,turn:5.78,line:8.01,ex:6.81,finish:1}
+];
+const groups=[...new Map(data.map(x=>[x.venue+"|"+x.motor,{venue:x.venue,motor:x.motor}])).values()];
+document.getElementById("races").textContent=new Set(data.map(x=>x.date+x.venue)).size;
+document.getElementById("motors").textContent=groups.length;
+document.getElementById("growth").textContent=groups.length;
+document.getElementById("ranking").innerHTML=groups.map((g,i)=>{let a=data.filter(x=>x.venue===g.venue&&x.motor===g.motor);let delta=a[0].ex-a[a.length-1].ex;return `<div class="card" style="margin:9px 0"><div style="display:flex;justify-content:space-between;gap:8px"><b style="font-size:16px">${i+1}. ${g.venue} ${g.motor}号機</b><span class="tag">改善傾向・サンプル</span></div><p class="muted">${a.length}走 / 展示タイム変化 ${delta.toFixed(2)}秒</p><div class="bar"><span style="width:${Math.min(100,delta*500)}%"></span></div></div>`}).join("");
+const sel=document.getElementById("motorSelect");sel.innerHTML=groups.map(g=>`<option value="${g.venue}|${g.motor}">${g.venue} ${g.motor}号機</option>`).join("");
+function showHistory(){let [v,m]=sel.value.split("|");let a=data.filter(x=>x.venue===v&&x.motor===m);document.getElementById("history").innerHTML=`<p class="muted">${v}・${m}号機 / ${a.length}走</p><div class="tablewrap"><table><tr><th>日付</th><th>選手</th><th>1周</th><th>回り足</th><th>直線</th><th>展示</th><th>着順</th></tr>${a.map(x=>`<tr><td>${x.date}</td><td>${x.racer}</td><td>${x.one}</td><td>${x.turn}</td><td>${x.line}</td><td>${x.ex}</td><td>${x.finish}着</td></tr>`).join("")}</table></div>`}
+sel.addEventListener("change",showHistory);showHistory();
+document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("active",x===b));["rank","detail","about"].forEach(id=>document.getElementById(id).classList.toggle("hidden",id!==b.dataset.tab))}));
+</script>
+</body></html>
