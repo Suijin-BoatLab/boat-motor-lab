@@ -439,9 +439,9 @@ function getSixMonthRange(){const end=new Date();end.setUTCHours(0,0,0,0);end.se
 async function loadHistoricalMotorHistory(){
  const status=$('historyQueryStatus');
  if(!cloudClient||!cloudUser){status.textContent='クラウドにログインすると過去データを表示できます。';return}
- const range=getSixMonthRange();
- if(!$('historyFrom').value)$('historyFrom').value=range.from;
- if(!$('historyTo').value)$('historyTo').value=range.to;
+ const end=new Date();end.setUTCHours(0,0,0,0);end.setUTCDate(end.getUTCDate()-1);const start=new Date(end);if($('historyVenue').value)start.setUTCMonth(start.getUTCMonth()-6);else start.setUTCDate(start.getUTCDate()-30);
+ if(!$('historyFrom').value)$('historyFrom').value=start.toISOString().slice(0,10);
+ if(!$('historyTo').value)$('historyTo').value=end.toISOString().slice(0,10);
  await queryHistoricalMotorHistory();
 }
 async function queryHistoricalMotorHistory(){
@@ -449,6 +449,9 @@ async function queryHistoricalMotorHistory(){
  if(!cloudClient||!cloudUser){status.textContent='クラウドにログインしてください。';return}
  const from=$('historyFrom').value,to=$('historyTo').value,venue=$('historyVenue').value,motor=$('historyMotor').value.trim();
  if(!from||!to||from>to){status.textContent='開始日と終了日を正しく指定してください。';return}
+ const days=Math.floor((Date.parse(to+'T00:00:00Z')-Date.parse(from+'T00:00:00Z'))/86400000)+1;
+ if(days>185){status.textContent='一度に検索できる期間は185日までです。';return}
+ if(!venue&&days>31){status.textContent='全24場を検索する場合は31日以内にしてください。6か月分は競艇場を選択してください。';return}
  const btn=$('historySearch');btn.disabled=true;status.textContent='クラウドの過去データを集計しています…';table.innerHTML='';
  try{
   const {data,error}=await cloudClient.functions.invoke('get-motor-history',{body:{from,to,venue,motor}});
