@@ -47,7 +47,6 @@ footer{color:var(--muted);font-size:11px;text-align:center;padding:24px}
   </nav>
 </header>
 <main>
-<div class="notice" style="margin:14px 0">統合版v11＋クラウド同期の検証ページです。公開トップページ（index.html）は変更していません。</div>
 <section id="entry">
   <h1>レースデータ入力</h1><div class="muted small">展示後に一括保存 → レース終了後に同じ12R一括取得で結果を同期</div>
   <div class="panel">
@@ -60,12 +59,12 @@ footer{color:var(--muted);font-size:11px;text-align:center;padding:24px}
       <div class="field"><label>風速（m）</label><input id="wind" type="number" min="0" step=".1" placeholder="例：3"></div>
       <div class="field"><label>波高（cm）</label><input id="wave" type="number" min="0" step="1" placeholder="例：5"></div>
       <div class="field"><label>気温（℃）</label><input id="temp" type="number" step=".1"></div>
-      <div class="field"><label>水面・潮汐など</label><input id="water" placeholder="例：干潮・うねりあり"></div>
+      <div class="field"><label>水温（℃）</label><input id="waterTemp" type="number" step=".1"></div><div class="field"><label>天候</label><input id="weather" placeholder="例：晴・曇・雨"></div><div class="field"><label>水面・潮汐など</label><input id="water" placeholder="例：干潮・うねりあり"></div>
     </div>
   </div>
   <div class="panel">
     <h2>出走表・直前情報を自動取得</h2>
-    <p class="small muted">選択した日付・競艇場・レース番号の公開データを読み込み、選手名・モーター番号・展示タイム・展示ST・気象情報を入力欄へ反映します。</p>
+    <p class="small muted">選択した日付・競艇場・レース番号の公開データを読み込み、選手情報・勝率・モーター／ボート成績・直前情報・気象・結果を取得できる範囲で入力欄へ反映します。</p>
     <div class="actions"><button class="btn primary" id="fetchRace">選択レースのデータを取得</button><button class="btn secondary" id="fetchAllRaces">当日の全12Rを再取得・結果更新</button></div>
     <p class="small muted" id="fetchMsg" aria-live="polite">取得前です。取得データは確認してから保存してください。</p>
     <p class="small muted" id="bulkMsg" aria-live="polite">1R〜12Rを再取得します。既存記録は展示メモ等を残したまま、公開済みのレース結果だけを更新します。</p>
@@ -155,6 +154,18 @@ function buildBoats(){
  ${field('展示タイム（秒）','exhibition','例：6.78')}${field('周回タイム（秒）','lap','例：37.20')}
  ${field('直線タイム（秒）','straight','例：7.20')}${field('回り足タイム（秒）','turn','例：5.60')}
  ${field('展示ST','exSt','例：0.12 または F.05','text') }
+ <details class="field wide"><summary>出走表・モーター詳細データ</summary><div class="boatgrid">
+ ${field('選手登録番号','registration','登録番号','text')}${field('級別','racerClass','例：A1','text')}
+ ${field('支部','branch','支部名','text')}${field('全国勝率','nationalWin','')}
+ ${field('全国2連対率（%）','national2','')}${field('全国3連対率（%）','national3','')}
+ ${field('当地勝率','localWin','')}${field('当地2連対率（%）','local2','')}
+ ${field('当地3連対率（%）','local3','')}${field('モーター2連対率（%）','motor2','')}
+ ${field('モーター3連対率（%）','motor3','')}${field('ボート番号','boatNo','番号','text')}
+ ${field('ボート2連対率（%）','boat2','')}${field('ボート3連対率（%）','boat3','')}
+ ${field('体重（kg）','weight','')}${field('体重調整（kg）','weightAdj','')}
+ ${field('チルト','tilt','')}${field('プロペラ','propeller','例：新','text')}
+ ${field('交換部品','parts','部品名','text')}
+ </div></details>
  <div class="field"><label>展示気配（主観）</label><select data-k="feel"><option value="">未評価</option><option value="1">1・弱い</option><option value="2">2・やや弱い</option><option value="3">3・普通</option><option value="4">4・良い</option><option value="5">5・かなり良い</option></select></div>
  </div></div>`).join('');
  $('results').innerHTML=Array.from({length:6},(_,i)=>`<div class="boat"><div class="boathead"><span class="lane l${i+1}">${i+1}</span>${i+1}号艇・レース後</div><div class="boatgrid">
@@ -184,12 +195,12 @@ $('fetchRace').onclick=async()=>{
  if(!date){$('fetchMsg').textContent='開催日を選択してください。';return}
  if(!stadium||!raceNo){$('fetchMsg').textContent='競艇場またはレース番号を確認してください。';return}
  const compact=date.replaceAll('-',''),year=date.slice(0,4),url=`https://boatraceopenapi.github.io/api/v1/${year}/${compact}.json`;
- if(!confirm('取得を実行します。選手名・モーター番号・展示タイム・展示ST・気象・レース結果の欄は、今回の取得内容で更新されます。周回・直線・回り足・展示気配・メモはそのまま残します。よろしいですか？'))return;
+ if(!confirm('取得を実行します。選手情報・勝率・モーター／ボート成績・展示タイム・展示ST・体重・チルト・部品交換・気象・レース結果を取得できた範囲で更新します。周回・直線・回り足・展示気配・メモはそのまま残します。よろしいですか？'))return;
  const btn=$('fetchRace');btn.disabled=true;btn.textContent='取得中…';$('fetchMsg').textContent='公開データを読み込んでいます。';
  // Clear API-managed fields first so data from a previously selected race cannot remain by mistake.
  $('boats').querySelectorAll('.boat').forEach(el=>el.querySelectorAll('[data-k="racer"],[data-k="motor"],[data-k="exhibition"],[data-k="exSt"]').forEach(x=>x.value=''));
  $('results').querySelectorAll('.boat').forEach(el=>el.querySelectorAll('[data-k="rank"],[data-k="actualSt"],[data-k="course"]').forEach(x=>x.value=''));
- ['wind','wave','temp'].forEach(k=>$(k).value='');$('windDir').value='';
+ ['wind','wave','temp','waterTemp','weather'].forEach(k=>$(k).value='');$('windDir').value='';
  try{
   const response=await fetch(url,{cache:'no-store'});
   if(!response.ok)throw new Error(response.status===404?'この日付のデータはまだ公開されていないか、対象外です。':`データ取得エラー（${response.status}）`);
@@ -200,7 +211,7 @@ $('fetchRace').onclick=async()=>{
   const boatEls=$('boats').querySelectorAll('.boat'),resultEls=$('results').querySelectorAll('.boat');let entryFilled=0,resultFilled=0,weatherFilled=0;
   for(let i=0;i<6;i++){
    const key=String(i+1),b=base[key]||{},pr=preR[key]||{},rr=resR[key]||{},el=boatEls[i];
-   const vals={racer:b.name,motor:b.motor_number,exhibition:pr.exhibition_time,exSt:formatST(pr.start_timing)};
+   const vals={racer:b.name,motor:b.motor_number,registration:b.number,racerClass:b.rank_number_source,branch:b.branch_number_source,nationalWin:b.national_win_rate,national2:b.national_top_2_percent,national3:b.national_top_3_percent,localWin:b.local_win_rate,local2:b.local_top_2_percent,local3:b.local_top_3_percent,motor2:b.motor_top_2_percent,motor3:b.motor_top_3_percent,boatNo:b.boat_number,boat2:b.boat_top_2_percent,boat3:b.boat_top_3_percent,weight:pr.weight??b.weight,weightAdj:pr.weight_adjustment,tilt:pr.tilt_adjustment,propeller:pr.propeller,parts:Array.isArray(pr.parts)?pr.parts.map(p=>String(p.number)+(p.quantity?'×'+p.quantity:'')).join(' / '):'',exhibition:pr.exhibition_time,exSt:formatST(pr.start_timing)};
    el.querySelectorAll('[data-k]').forEach(x=>{if(vals[x.dataset.k]!==undefined&&vals[x.dataset.k]!==null&&vals[x.dataset.k]!==''){x.value=String(vals[x.dataset.k]);entryFilled++}});
    const rel=resultEls[i];rel.querySelectorAll('[data-k]').forEach(x=>{
     if(x.dataset.k==='rank'&&Number.isInteger(Number(rr.place_number))&&rr.place_number>=1&&rr.place_number<=6){x.value=String(rr.place_number);resultFilled++}
@@ -208,11 +219,11 @@ $('fetchRace').onclick=async()=>{
     if(x.dataset.k==='course'&&rr.course_number!==undefined&&rr.course_number!==null){x.value=String(rr.course_number);resultFilled++}
    });
   }
-  for(const [key,value] of [['wind',preview.wind_speed],['wave',preview.wave_height],['temp',preview.air_temperature]]){if(value!==undefined&&value!==null&&value!==''){$(key).value=String(value);weatherFilled++}}
+  for(const [key,value] of [['wind',preview.wind_speed],['wave',preview.wave_height],['temp',preview.air_temperature],['waterTemp',preview.water_temperature],['weather',preview.weather_number_source||preview.weather_number_source_text]]){if(value!==undefined&&value!==null&&value!==''){$(key).value=String(value);weatherFilled++}}
   const dir=preview.wind_direction_number_source||preview.wind_direction_number_source_text||'';
   if(dir.includes('向かい')){$('windDir').value='向かい風';weatherFilled++}else if(dir.includes('追い')){$('windDir').value='追い風';weatherFilled++}else if(dir.includes('左')){$('windDir').value='左横風';weatherFilled++}else if(dir.includes('右')){$('windDir').value='右横風';weatherFilled++}
   const resultMessage=resultFilled>0?`レース結果 ${resultFilled}/18項目`:'レース結果は未公開、または取得対象データがありません';
-  $('fetchMsg').textContent=`取得完了：${venue} ${date} ${raceNo}R。出走表・展示 ${entryFilled}/24項目、気象 ${weatherFilled}/4項目、${resultMessage}。未公開・欠損項目は空欄です。内容を確認してから保存してください。`;
+  $('fetchMsg').textContent=`取得完了：${venue} ${date} ${raceNo}R。出走表・展示 ${entryFilled}項目、気象 ${weatherFilled}項目、${resultMessage}。未公開・欠損項目は空欄です。内容を確認してから保存してください。`;
  }catch(err){$('fetchMsg').textContent=`取得できませんでした：${err.message} 手入力は引き続き利用できます。`}
  finally{btn.disabled=false;btn.textContent='選択レースのデータを取得'}
 };
@@ -221,7 +232,7 @@ $('fetchAllRaces').onclick=async()=>{
  const venue=$('venue').value,date=$('raceDate').value,stadium=stadiumCodes[venue];
  if(!date){$('bulkMsg').textContent='開催日を選択してください。';return}
  if(!stadium){$('bulkMsg').textContent='競艇場を確認してください。';return}
- if(!confirm(`${venue} ${date} の1R〜12Rを再取得します。既存レースは展示データ・メモを残し、公開済みの結果を更新します。よろしいですか？`))return;
+ if(!confirm(`${venue} ${date} の1R〜12Rを再取得します。既存レースは手入力の周回・直線・回り足・展示気配・メモを残し、取得可能な出走表・直前情報・結果を更新します。よろしいですか？`))return;
  const btn=$('fetchAllRaces');btn.disabled=true;btn.textContent='12R再取得中…';$('bulkMsg').textContent='公開データを読み込んでいます。画面を閉じずにお待ちください。';
  try{
   const compact=date.replaceAll('-',''),year=date.slice(0,4),url=`https://boatraceopenapi.github.io/api/v1/${year}/${compact}.json`;
@@ -243,7 +254,7 @@ $('fetchAllRaces').onclick=async()=>{
    let entryChanged=false,resultChanged=false;
    for(let i=0;i<6;i++){
     const k=String(i+1),b=base[k]||{},pr=preR[k]||{},rr=resR[k]||{};
-    const entryValues={racer:b.name,motor:b.motor_number,exhibition:pr.exhibition_time,exSt:formatST(pr.start_timing)};
+    const entryValues={racer:b.name,motor:b.motor_number,registration:b.number,racerClass:b.rank_number_source,branch:b.branch_number_source,nationalWin:b.national_win_rate,national2:b.national_top_2_percent,national3:b.national_top_3_percent,localWin:b.local_win_rate,local2:b.local_top_2_percent,local3:b.local_top_3_percent,motor2:b.motor_top_2_percent,motor3:b.motor_top_3_percent,boatNo:b.boat_number,boat2:b.boat_top_2_percent,boat3:b.boat_top_3_percent,weight:pr.weight??b.weight,weightAdj:pr.weight_adjustment,tilt:pr.tilt_adjustment,propeller:pr.propeller,parts:Array.isArray(pr.parts)?pr.parts.map(p=>String(p.number)+(p.quantity?'×'+p.quantity:'')).join(' / '):'',exhibition:pr.exhibition_time,exSt:formatST(pr.start_timing)};
     for(const [field,value] of Object.entries(entryValues)){
      if(value!==undefined&&value!==null&&value!==''&&String(boats[i][field]??'')!==String(value)){boats[i][field]=String(value);entryChanged=true;entryRowsUpdated++;}
     }
@@ -264,10 +275,12 @@ $('fetchAllRaces').onclick=async()=>{
     if(preview.wind_speed!==undefined&&preview.wind_speed!==null)existing.wind=String(preview.wind_speed);
     if(preview.wave_height!==undefined&&preview.wave_height!==null)existing.wave=String(preview.wave_height);
     if(preview.air_temperature!==undefined&&preview.air_temperature!==null)existing.temp=String(preview.air_temperature);
+    if(preview.water_temperature!==undefined&&preview.water_temperature!==null)existing.waterTemp=String(preview.water_temperature);
+    if(preview.weather_number_source||preview.weather_number_source_text)existing.weather=preview.weather_number_source||preview.weather_number_source_text;
     existing.updatedAt=now;
     if(entryChanged||resultChanged||hasWeather)updated++;else unchanged++;
    }else{
-    races.push({id:`bulk-${date}-${stadium}-${n}-${Date.now()}-${iSafeId(n)}`,venue,date,raceNo:`${n}R`,windDir,wind:preview.wind_speed??'',wave:preview.wave_height??'',temp:preview.air_temperature??'',water:'',boats,results,memo:'一括取得データ。未取得・欠損項目は空欄。公式情報との照合推奨。',updatedAt:now});
+    races.push({id:`bulk-${date}-${stadium}-${n}-${Date.now()}-${iSafeId(n)}`,venue,date,raceNo:`${n}R`,windDir,wind:preview.wind_speed??'',wave:preview.wave_height??'',temp:preview.air_temperature??'',waterTemp:preview.water_temperature??'',weather:preview.weather_number_source||preview.weather_number_source_text||'',water:'',boats,results,memo:'一括取得データ。未取得・欠損項目は空欄。公式情報との照合推奨。',updatedAt:now});
     added++;
    }
   }
@@ -280,7 +293,7 @@ function iSafeId(n){return String(n).padStart(2,'0')}
 function collect(){
  const boats=[...$('boats').querySelectorAll('.boat')].map((el,i)=>{let o={lane:i+1};el.querySelectorAll('[data-k]').forEach(x=>o[x.dataset.k]=x.value);return o});
  const results=[...$('results').querySelectorAll('.boat')].map((el,i)=>{let o={lane:i+1};el.querySelectorAll('[data-k]').forEach(x=>o[x.dataset.k]=x.value);return o});
- return {id:editingRaceId||Date.now().toString(),venue:$('venue').value,date:$('raceDate').value,raceNo:$('raceNo').value,windDir:$('windDir').value,wind:$('wind').value,wave:$('wave').value,temp:$('temp').value,water:$('water').value,boats,results,memo:$('memo').value,updatedAt:new Date().toISOString()};
+ return {id:editingRaceId||Date.now().toString(),venue:$('venue').value,date:$('raceDate').value,raceNo:$('raceNo').value,windDir:$('windDir').value,wind:$('wind').value,wave:$('wave').value,temp:$('temp').value,waterTemp:$('waterTemp').value,weather:$('weather').value,water:$('water').value,boats,results,memo:$('memo').value,updatedAt:new Date().toISOString()};
 }
 function persist(){
  const payload=JSON.stringify(races);
@@ -313,7 +326,7 @@ function renderHistory(){
  if(!races.length){$('historyList').innerHTML='<div class="empty">まだ保存されたレースはありません。</div>';return}
  $('historyList').innerHTML='<div class="tablewrap"><table><thead><tr><th>日付</th><th>競艇場</th><th>R</th><th>入力艇数</th><th></th></tr></thead><tbody>'+[...races].reverse().map(r=>`<tr><td>${r.date||''}</td><td>${r.venue}</td><td>${r.raceNo}</td><td>${(r.boats||[]).filter(b=>b.motor||b.racer||b.exhibition).length}/6</td><td><button class="btn secondary" onclick="loadRace('${r.id}')">開く</button></td></tr>`).join('')+'</tbody></table></div>';
 }
-window.loadRace=id=>{let r=races.find(x=>x.id===id);if(!r)return;editingRaceId=r.id;editingRaceKey=raceKey(r);showTab('entry');$('venue').value=r.venue;$('raceDate').value=r.date;$('raceNo').value=r.raceNo;$('windDir').value=r.windDir||'';['wind','wave','temp','water','memo'].forEach(k=>$(k).value=r[k]||'');(r.boats||[]).forEach((b,i)=>{let el=$('boats').querySelectorAll('.boat')[i];el.querySelectorAll('[data-k]').forEach(x=>x.value=b[x.dataset.k]||'')});(r.results||[]).forEach((b,i)=>{let el=$('results').querySelectorAll('.boat')[i];el.querySelectorAll('[data-k]').forEach(x=>x.value=b[x.dataset.k]||'')});$('saveMsg').textContent='過去の記録を読み込みました。保存すると、この記録を更新します。'};
+window.loadRace=id=>{let r=races.find(x=>x.id===id);if(!r)return;editingRaceId=r.id;editingRaceKey=raceKey(r);showTab('entry');$('venue').value=r.venue;$('raceDate').value=r.date;$('raceNo').value=r.raceNo;$('windDir').value=r.windDir||'';['wind','wave','temp','waterTemp','weather','water','memo'].forEach(k=>$(k).value=r[k]||'');(r.boats||[]).forEach((b,i)=>{let el=$('boats').querySelectorAll('.boat')[i];el.querySelectorAll('[data-k]').forEach(x=>x.value=b[x.dataset.k]||'')});(r.results||[]).forEach((b,i)=>{let el=$('results').querySelectorAll('.boat')[i];el.querySelectorAll('[data-k]').forEach(x=>x.value=b[x.dataset.k]||'')});$('saveMsg').textContent='過去の記録を読み込みました。保存すると、この記録を更新します。'};
 function numericST(value){
  const s=String(value??'').trim().toUpperCase();
  if(!s)return null;
@@ -407,13 +420,17 @@ function cloudEntryPayload(r,b,uid,raceId){
  const rank=Number.parseInt(result.rank,10),course=Number.parseInt(result.course,10),motor=Number.parseInt(b.motor,10);
  return {
   race_id:raceId,user_id:uid,lane:Number(b.lane),
-  racer_name:b.racer||null,motor_number:Number.isFinite(motor)?motor:null,
+  racer_name:b.racer||null,racer_registration_no:b.registration||null,racer_class:b.racerClass||null,racer_branch:b.branch||null,
+  racer_win_rate:cloudNum(b.nationalWin),racer_place_rate:cloudNum(b.national2),
+  motor_number:Number.isFinite(motor)?motor:null,motor_place_rate:cloudNum(b.motor2),
+  boat_number:cloudNum(b.boatNo),boat_place_rate:cloudNum(b.boat2),
   exhibition_time:cloudNum(b.exhibition),lap_time:cloudNum(b.lap),
   straight_time:cloudNum(b.straight),turn_time:cloudNum(b.turn),
   exhibition_st_raw:ex.raw,exhibition_st:ex.value,exhibition_st_is_f:ex.isF,
   actual_st_raw:actual.raw,actual_st:actual.value,actual_st_is_f:actual.isF,
   finish_rank:Number.isFinite(rank)&&rank>=1&&rank<=6?rank:null,
   actual_course:Number.isFinite(course)&&course>=1&&course<=6?course:null,
+  tilt:cloudNum(b.tilt),body_weight:cloudNum(b.weight),parts_exchange:b.parts||null,propeller_note:b.propeller||null,
   subjective_feel:b.feel||null,source_data:{legacy_boat:b,legacy_result:result}
  };
 }
@@ -422,7 +439,7 @@ function cloudParentPayload(r,uid){
  return {
   user_id:uid,venue_code:code,venue_name:r.venue,race_date:r.date,race_no:raceNo,
   wind_direction:r.windDir||null,wind_speed:cloudNum(r.wind),wave_height:cloudNum(r.wave),
-  air_temperature:cloudNum(r.temp),water_condition:r.water||null,notes:r.memo||null,
+  air_temperature:cloudNum(r.temp),water_temperature:cloudNum(r.waterTemp),weather:r.weather||null,water_condition:r.water||null,notes:r.memo||null,
   source_name:'BOAT MOTOR LAB v11',source_data:{legacy_record:r,legacy_updated_at:r.updatedAt||new Date().toISOString()},
   updated_at:new Date().toISOString()
  };
@@ -439,7 +456,7 @@ function cloudLegacyFromRow(row){
   const e=entries.find(x=>x.lane===i+1)||{};
   return e.source_data?.legacy_result||{lane:i+1,rank:e.finish_rank==null?'':String(e.finish_rank),actualSt:e.actual_st_raw||'',course:e.actual_course==null?'':String(e.actual_course)};
  });
- return {id:row.id,venue:row.venue_name,date:row.race_date,raceNo:row.race_no+'R',windDir:row.wind_direction||'',wind:row.wind_speed??'',wave:row.wave_height??'',temp:row.air_temperature??'',water:row.water_condition||'',boats,results,memo:row.notes||'',updatedAt:row.updated_at||new Date().toISOString()};
+ return {id:row.id,venue:row.venue_name,date:row.race_date,raceNo:row.race_no+'R',windDir:row.wind_direction||'',wind:row.wind_speed??'',wave:row.wave_height??'',temp:row.air_temperature??'',waterTemp:row.water_temperature??'',weather:row.weather||'',water:row.water_condition||'',boats,results,memo:row.notes||'',updatedAt:row.updated_at||new Date().toISOString()};
 }
 async function cloudUploadRace(r){
  const uid=cloudUser.id,code=cloudVenueCode(r.venue),raceNo=Number.parseInt(r.raceNo,10);
