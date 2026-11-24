@@ -125,12 +125,12 @@ function buildBoats(){
  ${field('選手名','racer','選手名','text')}${field('モーター番号','motor','番号','text')}
  ${field('展示タイム（秒）','exhibition','例：6.78')}${field('周回タイム（秒）','lap','例：37.20')}
  ${field('直線タイム（秒）','straight','例：7.20')}${field('回り足タイム（秒）','turn','例：5.60')}
- ${field('展示ST','exSt','例：0.12') }
+ ${field('展示ST','exSt','例：0.12 または F.05','text') }
  <div class="field"><label>展示気配（主観）</label><select data-k="feel"><option value="">未評価</option><option value="1">1・弱い</option><option value="2">2・やや弱い</option><option value="3">3・普通</option><option value="4">4・良い</option><option value="5">5・かなり良い</option></select></div>
  </div></div>`).join('');
  $('results').innerHTML=Array.from({length:6},(_,i)=>`<div class="boat"><div class="boathead"><span class="lane l${i+1}">${i+1}</span>${i+1}号艇・レース後</div><div class="boatgrid">
  <div class="field"><label>着順</label><select data-r="${i}" data-k="rank"><option value="">未入力</option>${[1,2,3,4,5,6,'欠'].map(x=>`<option>${x}</option>`).join('')}</select></div>
- ${field('本番ST','actualSt','例：0.15')}
+ ${field('本番ST','actualSt','例：0.15 または F.05','text')}
  <div class="field"><label>実際の進入コース</label><select data-r="${i}" data-k="course"><option value="">未入力</option>${[1,2,3,4,5,6].map(x=>`<option>${x}</option>`).join('')}</select></div>
  </div></div>`).join('');
 }
