@@ -618,7 +618,7 @@ async function cloudBackfillExisting(){
  if(!candidates.length){cloudStatus('補完対象の2026年以降の記録がありません。');return}
  if(!confirm('既存レースの空欄だけを公開データで補完します。入力済みの値・展示メモ・周回・直線・回り足は上書きしません。補完後はクラウドにも保存します。実行しますか？'))return;
  cloudBusy=true;const btn=$('cloudBackfill');btn.disabled=true;
- const cache=new Map();let updated=0,filled=0,missing=0,failed=0,uploaded=0,uploadFailed=0;const changedRaces=[];
+ const cache=new Map();let updated=0,filled=0,missing=0,failed=0,uploaded=0,uploadFailed=0,tiltFound=0,tiltZero=0;const changedRaces=[];
  const put=(obj,key,value)=>{if(value===undefined||value===null||value==='')return false;if(obj[key]!==undefined&&obj[key]!==null&&obj[key]!=='')return false;obj[key]=value;filled++;return true};
  try{
   for(const r of candidates){
@@ -638,7 +638,7 @@ async function cloudBackfillExisting(){
      const key=String(i+1),b=base[key]||{},pr=preR[key]||{},rr=resR[key]||{};
      let boat=r.boats.find(x=>Number(x.lane)===i+1);if(!boat){boat={lane:i+1};r.boats.push(boat)}
      const vals={racer:b.name,motor:b.motor_number,registration:b.number,racerClass:rankLabel(b.rank_number),branch:branchLabel(b.branch_number),nationalWin:b.national_win_rate,national2:b.national_top_2_percent,national3:b.national_top_3_percent,localWin:b.local_win_rate,local2:b.local_top_2_percent,local3:b.local_top_3_percent,motor2:b.motor_top_2_percent,motor3:b.motor_top_3_percent,boatNo:b.boat_number,boat2:b.boat_top_2_percent,boat3:b.boat_top_3_percent,weight:pr.weight??b.weight,weightAdj:pr.weight_adjustment,tilt:pr.tilt_adjustment??pr.tilt_adjustment_source??pr.tilt??b.tilt_adjustment??b.tilt_adjustment_source,propeller:pr.propeller,parts:Array.isArray(pr.parts)?pr.parts.map(partLabel).join(' / '):'',exhibition:pr.exhibition_time,exSt:pr.start_timing===undefined?'':formatST(pr.start_timing)};
-     Object.entries(vals).forEach(([k,v])=>put(boat,k,v));
+     if(vals.tilt!==undefined&&vals.tilt!==null&&vals.tilt!==''){tiltFound++;if(Number(vals.tilt)===0)tiltZero++;}Object.entries(vals).forEach(([k,v])=>put(boat,k,v));
      let res=r.results.find(x=>Number(x.lane)===i+1);if(!res){res={lane:i+1};r.results.push(res)}
      put(res,'rank',rr.place_number);put(res,'actualSt',rr.start_timing===undefined?'':formatST(rr.start_timing));put(res,'course',rr.course_number);
     }
