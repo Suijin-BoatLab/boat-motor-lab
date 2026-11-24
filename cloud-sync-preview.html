@@ -498,7 +498,14 @@ function cloudParentPayload(r,uid){
 }
 function cloudLegacyFromRow(row){
  const saved=row.source_data&&row.source_data.legacy_record;
- if(saved&&Array.isArray(saved.boats)&&Array.isArray(saved.results))return saved;
+ if(saved&&Array.isArray(saved.boats)&&Array.isArray(saved.results)){
+  const entries=row.race_entries||[];
+  const boats=saved.boats.map((boat,i)=>{
+   const e=entries.find(x=>x.lane===Number(boat.lane||i+1))||{};
+   return {...boat,tilt:boat.tilt!==undefined&&boat.tilt!==null&&boat.tilt!==''?boat.tilt:(e.tilt??'')};
+  });
+  return {...saved,boats};
+ }
  const entries=(row.race_entries||[]).slice().sort((a,b)=>a.lane-b.lane);
  const boats=Array.from({length:6},(_,i)=>{
   const e=entries.find(x=>x.lane===i+1)||{};
