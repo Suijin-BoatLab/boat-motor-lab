@@ -83,13 +83,31 @@ footer{color:var(--muted);font-size:11px;text-align:center;padding:24px}
   <div class="brand">BOAT <span>MOTOR</span> LAB <small style="font-size:10px;color:var(--muted)">v12 RELEASE CANDIDATE</small></div>
   <div class="sub">MOTOR PERFORMANCE & RACE HISTORY</div>
   <nav>
-    <button class="active" data-tab="entry">レース入力</button>
+    <button class="active" data-tab="raceanalysis">レース分析</button>
+    <button data-tab="entry">レース入力</button>
     <button data-tab="history">記録一覧</button>
     <button data-tab="analysis">モーター分析</button>
     <button data-tab="backup">保存・移行</button>
   </nav>
 </header>
 <main>
+<section id="raceanalysis">
+ <h1>レース別・モーター機力分析</h1>
+ <div class="muted small">開催日・競艇場・レースを選択すると、出走6艇と各モーターの過去180日履歴を照合します。展示前の機力比較から、展示後の再評価まで行います。</div>
+ <div class="panel">
+  <h2>分析するレース</h2>
+  <div class="grid">
+   <div class="field"><label for="anDate">開催日</label><input id="anDate" type="date" value="2026-11-25"></div>
+   <div class="field"><label for="anVenue">競艇場</label><select id="anVenue"><option value="1">桐生</option><option value="2">戸田</option><option value="3">江戸川</option><option value="4">平和島</option><option value="5">多摩川</option><option value="6">浜名湖</option><option value="7">蒲郡</option><option value="8">常滑</option><option value="9" selected>津</option><option value="10">三国</option><option value="11">びわこ</option><option value="12">住之江</option><option value="13">尼崎</option><option value="14">鳴門</option><option value="15">丸亀</option><option value="16">児島</option><option value="17">宮島</option><option value="18">徳山</option><option value="19">下関</option><option value="20">若松</option><option value="21">芦屋</option><option value="22">福岡</option><option value="23">唐津</option><option value="24">大村</option></select></div>
+   <div class="field"><label for="anRace">レース番号</label><select id="anRace"><option value="1">1R</option><option value="2">2R</option><option value="3">3R</option><option value="4">4R</option><option value="5">5R</option><option value="6">6R</option><option value="7">7R</option><option value="8">8R</option><option value="9">9R</option><option value="10">10R</option><option value="11">11R</option><option value="12">12R</option></select></div>
+  </div>
+  <div class="actions"><button class="btn primary" id="analyzeRaceBtn">出走表取得・6艇の機力を分析</button></div>
+  <p class="small muted" id="analyzeRaceStatus" aria-live="polite">レースを選択して分析を開始してください。</p>
+ </div>
+ <div id="raceAnalysisOutput"></div>
+ <div class="notice">機力評価は取得できた過去の展示・周回・直線・回り足などの数値比較です。選手の技量や水面差をモーター性能と混同しないよう、選手情報は別枠で表示します。履歴が少ない場合は評価の確度を下げて表示します。</div>
+</section>
+
 <section id="entry">
   <h1>レースデータ入力</h1><div class="muted small">展示後に一括保存 → レース終了後に同じ12R一括取得で結果を同期</div>
   <div class="panel">
@@ -238,7 +256,67 @@ $('venue').innerHTML=venues.map(v=>`<option>${v}</option>`).join('');
 $('raceNo').innerHTML=Array.from({length:12},(_,i)=>`<option>${i+1}R</option>`).join('');
 $('raceDate').value=new Date().toLocaleDateString('sv-SE');
 document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
-function showTab(tab){document.querySelectorAll('main section').forEach(s=>s.classList.toggle('hidden',s.id!==tab));document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));if(tab==='history')renderHistory();if(tab==='analysis'){renderAnalysis();loadHistoricalMotorHistory();}if(tab==='backup'){$('backupCount').textContent=races.length+'レース';updateBackupStatus();}window.scrollTo(0,0)}
+function scoreRaceMotor(boat){
+ const h=boat.history?.find(x=>x.days===30)||boat.history?.[1]||{};
+ const metrics=[['exhibition_time',.25],['lap_time',.25],['straight_time',.25],['turn_time',.25]];
+ let total=0,weight=0;
+ for(const [key,w] of metrics){const n=Number(h[key]);if(Number.isFinite(n)&&n>0){total+=n*w;weight+=w}}
+ return {avg:weight?total/weight:null,count:Number(h.count)||0,exCount:Number(h.exhibition_time_count)||0};
+}
+function motorPercentileScores(boats){
+ const vals=boats.map(b=>({lane:b.lane,stats:scoreRaceMotor(b)}));
+ const keys=['exhibition_time','lap_time','straight_time','turn_time'];
+ const available=vals.filter(x=>x.stats.avg!==null);
+ if(available.length<2)return vals.map(x=>({...x,score:null}));
+ const ranked=available.map(x=>{const metricScores=[];
+  for(const key of keys){const v=Number((x.stats as any)?.[key]);if(Number.isFinite(v))metricScores.push(v)}
+  return x;
+ });
+ const scores=new Map();
+ for(const x of available){let sum=0,n=0;
+  for(const key of keys){const raw=boats.find(b=>b.lane===x.lane)?.history?.find(h=>h.days===30)?.[key];const v=Number(raw);if(!Number.isFinite(v)||v<=0)continue;
+   const peers=available.map(p=>Number(boats.find(b=>b.lane===p.lane)?.history?.find(h=>h.days===30)?.[key])).filter(v=>Number.isFinite(v)&&v>0);
+   if(peers.length<2)continue;
+   const better=peers.filter(p=>p>v).length;const equal=peers.filter(p=>p===v).length;
+   sum+=100*(better+equal*.5)/peers.length;n++;
+  }
+  if(n)scores.set(x.lane,sum/n);
+ }
+ return vals.map(x=>({...x,score:scores.has(x.lane)?Math.round(scores.get(x.lane)):null}));
+}
+async function analyzeSelectedRace(){
+ const btn=$('analyzeRaceBtn'),status=$('analyzeRaceStatus'),out=$('raceAnalysisOutput');
+ if(!cloudClient||!cloudUser){status.textContent='クラウドにログインしてください。';return}
+ btn.disabled=true;status.textContent='出走表と過去180日のモーター履歴を照合しています…';out.innerHTML='';
+ try{
+  const req={date:$('anDate').value,venue_code:Number($('anVenue').value),race_no:Number($('anRace').value)};
+  const {data,error}=await cloudClient.functions.invoke('analyze-race-motors',{body:req});
+  if(error){const detail=error?.context?.body?await error.context.body.text().catch(()=> ''):'';throw new Error(detail||error.message)}
+  if(data?.error)throw new Error(data.error);
+  const boats=data.boats||[],scores=motorPercentileScores(boats);
+  const cards=boats.map(b=>{
+   const h=b.history||[],h7=h.find(x=>x.days===7)||{},h30=h.find(x=>x.days===30)||{},h90=h.find(x=>x.days===90)||{},h180=h.find(x=>x.days===180)||{};
+   const score=scores.find(x=>x.lane===b.lane)?.score;
+   const fmt=(v,d=2)=>v==null?'—':Number(v).toFixed(d);
+   const trend=(key)=>{const a=Number(h7[key]),z=Number(h30[key]);if(!Number.isFinite(a)||!Number.isFinite(z)||!a||!z)return '比較データ不足';const delta=a-z;return (delta<0?'改善 ':'悪化 ')+(delta>0?'+':'')+delta.toFixed(3)};
+   const scoreLabel=score==null?'算出不可':score>=75?'相対上位':score>=50?'中位':'相対下位';
+   return '<div class="panel"><div class="boathead"><strong>'+b.lane+'号艇　'+(b.racer?.name||'選手データなし')+'</strong><span class="tag">モーター '+b.motor_number+'号機</span></div>'+
+    '<div class="grid"><div><div class="small muted">6艇内の相対機力</div><div style="font-size:28px;font-weight:800">'+(score==null?'—':score+'/100')+'</div><div class="small">'+scoreLabel+'</div></div>'+
+    '<div><div class="small muted">履歴サンプル</div><strong>'+Number(h180.count||0)+'走／180日</strong><div class="small muted">'+(b.history_source||'')+'</div></div>'+
+    '<div><div class="small muted">選手級別</div><strong>'+(b.racer?.class??'—')+'</strong><div class="small muted">全国勝率 '+fmt(b.racer?.national_win_rate,2)+'</div></div></div>'+
+    '<div class="tablewrap"><table><thead><tr><th>指標</th><th>7日</th><th>30日</th><th>90日</th><th>180日</th></tr></thead><tbody>'+
+    [['展示', 'exhibition_time'],['周回','lap_time'],['直線','straight_time'],['回り足','turn_time'],['展示ST','exhibition_st']].map(([label,key])=>'<tr><td>'+label+'</td><td>'+fmt(h7[key],key==='exhibition_st'?3:2)+'</td><td>'+fmt(h30[key],key==='exhibition_st'?3:2)+'</td><td>'+fmt(h90[key],key==='exhibition_st'?3:2)+'</td><td>'+fmt(h180[key],key==='exhibition_st'?3:2)+'</td></tr>').join('')+
+    '</tbody></table></div><div class="small muted">直近7日：'+trend('exhibition_time')+'（展示タイム基準）／展示F '+Number(h30.exhibition_f_count||0)+'回（通常ST平均から除外）</div>'+
+    '<div class="small">当日展示：展示 '+fmt(b.current?.exhibition_time)+'／周回 '+fmt(b.current?.lap_time)+'／直線 '+fmt(b.current?.straight_time)+'／回り足 '+fmt(b.current?.turn_time)+'／展示ST '+(b.current?.exhibition_st?.isF?'F':fmt(b.current?.exhibition_st?.value,3))+'</div></div>';
+  }).join('');
+  out.innerHTML='<div class="panel"><h2>'+data.venue_name+' '+data.race_no+'R｜'+data.date+'</h2><div class="small muted">6艇の出走情報とモーター履歴を照合。評価点はこのレースの6艇間での相対比較です。</div></div>'+cards;
+  status.textContent='分析完了：6艇中 '+boats.filter(b=>b.motor_number).length+'艇のモーター情報を取得。出典：'+data.source;
+ }catch(err){status.textContent='分析できませんでした：'+(err.message||'不明なエラー')}
+ finally{btn.disabled=false}
+}
+$('analyzeRaceBtn').onclick=analyzeSelectedRace;
+
+function showTab(tab){document.querySelectorAll('main section').forEach(s=>s.classList.toggle('hidden',s.id!==tab));document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));if(tab==='history')renderHistory();if(tab==='analysis'){renderAnalysis();loadHistoricalMotorHistory();}if(tab==='raceanalysis'){$('anDate').value=$('anDate').value||new Date().toISOString().slice(0,10)}if(tab==='backup'){$('backupCount').textContent=races.length+'レース';updateBackupStatus();}window.scrollTo(0,0)}
 const stadiumCodes={'桐生':1,'戸田':2,'江戸川':3,'平和島':4,'多摩川':5,'浜名湖':6,'蒲郡':7,'常滑':8,'津':9,'三国':10,'びわこ':11,'住之江':12,'尼崎':13,'鳴門':14,'丸亀':15,'児島':16,'宮島':17,'徳山':18,'下関':19,'若松':20,'芦屋':21,'福岡':22,'唐津':23,'大村':24};
 function setIf(el,value){if(value!==undefined&&value!==null&&value!=='')el.value=String(value)}
 const rankLabel=n=>({1:'A1',2:'A2',3:'B1',4:'B2'})[Number(n)]||'';
@@ -676,9 +754,9 @@ async function importMotorHistorySixMonths(){
  for(let d=new Date(start);d<=end;d.setUTCDate(d.getUTCDate()+1))dates.push(fmt(d));
  try{
   out.textContent='保存済みの日付を確認しています…';
-  const {data:existing,error:readError}=await cloudClient.from('historical_motor_daily').select('race_date,motor_data').gte('race_date','2026-05-24').lte('race_date','2026-11-24');
+  const {data:existing,error:readError}=await cloudClient.from('historical_motor_entries').select('race_date').gte('race_date','2026-05-24').lte('race_date','2026-11-24');
   if(readError)throw readError;
-  const have=new Set((existing||[]).filter(x=>x.motor_data && Object.keys(x.motor_data).length>0).map(x=>x.race_date));
+  const have=new Set((existing||[]).map(x=>x.race_date));
   const missing=dates.filter(d=>!have.has(d));
   if(!missing.length){out.textContent='過去6か月分はすでに取り込み済みです。';return}
   let saved=0,skipped=0,failed=0,totalRaces=0,totalEntries=0;
