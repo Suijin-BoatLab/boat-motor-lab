@@ -156,7 +156,7 @@ footer{color:var(--muted);font-size:11px;text-align:center;padding:24px}
     </div>
     <div id="cloudSignedIn" class="hidden">
       <p class="small" id="cloudUser"></p>
-      <div class="actions"><button class="btn primary" id="cloudSync">今すぐ同期</button><button class="btn secondary" id="cloudTest">保存テスト（自動削除）</button><button class="btn secondary" id="cloudLogout">ログアウト</button></div>
+      <div class="actions"><button class="btn primary" id="cloudSync">今すぐ同期</button><button class="btn secondary" id="cloudBackfill">既存記録の不足項目を補完</button><button class="btn secondary" id="cloudTest">保存テスト（自動削除）</button><button class="btn secondary" id="cloudLogout">ログアウト</button></div>
     </div>
     <p class="small muted" id="cloudStatus" aria-live="polite">クラウド未接続。端末内の記録と自動バックアップはこれまで通り維持されます。</p>
   </div>
@@ -596,6 +596,8 @@ async function cloudInit(){
   else cloudStatus('ログアウトしました。端末内の記録と自動バックアップは残っています。');
  });
 }
+$('cloudBackfill').onclick=cloudBackfillExisting;
+
 $('cloudLogin').onclick=async()=>{
  const email=$('cloudEmail').value.trim();
  if(!email||! /^\S+@\S+\.\S+$/.test(email)){cloudStatus('有効なメールアドレスを入力してください。');return}
@@ -607,6 +609,48 @@ $('cloudLogin').onclick=async()=>{
  }catch(err){cloudStatus('送信できませんでした：'+err.message)}
  finally{$('cloudLogin').disabled=false}
 };
+
+
+async function cloudBackfillExisting(){
+ if(!cloudClient||!cloudUser){cloudStatus('先にログインしてください。');return}
+ if(cloudBusy)return;
+ const candidates=races.filter(r=>/^2026-/.test(r.date||'')&&stadiumCodes[r.venue]);
+ if(!candidates.length){cloudStatus('補完対象の2026年以降の記録がありません。');return}
+ if(!confirm('既存レースの空欄だけを公開データで補完します。入力済みの値・展示メモ・周回・直線・回り足は上書きしません。補完後はクラウドにも保存します。実行しますか？'))return;
+ cloudBusy=true;const btn=$('cloudBackfill');btn.disabled=true;
+ const cache=new Map();let updated=0,filled=0,missing=0,failed=0;
+ const put=(obj,key,value)=>{if(value===undefined||value===null||value==='')return false;if(obj[key]!==undefined&&obj[key]!==null&&obj[key]!=='')return false;obj[key]=value;filled++;return true};
+ try{
+  for(const r of candidates){
+   const date=r.date,venue=r.venue,stadium=stadiumCodes[venue];
+   try{
+    if(!cache.has(date)){
+     const compact=date.replaceAll('-',''),year=date.slice(0,4),url=`https://boatraceopenapi.github.io/api/v1/${year}/${compact}.json`;
+     const response=await fetch(url,{cache:'no-store'});
+     if(!response.ok)throw new Error('公開データHTTP '+response.status);
+     cache.set(date,await response.json());
+    }
+    const data=cache.get(date),race=data?.programs?.stadiums?.[String(stadium)]?.races?.[String(parseInt(r.raceNo,10))];
+    if(!race){missing++;continue}
+    const base=race.racers||{},preview=race.preview||{},preR=preview.racers||{},result=race.result||{},resR=result.racers||{};
+    r.boats=r.boats||[];r.results=r.results||[];
+    for(let i=0;i<6;i++){
+     const key=String(i+1),b=base[key]||{},pr=preR[key]||{},rr=resR[key]||{};
+     let boat=r.boats.find(x=>Number(x.lane)===i+1);if(!boat){boat={lane:i+1};r.boats.push(boat)}
+     const vals={racer:b.name,motor:b.motor_number,registration:b.number,racerClass:rankLabel(b.rank_number),branch:branchLabel(b.branch_number),nationalWin:b.national_win_rate,national2:b.national_top_2_percent,national3:b.national_top_3_percent,localWin:b.local_win_rate,local2:b.local_top_2_percent,local3:b.local_top_3_percent,motor2:b.motor_top_2_percent,motor3:b.motor_top_3_percent,boatNo:b.boat_number,boat2:b.boat_top_2_percent,boat3:b.boat_top_3_percent,weight:pr.weight??b.weight,weightAdj:pr.weight_adjustment,tilt:pr.tilt_adjustment,propeller:pr.propeller,parts:Array.isArray(pr.parts)?pr.parts.map(partLabel).join(' / '):'',exhibition:pr.exhibition_time,exSt:pr.start_timing===undefined?'':formatST(pr.start_timing)};
+     Object.entries(vals).forEach(([k,v])=>put(boat,k,v));
+     let res=r.results.find(x=>Number(x.lane)===i+1);if(!res){res={lane:i+1};r.results.push(res)}
+     put(res,'rank',rr.place_number);put(res,'actualSt',rr.start_timing===undefined?'':formatST(rr.start_timing));put(res,'course',rr.course_number);
+    }
+    put(r,'wind',preview.wind_speed);put(r,'wave',preview.wave_height);put(r,'temp',preview.air_temperature);put(r,'waterTemp',preview.water_temperature);put(r,'weather',weatherLabel(preview.weather_number));put(r,'windDir',windLabel(preview.wind_direction_number));
+    r.boats.sort((a,b)=>Number(a.lane)-Number(b.lane));r.results.sort((a,b)=>Number(a.lane)-Number(b.lane));r.updatedAt=new Date().toISOString();updated++;
+   }catch(err){failed++;console.warn('Backfill failed',venue,date,r.raceNo,err)}
+  }
+  if(updated){cloudApplyingRemote=true;persist();cloudApplyingRemote=false;await cloudSync()}
+  cloudStatus(`補完完了：対象 ${candidates.length}レース／更新 ${updated}レース／追加 ${filled}項目／データなし ${missing}レース／取得エラー ${failed}レース。既存入力は保持しました。`);
+ }catch(err){cloudApplyingRemote=false;cloudStatus('補完エラー：'+(err.message||'不明なエラー'))}
+ finally{cloudBusy=false;btn.disabled=false}
+}
 
 async function cloudStorageSelfTest(){
  if(!cloudClient||!cloudUser){cloudStatus('先にログインしてください。');return}
