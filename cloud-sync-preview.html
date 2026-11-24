@@ -468,15 +468,21 @@ function cloudEntryPayload(r,b,uid,raceId){
   race_id:raceId,user_id:uid,lane:Number(b.lane),
   racer_name:b.racer||null,racer_registration_no:b.registration||null,racer_class:b.racerClass||null,racer_branch:b.branch||null,
   racer_win_rate:cloudNum(b.nationalWin),racer_place_rate:cloudNum(b.national2),
+  racer_national_win_rate:cloudNum(b.nationalWin),
+  racer_national_place2_rate:cloudNum(b.national2),racer_national_place3_rate:cloudNum(b.national3),
+  racer_local_win_rate:cloudNum(b.localWin),
+  racer_local_place2_rate:cloudNum(b.local2),racer_local_place3_rate:cloudNum(b.local3),
   motor_number:Number.isFinite(motor)?motor:null,motor_place_rate:cloudNum(b.motor2),
+  motor_place2_rate:cloudNum(b.motor2),motor_place3_rate:cloudNum(b.motor3),
   boat_number:cloudNum(b.boatNo),boat_place_rate:cloudNum(b.boat2),
+  boat_place2_rate:cloudNum(b.boat2),boat_place3_rate:cloudNum(b.boat3),
   exhibition_time:cloudNum(b.exhibition),lap_time:cloudNum(b.lap),
   straight_time:cloudNum(b.straight),turn_time:cloudNum(b.turn),
   exhibition_st_raw:ex.raw,exhibition_st:ex.value,exhibition_st_is_f:ex.isF,
   actual_st_raw:actual.raw,actual_st:actual.value,actual_st_is_f:actual.isF,
   finish_rank:Number.isFinite(rank)&&rank>=1&&rank<=6?rank:null,
   actual_course:Number.isFinite(course)&&course>=1&&course<=6?course:null,
-  tilt:cloudNum(b.tilt),body_weight:cloudNum(b.weight),parts_exchange:b.parts||null,propeller_note:b.propeller||null,
+  tilt:cloudNum(b.tilt),body_weight:cloudNum(b.weight),weight_adjustment:cloudNum(b.weightAdj),parts_exchange:b.parts||null,propeller_note:b.propeller||null,
   subjective_feel:b.feel||null,source_data:{legacy_boat:b,legacy_result:result}
  };
 }
