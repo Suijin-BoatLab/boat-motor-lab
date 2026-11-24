@@ -435,11 +435,13 @@ function avg(a){return a.length?(a.reduce((x,y)=>x+y,0)/a.length).toFixed(2):'�
 
 let historicalMotorRows=[],historicalMotorPage=0;
 const HISTORY_PAGE_SIZE=50;
+function getSixMonthRange(){const end=new Date();end.setUTCHours(0,0,0,0);end.setUTCDate(end.getUTCDate()-1);const start=new Date(end);start.setUTCMonth(start.getUTCMonth()-6);return {from:start.toISOString().slice(0,10),to:end.toISOString().slice(0,10)}}
 async function loadHistoricalMotorHistory(){
  const status=$('historyQueryStatus');
  if(!cloudClient||!cloudUser){status.textContent='クラウドにログインすると過去データを表示できます。';return}
- if(!$('historyFrom').value)$('historyFrom').value='2026-10-26';
- if(!$('historyTo').value)$('historyTo').value='2026-11-24';
+ const range=getSixMonthRange();
+ if(!$('historyFrom').value)$('historyFrom').value=range.from;
+ if(!$('historyTo').value)$('historyTo').value=range.to;
  await queryHistoricalMotorHistory();
 }
 async function queryHistoricalMotorHistory(){
@@ -467,7 +469,7 @@ function renderHistoricalMotorPage(){
 $('historySearch').onclick=queryHistoricalMotorHistory;
 $('historySixMonths').onclick=()=>{
  if(!$('historyVenue').value){$('historyQueryStatus').textContent='6か月表示には競艇場を選択してください。';return}
- $('historyFrom').value='2026-05-24';$('historyTo').value='2026-11-24';queryHistoricalMotorHistory();
+ const range=getSixMonthRange();$('historyFrom').value=range.from;$('historyTo').value=range.to;queryHistoricalMotorHistory();
 };
 $('historyPrev').onclick=()=>{if(historicalMotorPage>0){historicalMotorPage--;renderHistoricalMotorPage()}};
 $('historyNext').onclick=()=>{if((historicalMotorPage+1)*HISTORY_PAGE_SIZE<historicalMotorRows.length){historicalMotorPage++;renderHistoricalMotorPage()}};
@@ -664,7 +666,7 @@ async function importMotorHistorySixMonths(){
  btn.disabled=true;
  const fmt=d=>d.toISOString().slice(0,10);
  const dates=[];
- const end=new Date();end.setUTCHours(0,0,0,0);end.setUTCDate(end.getUTCDate()-1);const start=new Date(end);start.setUTCMonth(start.getUTCMonth()-6);
+ const range=getSixMonthRange(),start=new Date(range.from+'T00:00:00Z'),end=new Date(range.to+'T00:00:00Z');
  for(let d=new Date(start);d<=end;d.setUTCDate(d.getUTCDate()+1))dates.push(fmt(d));
  try{
   out.textContent='保存済みの日付を確認しています…';
