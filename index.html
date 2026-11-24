@@ -435,11 +435,12 @@ function avg(a){return a.length?(a.reduce((x,y)=>x+y,0)/a.length).toFixed(2):'�
 
 let historicalMotorRows=[],historicalMotorPage=0;
 const HISTORY_PAGE_SIZE=50;
-function getSixMonthRange(){const end=new Date();end.setUTCHours(0,0,0,0);end.setUTCDate(end.getUTCDate()-1);const start=new Date(end);start.setUTCMonth(start.getUTCMonth()-6);return {from:start.toISOString().slice(0,10),to:end.toISOString().slice(0,10)}}
+function subtractUtcMonthsClamped(date,months){const year=date.getUTCFullYear(),month=date.getUTCMonth()-months,day=date.getUTCDate();const first=new Date(Date.UTC(year,month,1));const lastDay=new Date(Date.UTC(first.getUTCFullYear(),first.getUTCMonth()+1,0)).getUTCDate();first.setUTCDate(Math.min(day,lastDay));return first}
+function getSixMonthRange(){const end=new Date();end.setUTCHours(0,0,0,0);end.setUTCDate(end.getUTCDate()-1);const start=subtractUtcMonthsClamped(end,6);return {from:start.toISOString().slice(0,10),to:end.toISOString().slice(0,10)}}
 async function loadHistoricalMotorHistory(){
  const status=$('historyQueryStatus');
  if(!cloudClient||!cloudUser){status.textContent='クラウドにログインすると過去データを表示できます。';return}
- const end=new Date();end.setUTCHours(0,0,0,0);end.setUTCDate(end.getUTCDate()-1);const start=new Date(end);if($('historyVenue').value)start.setUTCMonth(start.getUTCMonth()-6);else start.setUTCDate(start.getUTCDate()-30);
+ const end=new Date();end.setUTCHours(0,0,0,0);end.setUTCDate(end.getUTCDate()-1);const start=$('historyVenue').value?subtractUtcMonthsClamped(end,6):new Date(end.getTime()-30*86400000);
  if(!$('historyFrom').value)$('historyFrom').value=start.toISOString().slice(0,10);
  if(!$('historyTo').value)$('historyTo').value=end.toISOString().slice(0,10);
  await queryHistoricalMotorHistory();
