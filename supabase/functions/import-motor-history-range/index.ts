@@ -64,7 +64,9 @@ Deno.serve(async (req: Request) => {
                 if (!raw) return { raw: null, value: null, isF: false };
                 if (/^F/i.test(raw)) return { raw, value: null, isF: true };
                 const n = Number(raw);
-                return { raw, value: Number.isFinite(n) ? n : null, isF: false };
+                if (!Number.isFinite(n)) return { raw, value: null, isF: false };
+                if (n < 0) return { raw, value: null, isF: true };
+                return { raw, value: n, isF: false };
               };
               const exST = parseST(p.start_timing);
               const actualST = parseST(r.start_timing);
