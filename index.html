@@ -3,58 +3,158 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#09111b">
+<meta name="theme-color" content="#090d14">
 <title>BOAT MOTOR LAB</title>
 <style>
-:root{color-scheme:dark;--bg:#09111b;--panel:#121f2d;--line:#26394b;--text:#edf5fc;--muted:#9aafc2;--cyan:#42d9e8;--green:#48d5a0}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN",Meiryo,sans-serif}
-header{padding:22px 17px 15px;background:#0c1723;border-bottom:1px solid var(--line)}.brand{font-size:11px;letter-spacing:.2em;color:var(--cyan);font-weight:800}h1{font-size:22px;margin:6px 0}.sub{font-size:12px;color:var(--muted)}
-main{max-width:900px;margin:auto;padding:16px}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.card,.panel{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:13px}.card small{font-size:11px;color:var(--muted)}.card b{display:block;font-size:24px;margin-top:5px}.tabs{display:flex;gap:7px;margin:15px 0;overflow:auto}.tabs button,button{border:1px solid var(--line);border-radius:9px;background:#1a2b3c;color:var(--text);padding:10px 13px;font-weight:700}.tabs button.active,.primary{background:#16414a;border-color:#267c88;color:#c5fbff}.panel{margin:12px 0}.panel h2{font-size:16px;margin:0 0 10px}.muted{color:var(--muted);font-size:12px;line-height:1.6}.tablewrap{overflow:auto}table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;padding:10px 7px;border-bottom:1px solid var(--line);white-space:nowrap}th{color:var(--muted);font-weight:600}.good{color:var(--green)}.tag{font-size:11px;color:var(--green);border:1px solid #276b58;border-radius:99px;padding:4px 7px}.hidden{display:none}select,input{background:#0b1520;color:var(--text);border:1px solid #34495d;border-radius:8px;padding:10px;width:100%;margin:5px 0 10px}label{font-size:12px;color:var(--muted)}.note{background:#241f17;border-left:3px solid #e9ae5d;padding:10px;border-radius:6px;font-size:12px;color:#f4d8ae;line-height:1.6}.bar{height:7px;background:#26394b;border-radius:8px;overflow:hidden}.bar span{display:block;height:100%;background:var(--cyan)}@media(max-width:520px){.stats{grid-template-columns:repeat(3,1fr)}.card{padding:10px}.card b{font-size:20px}}
+:root{color-scheme:dark;--bg:#090d14;--panel:#121a26;--panel2:#182333;--line:#2a394d;--muted:#93a2b7;--text:#eef4fc;--blue:#42a5ff;--green:#43d19e;--gold:#f4c45e;--red:#ff7373}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+header{padding:18px 16px 14px;background:#0d1420;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+.brand{font-weight:900;letter-spacing:.08em;font-size:19px}.brand span{color:var(--blue)}.sub{font-size:11px;color:var(--muted);letter-spacing:.12em}
+nav{display:flex;gap:8px;margin-top:14px;overflow:auto}nav button,.btn{border:1px solid var(--line);background:#172233;color:var(--text);border-radius:10px;padding:10px 13px;font-weight:700;white-space:nowrap}
+nav button.active,.btn.primary{background:#145da0;border-color:#287fc9}
+main{max-width:1100px;margin:auto;padding:16px}
+h1{font-size:23px;margin:8px 0 4px}h2{font-size:17px;margin:0 0 12px}
+.muted{color:var(--muted)}.small{font-size:12px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:15px;margin:13px 0}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.field label{display:block;color:var(--muted);font-size:12px;margin:0 0 5px}
+input,select,textarea{width:100%;min-width:0;background:#0b121c;color:var(--text);border:1px solid #34445a;border-radius:9px;padding:10px;font:inherit}
+input:focus,select:focus,textarea:focus{outline:2px solid #287fc9;border-color:transparent}
+.boat{border:1px solid var(--line);border-radius:12px;padding:12px;margin:10px 0;background:#0e1622}
+.boathead{display:flex;align-items:center;gap:9px;margin-bottom:10px;font-weight:800}
+.lane{width:27px;height:27px;border-radius:7px;display:grid;place-items:center;color:#08101a;font-weight:900}
+.l1{background:#fff}.l2{background:#222;color:#fff}.l3{background:#e84b4b;color:#fff}.l4{background:#4d8df0;color:#fff}.l5{background:#f4d34f}.l6{background:#3cc98a}
+.boatgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.btn{cursor:pointer}.btn.secondary{background:#17202d}.btn.danger{border-color:#773d49;color:#ff9ca5;background:#29151b}
+.statgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.stat{background:#0c1420;border:1px solid var(--line);padding:12px;border-radius:11px}.stat b{display:block;font-size:23px;color:var(--blue)}.stat span{font-size:11px;color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px 7px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}th{color:var(--muted);font-weight:600}
+.tablewrap{overflow:auto}.notice{border-left:3px solid var(--gold);padding:9px 11px;background:#211d13;color:#f6dfaa;border-radius:7px;font-size:12px}
+.hidden{display:none!important}.tag{display:inline-block;padding:3px 7px;border-radius:6px;background:#17334d;color:#9bd2ff;font-size:11px}
+.empty{padding:22px;text-align:center;color:var(--muted)}
+footer{color:var(--muted);font-size:11px;text-align:center;padding:24px}
+@media(min-width:760px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}.boatgrid{grid-template-columns:repeat(4,minmax(0,1fr))}.boat{padding:15px}.wide{grid-column:span 2}}
+@media(max-width:420px){main{padding:11px}.boatgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.statgrid{grid-template-columns:repeat(3,1fr)}.stat b{font-size:19px}}
 </style>
 </head>
 <body>
-<header><div class="brand">BOAT MOTOR LAB / ANALYTICS</div><h1>モーター成長・機力分析</h1><div class="sub">全国24場対応を目指す開発版</div></header>
+<header>
+  <div class="brand">BOAT <span>MOTOR</span> LAB</div>
+  <div class="sub">MOTOR PERFORMANCE & RACE HISTORY</div>
+  <nav>
+    <button class="active" data-tab="entry">ã¬ã¼ã¹å¥å</button>
+    <button data-tab="history">è¨é²ä¸è¦§</button>
+    <button data-tab="analysis">ã¢ã¼ã¿ã¼åæ</button>
+    <button data-tab="backup">ä¿å­ã»ç§»è¡</button>
+  </nav>
+</header>
 <main>
-<div class="stats">
-<div class="card"><small>登録レース</small><b id="races">0</b></div>
-<div class="card"><small>登録モーター</small><b id="motors">0</b></div>
-<div class="card"><small>成長候補</small><b id="growth">0</b></div>
-</div>
-<div class="tabs">
-<button class="active" data-tab="rank">成長ランキング</button>
-<button data-tab="detail">個別履歴</button>
-<button data-tab="about">開発状況</button>
-</div>
-<section id="rank">
-<div class="panel"><h2>モーター成長ランキング</h2><p class="muted">現在は操作確認用の架空データです。実際の競艇データはまだ接続していません。</p><div id="ranking"></div></div>
+<section id="entry">
+  <h1>ã¬ã¼ã¹ãã¼ã¿å¥å</h1><div class="muted small">å±ç¤ºå¾ã«å¥å â ã¬ã¼ã¹çµäºå¾ã«çµæãè¿½å å¥å</div>
+  <div class="panel">
+    <h2>ã¬ã¼ã¹åºæ¬æå ±</h2>
+    <div class="grid">
+      <div class="field"><label>ç«¶èå ´</label><select id="venue"></select></div>
+      <div class="field"><label>éå¬æ¥</label><input id="raceDate" type="date"></div>
+      <div class="field"><label>ã¬ã¼ã¹çªå·</label><select id="raceNo"></select></div>
+      <div class="field"><label>é¢¨å</label><select id="windDir"><option value="">æªå¥å</option><option>åããé¢¨</option><option>è¿½ãé¢¨</option><option>å·¦æ¨ªé¢¨</option><option>å³æ¨ªé¢¨</option></select></div>
+      <div class="field"><label>é¢¨éï¼mï¼</label><input id="wind" type="number" min="0" step=".1" placeholder="ä¾ï¼3"></div>
+      <div class="field"><label>æ³¢é«ï¼cmï¼</label><input id="wave" type="number" min="0" step="1" placeholder="ä¾ï¼5"></div>
+      <div class="field"><label>æ°æ¸©ï¼âï¼</label><input id="temp" type="number" step=".1"></div>
+      <div class="field"><label>æ°´é¢ã»æ½®æ±ãªã©</label><input id="water" placeholder="ä¾ï¼å¹²æ½®ã»ãã­ããã"></div>
+    </div>
+  </div>
+  <div class="panel">
+    <h2>6èã¾ã¨ãã¦å¥å <span class="tag">å±ç¤ºå¾</span></h2>
+    <div class="muted small">ã¿ã¤ã ã¯å¬å¼è¡¨ç¤ºã«åããã¦å¥åãåãããªãé ç®ã¯ç©ºæ¬ã§OKã</div>
+    <div id="boats"></div>
+  </div>
+  <div class="panel">
+    <h2>ã¬ã¼ã¹å¾ã®çµæå¥å</h2>
+    <div class="muted small">çé ã»å®éã®STã»é²å¥ã³ã¼ã¹ãå¥åãçµææªç¢ºå®ã®ã¾ã¾ã§ãå±ç¤ºãã¼ã¿ãä¿å­ã§ãã¾ãã</div>
+    <div id="results"></div>
+  </div>
+  <div class="panel">
+    <h2>ã¡ã¢</h2><textarea id="memo" rows="2" placeholder="æ°ã¥ãããã¨ãå±ç¤ºã¨æ¬çªã®éããªã©"></textarea>
+    <div class="actions"><button class="btn primary" id="save">ãã®ã¬ã¼ã¹ãä¿å­</button><button class="btn secondary" id="clear">å¥åãã¯ãªã¢</button></div>
+    <p class="small muted" id="saveMsg" aria-live="polite"></p>
+  </div>
+  <div class="notice">åæã¯ç»é²ãããæ°å¤ã®æ¯è¼ã«ããæ¨å®ã§ãããã­ãã©èª¿æ´ã®å®æ½åå®¹ãç´æ¥å¤å®ãããã®ã§ã¯ããã¾ãããé¸æå·®ã»æ°´é¢å·®ãèæ®ãã¦ç¢ºèªãã¦ãã ããã</div>
 </section>
-<section id="detail" class="hidden">
-<div class="panel"><h2>モーター個別履歴</h2><label for="motorSelect">モーターを選択</label><select id="motorSelect"></select><div id="history"></div></div>
+
+<section id="history" class="hidden">
+  <h1>è¨é²ä¸è¦§</h1><div class="muted small">ä¿å­ããã¬ã¼ã¹ãã¼ã¿ãã¬ã¼ã¹ãé¸ã¶ã¨åå®¹ãå¥åç»é¢ã¸èª­ã¿è¾¼ãã¾ãã</div>
+  <div class="panel"><div class="actions"><button class="btn secondary" id="refreshHistory">ä¸è¦§ãæ´æ°</button></div><div id="historyList"></div></div>
 </section>
-<section id="about" class="hidden">
-<div class="panel"><h2>現在の開発状況</h2><p class="muted">画面の基本形を用意しました。次にデータ取得元の利用条件と接続方法を確認し、過去データの蓄積・分析機能を追加します。</p><ul class="muted"><li>1周タイム</li><li>回り足タイム</li><li>直線タイム</li><li>展示タイム</li><li>出走表・モーター番号・選手情報</li><li>レース結果・ST・水面条件</li></ul><div class="note">このファイル単体ではクラウド保存や自動データ取得は行いません。公開URLとデータ連携は次の工程です。</div></div>
+
+<section id="analysis" class="hidden">
+  <h1>ã¢ã¼ã¿ã¼åæ</h1><div class="muted small">ä¿å­ãã¼ã¿ã«å«ã¾ããå±ç¤ºã¿ã¤ã ãéè¨ãã¾ããç°ãªãç«¶èå ´ã»æ°´é¢ã®æ°å¤ã¯åç´æ¯è¼ã«æ³¨æã</div>
+  <div class="panel"><h2>ç»é²ç¶æ³</h2><div class="statgrid" id="stats"></div></div>
+  <div class="panel"><h2>ã¢ã¼ã¿ã¼å¥ å±ç¤ºãã¼ã¿</h2><div id="motorTable"></div></div>
+  <div class="panel"><h2>èª­ã¿æ¹</h2><p class="small muted">å¹³åå±ç¤ºã¿ã¤ã ã¯å°ããã»ã©éãå¾åã§ããåºèµ°åæ°ãå°ãªãã¢ã¼ã¿ã¼ã¯é ä½ãä¸å®å®ã«ãªãã¾ããå±ç¤ºã¿ã¤ã ã ãã§æ©åãæ¬çªæ§è½ãæ­å®ãããå¨åã»ç´ç·ã»åãè¶³ã»çé ã»STã¨åããã¦è¦ã¦ãã ããã</p></div>
+</section>
+
+<section id="backup" class="hidden">
+  <h1>ä¿å­ã»ãã¼ã¿ç§»è¡</h1>
+  <div class="panel">
+    <h2>ãã®ç«¯æ«ã¸ã®ä¿å­</h2>
+    <p class="small muted">ç¾å¨ã®è©¦ä½çã¯ããã®ãã©ã¦ã¶ã®ç«¯æ«åã«ãã¼ã¿ãä¿å­ãã¾ããGitHub Pagesã«å¬éããã ãã§ã¯ãå¥ç«¯æ«ã¨ã®èªåå±æã¯ããã¾ããã</p>
+    <div class="actions"><button class="btn primary" id="export">ãã¼ã¿ãæ¸ãåºã</button><label class="btn secondary" for="importFile">ããã¯ã¢ãããèª­ã¿è¾¼ã</label><input id="importFile" type="file" accept="application/json" class="hidden"></div>
+    <p class="small muted" id="backupMsg" aria-live="polite"></p>
+  </div>
+  <div class="notice">ã¯ã©ã¦ãåæã¯ã¾ã æªæ¥ç¶ã§ããè¤æ°ç«¯æ«ã§åããã¼ã¿ãä½¿ãæ®µéã§ãã¯ã©ã¦ãä¿å­æ©è½ãè¿½å ãã¾ããå¤§åãªè¨é²ã¯å®æçã«ããã¯ã¢ãããã¦ãã ããã</div>
+  <div class="panel"><h2>ãã¼ã¿ä»¶æ°</h2><div id="backupCount" class="muted">0ã¬ã¼ã¹</div></div>
 </section>
 </main>
+<footer>BOAT MOTOR LAB Â· è©¦ä½ç / ãã¼ã¿ã¯å¥åèã®ç¢ºèªãåæã¨ããåæç¨è¨é²ã§ã</footer>
 <script>
-const data=[
-{venue:"住之江",motor:"12",date:"1/4",racer:"選手A",one:36.93,turn:5.53,line:8.07,ex:6.92,finish:3},
-{venue:"住之江",motor:"12",date:"1/8",racer:"選手B",one:36.90,turn:5.50,line:8.04,ex:6.88,finish:1},
-{venue:"住之江",motor:"12",date:"1/13",racer:"選手C",one:36.87,turn:5.48,line:8.02,ex:6.85,finish:2},
-{venue:"住之江",motor:"12",date:"1/18",racer:"選手D",one:36.84,turn:5.45,line:7.99,ex:6.82,finish:1},
-{venue:"住之江",motor:"12",date:"1/22",racer:"選手E",one:36.82,turn:5.43,line:7.98,ex:6.80,finish:2},
-{venue:"鳴門",motor:"35",date:"1/3",racer:"選手G",one:37.10,turn:5.90,line:8.12,ex:6.91,finish:5},
-{venue:"鳴門",motor:"35",date:"1/10",racer:"選手H",one:37.02,turn:5.85,line:8.08,ex:6.87,finish:3},
-{venue:"鳴門",motor:"35",date:"1/17",racer:"選手I",one:36.98,turn:5.82,line:8.04,ex:6.83,finish:2},
-{venue:"鳴門",motor:"35",date:"1/24",racer:"選手J",one:36.94,turn:5.78,line:8.01,ex:6.81,finish:1}
-];
-const groups=[...new Map(data.map(x=>[x.venue+"|"+x.motor,{venue:x.venue,motor:x.motor}])).values()];
-document.getElementById("races").textContent=new Set(data.map(x=>x.date+x.venue)).size;
-document.getElementById("motors").textContent=groups.length;
-document.getElementById("growth").textContent=groups.length;
-document.getElementById("ranking").innerHTML=groups.map((g,i)=>{let a=data.filter(x=>x.venue===g.venue&&x.motor===g.motor);let delta=a[0].ex-a[a.length-1].ex;return `<div class="card" style="margin:9px 0"><div style="display:flex;justify-content:space-between;gap:8px"><b style="font-size:16px">${i+1}. ${g.venue} ${g.motor}号機</b><span class="tag">改善傾向・サンプル</span></div><p class="muted">${a.length}走 / 展示タイム変化 ${delta.toFixed(2)}秒</p><div class="bar"><span style="width:${Math.min(100,delta*500)}%"></span></div></div>`}).join("");
-const sel=document.getElementById("motorSelect");sel.innerHTML=groups.map(g=>`<option value="${g.venue}|${g.motor}">${g.venue} ${g.motor}号機</option>`).join("");
-function showHistory(){let [v,m]=sel.value.split("|");let a=data.filter(x=>x.venue===v&&x.motor===m);document.getElementById("history").innerHTML=`<p class="muted">${v}・${m}号機 / ${a.length}走</p><div class="tablewrap"><table><tr><th>日付</th><th>選手</th><th>1周</th><th>回り足</th><th>直線</th><th>展示</th><th>着順</th></tr>${a.map(x=>`<tr><td>${x.date}</td><td>${x.racer}</td><td>${x.one}</td><td>${x.turn}</td><td>${x.line}</td><td>${x.ex}</td><td>${x.finish}着</td></tr>`).join("")}</table></div>`}
-sel.addEventListener("change",showHistory);showHistory();
-document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("active",x===b));["rank","detail","about"].forEach(id=>document.getElementById(id).classList.toggle("hidden",id!==b.dataset.tab))}));
+const venues=['æ¡ç','æ¸ç°','æ±æ¸å·','å¹³åå³¶','å¤æ©å·','æµåæ¹','è²é¡','å¸¸æ»','æ´¥','ä¸å½','ã³ãã','ä½ä¹æ±','å°¼å´','é³´é','ä¸¸äº','åå³¶','å®®å³¶','å¾³å±±','ä¸é¢','è¥æ¾','è¦å±','ç¦å²¡','åæ´¥','å¤§æ'];
+const $=id=>document.getElementById(id);
+const DBKEY='boatMotorLab_races_v1';
+let races=[];
+try{races=JSON.parse(localStorage.getItem(DBKEY)||'[]')}catch(e){races=[]}
+const lanes=['ç½','é»','èµ¤','é','é»','ç·'];
+function field(label,key,placeholder='',type='number',step='.01'){return `<div class="field"><label>${label}</label><input data-k="${key}" type="${type}" ${type==='number'?`step="${step}"`:''} placeholder="${placeholder}"></div>`}
+function buildBoats(){
+ $('boats').innerHTML=Array.from({length:6},(_,i)=>`<div class="boat"><div class="boathead"><span class="lane l${i+1}">${i+1}</span>${lanes[i]}ã³ã¼ã¹æ³å®</div><div class="boatgrid">
+ ${field('é¸æå','racer','é¸æå','text')}${field('ã¢ã¼ã¿ã¼çªå·','motor','çªå·','text')}
+ ${field('å±ç¤ºã¿ã¤ã ï¼ç§ï¼','exhibition','ä¾ï¼6.78')}${field('å¨åã¿ã¤ã ï¼ç§ï¼','lap','ä¾ï¼37.20')}
+ ${field('ç´ç·ã¿ã¤ã ï¼ç§ï¼','straight','ä¾ï¼7.20')}${field('åãè¶³ã¿ã¤ã ï¼ç§ï¼','turn','ä¾ï¼5.60')}
+ ${field('å±ç¤ºST','exSt','ä¾ï¼0.12') }
+ <div class="field"><label>å±ç¤ºæ°éï¼ä¸»è¦³ï¼</label><select data-k="feel"><option value="">æªè©ä¾¡</option><option value="1">1ã»å¼±ã</option><option value="2">2ã»ããå¼±ã</option><option value="3">3ã»æ®é</option><option value="4">4ã»è¯ã</option><option value="5">5ã»ããªãè¯ã</option></select></div>
+ </div></div>`).join('');
+ $('results').innerHTML=Array.from({length:6},(_,i)=>`<div class="boat"><div class="boathead"><span class="lane l${i+1}">${i+1}</span>${i+1}å·èã»ã¬ã¼ã¹å¾</div><div class="boatgrid">
+ <div class="field"><label>çé </label><select data-r="${i}" data-k="rank"><option value="">æªå¥å</option>${[1,2,3,4,5,6,'æ¬ '].map(x=>`<option>${x}</option>`).join('')}</select></div>
+ ${field('æ¬çªST','actualSt','ä¾ï¼0.15')}
+ <div class="field"><label>å®éã®é²å¥ã³ã¼ã¹</label><select data-r="${i}" data-k="course"><option value="">æªå¥å</option>${[1,2,3,4,5,6].map(x=>`<option>${x}</option>`).join('')}</select></div>
+ </div></div>`).join('');
+}
+buildBoats();
+$('venue').innerHTML=venues.map(v=>`<option>${v}</option>`).join('');
+$('raceNo').innerHTML=Array.from({length:12},(_,i)=>`<option>${i+1}R</option>`).join('');
+$('raceDate').value=new Date().toLocaleDateString('sv-SE');
+document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
+function showTab(tab){document.querySelectorAll('main section').forEach(s=>s.classList.toggle('hidden',s.id!==tab));document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));if(tab==='history')renderHistory();if(tab==='analysis')renderAnalysis();if(tab==='backup')$('backupCount').textContent=races.length+'ã¬ã¼ã¹';window.scrollTo(0,0)}
+function collect(){
+ const boats=[...$('boats').querySelectorAll('.boat')].map((el,i)=>{let o={lane:i+1};el.querySelectorAll('[data-k]').forEach(x=>o[x.dataset.k]=x.value);return o});
+ const results=[...$('results').querySelectorAll('.boat')].map((el,i)=>{let o={lane:i+1};el.querySelectorAll('[data-k]').forEach(x=>o[x.dataset.k]=x.value);return o});
+ return {id:Date.now().toString(),venue:$('venue').value,date:$('raceDate').value,raceNo:$('raceNo').value,windDir:$('windDir').value,wind:$('wind').value,wave:$('wave').value,temp:$('temp').value,water:$('water').value,boats,results,memo:$('memo').value,updatedAt:new Date().toISOString()};
+}
+function persist(){localStorage.setItem(DBKEY,JSON.stringify(races))}
+$('save').onclick=()=>{let r=collect();if(!r.date){$('saveMsg').textContent='éå¬æ¥ãå¥åãã¦ãã ãã';return}let ix=races.findIndex(x=>x.id===r.id);races.push(r);persist();$('saveMsg').textContent=`ä¿å­ãã¾ããï¼${r.venue} ${r.date} ${r.raceNo}ï¼åè¨${races.length}ã¬ã¼ã¹ï¼`;};
+$('clear').onclick=()=>{if(!confirm('å¥åæ¬ãã¯ãªã¢ãã¾ããï¼ä¿å­æ¸ã¿ãã¼ã¿ã¯æ¶ãã¾ããã'))return;document.querySelectorAll('#entry input,#entry textarea').forEach(x=>{if(x.type!=='date')x.value=''});document.querySelectorAll('#entry select').forEach(x=>x.selectedIndex=0);$('raceDate').value=new Date().toLocaleDateString('sv-SE');$('saveMsg').textContent='å¥åæ¬ãã¯ãªã¢ãã¾ãã'};
+function renderHistory(){
+ if(!races.length){$('historyList').innerHTML='<div class="empty">ã¾ã ä¿å­ãããã¬ã¼ã¹ã¯ããã¾ããã</div>';return}
+ $('historyList').innerHTML='<div class="tablewrap"><table><thead><tr><th>æ¥ä»</th><th>ç«¶èå ´</th><th>R</th><th>å¥åèæ°</th><th></th></tr></thead><tbody>'+[...races].reverse().map(r=>`<tr><td>${r.date||''}</td><td>${r.venue}</td><td>${r.raceNo}</td><td>${r.boats.filter(b=>b.motor||b.racer||b.exhibition).length}/6</td><td><button class="btn secondary" onclick="loadRace('${r.id}')">éã</button></td></tr>`).join('')+'</tbody></table></div>';
+}
+window.loadRace=id=>{let r=races.find(x=>x.id===id);if(!r)return;showTab('entry');$('venue').value=r.venue;$('raceDate').value=r.date;$('raceNo').value=r.raceNo;$('windDir').value=r.windDir||'';['wind','wave','temp','water','memo'].forEach(k=>$(k).value=r[k]||'');r.boats.forEach((b,i)=>{let el=$('boats').querySelectorAll('.boat')[i];el.querySelectorAll('[data-k]').forEach(x=>x.value=b[x.dataset.k]||'')});r.results.forEach((b,i)=>{let el=$('results').querySelectorAll('.boat')[i];el.querySelectorAll('[data-k]').forEach(x=>x.value=b[x.dataset.k]||'')});$('saveMsg').textContent='éå»ã®è¨é²ãèª­ã¿è¾¼ã¿ã¾ãããä¿å­ããã¨æ°ããè¨é²ã¨ãã¦è¿½å ããã¾ãã'};
+function renderAnalysis(){
+ const motors={};races.forEach(r=>r.boats.forEach(b=>{if(!b.motor)return;let m=motors[b.motor]||(motors[b.motor]={count:0,ex:[],lap:[],straight:[],turn:[],wins:0});m.count++;['exhibition','lap','straight','turn'].forEach(k=>{let n=parseFloat(b[k]);if(Number.isFinite(n))m[k==='exhibition'?'ex':k].push(n)});let res=r.results.find(x=>x.lane===b.lane);if(res&&res.rank==='1')m.wins++}));
+ const vals=Object.values(motors);$('stats').innerHTML=[['ä¿å­ã¬ã¼ã¹',races.length],['ç»é²ã¢ã¼ã¿ã¼',vals.length],['è¨æ¸¬ãã¼ã¿',vals.reduce((a,m)=>a+m.ex.length,0)]].map(x=>`<div class="stat"><b>${x[1]}</b><span>${x[0]}</span></div>`).join('');
+ const rows=Object.entries(motors).map(([id,m])=>({id,...m,avg:m.ex.length?m.ex.reduce((a,b)=>a+b,0)/m.ex.length:null})).sort((a,b)=>(a.avg??99)-(b.avg??99));
+ $('motorTable').innerHTML=rows.length?'<div class="tablewrap"><table><thead><tr><th>ã¢ã¼ã¿ã¼</th><th>åæ°</th><th>å¹³åå±ç¤º</th><th>å¹³åå¨å</th><th>å¹³åç´ç·</th><th>å¹³ååãè¶³</th><th>1ç</th></tr></thead><tbody>'+rows.map(m=>`<tr><td>${m.id}</td><td>${m.count}</td><td>${avg(m.ex)}</td><td>${avg(m.lap)}</td><td>${avg(m.straight)}</td><td>${avg(m.turn)}</td><td>${m.wins}</td></tr>`).join('')+'</tbody></table></div>':'<div class="empty">ã¢ã¼ã¿ã¼çªå·ã¨å±ç¤ºãã¼ã¿ãä¿å­ããã¨ãããã«éè¨ããã¾ãã</div>';
+}
+function avg(a){return a.length?(a.reduce((x,y)=>x+y,0)/a.length).toFixed(2):'â'}
+$('refreshHistory').onclick=renderHistory;
+$('export').onclick=()=>{let blob=new Blob([JSON.stringify({app:'BOAT MOTOR LAB',version:1,races},null,2)],{type:'application/json'});let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='boat-motor-lab-backup.json';a.click();URL.revokeObjectURL(a.href);$('backupMsg').textContent='ããã¯ã¢ãããã¡ã¤ã«ãæ¸ãåºãã¾ããã'};
+$('importFile').onchange=async e=>{let f=e.target.files[0];if(!f)return;try{let data=JSON.parse(await f.text());if(!Array.isArray(data.races))throw Error();if(!confirm(`${data.races.length}ã¬ã¼ã¹ãèª­ã¿è¾¼ã¿ã¾ããç¾å¨ã®è¨é²ã«è¿½å ãã¾ããï¼`))return;const ids=new Set(races.map(x=>x.id));data.races.forEach(r=>{if(!ids.has(r.id)){r.id=Date.now().toString()+Math.random();races.push(r)}});persist();$('backupMsg').textContent='èª­ã¿è¾¼ã¿ã¾ãããç¾å¨ã®åè¨ï¼'+races.length+'ã¬ã¼ã¹';}catch(err){$('backupMsg').textContent='ãã¡ã¤ã«ãèª­ã¿è¾¼ãã¾ããã§ãããæ­£ããããã¯ã¢ãããé¸ãã§ãã ããã'}e.target.value=''};
 </script>
 </body></html>
