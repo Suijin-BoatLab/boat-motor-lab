@@ -767,7 +767,6 @@ async function cloudBackfillExisting(){
 
 
 $('cloudSync').onclick=cloudSync;
-$('cloudTest').onclick=cloudStorageSelfTest;
 $('cloudLogout').onclick=async()=>{
  const {error}=await cloudClient.auth.signOut();
  if(error)cloudStatus('ログアウトできません：'+error.message);
