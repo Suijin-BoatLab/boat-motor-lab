@@ -32,7 +32,18 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px 7px;b
 .empty{padding:22px;text-align:center;color:var(--muted)}
 footer{color:var(--muted);font-size:11px;text-align:center;padding:24px}
 @media(min-width:760px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}.boatgrid{grid-template-columns:repeat(4,minmax(0,1fr))}.boat{padding:15px}.wide{grid-column:span 2}}
-@media(max-width:420px){main{padding:11px}.boatgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.statgrid{grid-template-columns:repeat(3,1fr)}.stat b{font-size:19px}}
+@media(max-width:600px){
+ main{padding:11px}
+ .boatgrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+ .boatgrid>details.wide{grid-column:1/-1;min-width:0}
+ .boatgrid details .boatgrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+ .boatgrid details .field{min-width:0}
+ .boatgrid details .field label{font-size:13px;line-height:1.4;min-height:2.8em;overflow-wrap:anywhere}
+ .boatgrid details input,.boatgrid details select{min-height:44px;padding:10px 9px}
+ .boatgrid details summary{font-size:15px;font-weight:800;padding:10px 0;cursor:pointer}
+ .statgrid{grid-template-columns:repeat(3,1fr)}
+ .stat b{font-size:19px}
+}
 </style>
 </head>
 <body>
