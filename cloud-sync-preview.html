@@ -225,6 +225,10 @@ document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()
 function showTab(tab){document.querySelectorAll('main section').forEach(s=>s.classList.toggle('hidden',s.id!==tab));document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));if(tab==='history')renderHistory();if(tab==='analysis')renderAnalysis();if(tab==='backup'){$('backupCount').textContent=races.length+'レース';updateBackupStatus();}window.scrollTo(0,0)}
 const stadiumCodes={'桐生':1,'戸田':2,'江戸川':3,'平和島':4,'多摩川':5,'浜名湖':6,'蒲郡':7,'常滑':8,'津':9,'三国':10,'びわこ':11,'住之江':12,'尼崎':13,'鳴門':14,'丸亀':15,'児島':16,'宮島':17,'徳山':18,'下関':19,'若松':20,'芦屋':21,'福岡':22,'唐津':23,'大村':24};
 function setIf(el,value){if(value!==undefined&&value!==null&&value!=='')el.value=String(value)}
+const rankLabel=n=>({1:'A1',2:'A2',3:'B1',4:'B2'})[Number(n)]||'';
+const branchLabel=n=>({1:'北海道',2:'青森',3:'岩手',4:'宮城',5:'秋田',6:'山形',7:'福島',8:'茨城',9:'栃木',10:'群馬',11:'埼玉',12:'千葉',13:'東京',14:'神奈川',15:'新潟',16:'富山',17:'石川',18:'福井',19:'山梨',20:'長野',21:'岐阜',22:'静岡',23:'愛知',24:'三重',25:'滋賀',26:'京都',27:'大阪',28:'兵庫',29:'奈良',30:'和歌山',31:'鳥取',32:'島根',33:'岡山',34:'広島',35:'山口',36:'徳島',37:'香川',38:'愛媛',39:'高知',40:'福岡',41:'佐賀',42:'長崎',43:'熊本',44:'大分',45:'宮崎',46:'鹿児島',47:'沖縄'})[Number(n)]||'';
+const weatherLabel=n=>({1:'晴',2:'曇り',3:'雨',4:'雪',5:'霧',6:'台風',99:'その他'})[Number(n)]||'';
+const windLabel=n=>{n=Number(n);if(n>=3&&n<=7)return '追い風';if(n>=11&&n<=15)return '向かい風';if(n===17)return '無風';return n>=1&&n<=16?'横風':''};
 function formatST(value){
  if(value===undefined||value===null||value==='')return '';
  let n=Number(value);
@@ -254,7 +258,7 @@ $('fetchRace').onclick=async()=>{
   const boatEls=$('boats').querySelectorAll('.boat'),resultEls=$('results').querySelectorAll('.boat');let entryFilled=0,resultFilled=0,weatherFilled=0;
   for(let i=0;i<6;i++){
    const key=String(i+1),b=base[key]||{},pr=preR[key]||{},rr=resR[key]||{},el=boatEls[i];
-   const vals={racer:b.name,motor:b.motor_number,registration:b.number,racerClass:b.rank_number_source,branch:b.branch_number_source,nationalWin:b.national_win_rate,national2:b.national_top_2_percent,national3:b.national_top_3_percent,localWin:b.local_win_rate,local2:b.local_top_2_percent,local3:b.local_top_3_percent,motor2:b.motor_top_2_percent,motor3:b.motor_top_3_percent,boatNo:b.boat_number,boat2:b.boat_top_2_percent,boat3:b.boat_top_3_percent,weight:pr.weight??b.weight,weightAdj:pr.weight_adjustment,tilt:pr.tilt_adjustment,propeller:pr.propeller,parts:Array.isArray(pr.parts)?pr.parts.map(p=>String(p.number)+(p.quantity?'×'+p.quantity:'')).join(' / '):'',exhibition:pr.exhibition_time,exSt:formatST(pr.start_timing)};
+   const vals={racer:b.name,motor:b.motor_number,registration:b.number,racerClass:rankLabel(b.rank_number),branch:branchLabel(b.branch_number),nationalWin:b.national_win_rate,national2:b.national_top_2_percent,national3:b.national_top_3_percent,localWin:b.local_win_rate,local2:b.local_top_2_percent,local3:b.local_top_3_percent,motor2:b.motor_top_2_percent,motor3:b.motor_top_3_percent,boatNo:b.boat_number,boat2:b.boat_top_2_percent,boat3:b.boat_top_3_percent,weight:pr.weight??b.weight,weightAdj:pr.weight_adjustment,tilt:pr.tilt_adjustment,propeller:pr.propeller,parts:Array.isArray(pr.parts)?pr.parts.map(p=>String(p.number)+(p.quantity?'×'+p.quantity:'')).join(' / '):'',exhibition:pr.exhibition_time,exSt:formatST(pr.start_timing)};
    el.querySelectorAll('[data-k]').forEach(x=>{if(vals[x.dataset.k]!==undefined&&vals[x.dataset.k]!==null&&vals[x.dataset.k]!==''){x.value=String(vals[x.dataset.k]);entryFilled++}});
    const rel=resultEls[i];rel.querySelectorAll('[data-k]').forEach(x=>{
     if(x.dataset.k==='rank'&&Number.isInteger(Number(rr.place_number))&&rr.place_number>=1&&rr.place_number<=6){x.value=String(rr.place_number);resultFilled++}
@@ -262,9 +266,8 @@ $('fetchRace').onclick=async()=>{
     if(x.dataset.k==='course'&&rr.course_number!==undefined&&rr.course_number!==null){x.value=String(rr.course_number);resultFilled++}
    });
   }
-  for(const [key,value] of [['wind',preview.wind_speed],['wave',preview.wave_height],['temp',preview.air_temperature],['waterTemp',preview.water_temperature],['weather',preview.weather_number_source||preview.weather_number_source_text]]){if(value!==undefined&&value!==null&&value!==''){$(key).value=String(value);weatherFilled++}}
-  const dir=preview.wind_direction_number_source||preview.wind_direction_number_source_text||'';
-  if(dir.includes('向かい')){$('windDir').value='向かい風';weatherFilled++}else if(dir.includes('追い')){$('windDir').value='追い風';weatherFilled++}else if(dir.includes('左')){$('windDir').value='左横風';weatherFilled++}else if(dir.includes('右')){$('windDir').value='右横風';weatherFilled++}
+  for(const [key,value] of [['wind',preview.wind_speed],['wave',preview.wave_height],['temp',preview.air_temperature],['waterTemp',preview.water_temperature],['weather',weatherLabel(preview.weather_number)]]){if(value!==undefined&&value!==null&&value!==''){$(key).value=String(value);weatherFilled++}}
+  const dir=windLabel(preview.wind_direction_number);if(dir){$('windDir').value=dir;weatherFilled++;}
   const resultMessage=resultFilled>0?`レース結果 ${resultFilled}/18項目`:'レース結果は未公開、または取得対象データがありません';
   $('fetchMsg').textContent=`取得完了：${venue} ${date} ${raceNo}R。出走表・展示 ${entryFilled}項目、気象 ${weatherFilled}項目、${resultMessage}。未公開・欠損項目は空欄です。内容を確認してから保存してください。`;
  }catch(err){$('fetchMsg').textContent=`取得できませんでした：${err.message} 手入力は引き続き利用できます。`}
@@ -297,7 +300,7 @@ $('fetchAllRaces').onclick=async()=>{
    let entryChanged=false,resultChanged=false;
    for(let i=0;i<6;i++){
     const k=String(i+1),b=base[k]||{},pr=preR[k]||{},rr=resR[k]||{};
-    const entryValues={racer:b.name,motor:b.motor_number,registration:b.number,racerClass:b.rank_number_source,branch:b.branch_number_source,nationalWin:b.national_win_rate,national2:b.national_top_2_percent,national3:b.national_top_3_percent,localWin:b.local_win_rate,local2:b.local_top_2_percent,local3:b.local_top_3_percent,motor2:b.motor_top_2_percent,motor3:b.motor_top_3_percent,boatNo:b.boat_number,boat2:b.boat_top_2_percent,boat3:b.boat_top_3_percent,weight:pr.weight??b.weight,weightAdj:pr.weight_adjustment,tilt:pr.tilt_adjustment,propeller:pr.propeller,parts:Array.isArray(pr.parts)?pr.parts.map(p=>String(p.number)+(p.quantity?'×'+p.quantity:'')).join(' / '):'',exhibition:pr.exhibition_time,exSt:formatST(pr.start_timing)};
+    const entryValues={racer:b.name,motor:b.motor_number,registration:b.number,racerClass:rankLabel(b.rank_number),branch:branchLabel(b.branch_number),nationalWin:b.national_win_rate,national2:b.national_top_2_percent,national3:b.national_top_3_percent,localWin:b.local_win_rate,local2:b.local_top_2_percent,local3:b.local_top_3_percent,motor2:b.motor_top_2_percent,motor3:b.motor_top_3_percent,boatNo:b.boat_number,boat2:b.boat_top_2_percent,boat3:b.boat_top_3_percent,weight:pr.weight??b.weight,weightAdj:pr.weight_adjustment,tilt:pr.tilt_adjustment,propeller:pr.propeller,parts:Array.isArray(pr.parts)?pr.parts.map(p=>String(p.number)+(p.quantity?'×'+p.quantity:'')).join(' / '):'',exhibition:pr.exhibition_time,exSt:formatST(pr.start_timing)};
     for(const [field,value] of Object.entries(entryValues)){
      if(value!==undefined&&value!==null&&value!==''&&String(boats[i][field]??'')!==String(value)){boats[i][field]=String(value);entryChanged=true;entryRowsUpdated++;}
     }
@@ -309,8 +312,7 @@ $('fetchAllRaces').onclick=async()=>{
      if(String(results[i][field]??'')!==String(value)){results[i][field]=value;resultChanged=true;resultRowsUpdated++;}
     }
    }
-   let windDir=preview.wind_direction_number_source||preview.wind_direction_number_source_text||'';
-   if(windDir.includes('向かい'))windDir='向かい風';else if(windDir.includes('追い'))windDir='追い風';else if(windDir.includes('左'))windDir='左横風';else if(windDir.includes('右'))windDir='右横風';else windDir=existing?.windDir||'';
+   let windDir=windLabel(preview.wind_direction_number);if(!windDir)windDir=existing?.windDir||'';
    const hasWeather=(preview.wind_speed!==undefined&&preview.wind_speed!==null)||(preview.wave_height!==undefined&&preview.wave_height!==null)||(preview.air_temperature!==undefined&&preview.air_temperature!==null);
    if(existing){
     existing.boats=boats;existing.results=results;
