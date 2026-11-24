@@ -66,7 +66,7 @@ Deno.serve(async(req:Request)=>{
    });
    const racer={name:b.racer_name??b.name??null,registration_no:b.registration_number??null,class:b.rank_number??null,branch:b.branch_number??null,national_win_rate:num(b.national_win_rate),national_place_rate:num(b.national_place_rate),local_win_rate:num(b.local_win_rate),local_place_rate:num(b.local_place_rate)};
    const current={exhibition_time:num(p.exhibition_time),lap_time:num(p.lap_time),straight_time:num(p.straight_time),turn_time:num(p.turn_time),exhibition_st:st(p.start_timing),actual_st:st(r.start_timing)};
-   boats.push({lane,motor_number:motor,boat_number:num(b.boat_number),racer,motor_rates:{win:num(b.motor_win_rate),place:num(b.motor_place_rate)},current,history:windows,history_rows:rows.length,history_source:rows.length?"詳細履歴":"未蓄積"});
+   boats.push({lane,motor_number:motor,boat_number:num(b.boat_number),racer,motor_rates:{win:num(b.motor_win_rate),place:num(b.motor_place_rate)},current,history:windows,history_rows:rows.length,history_days:rows.length,history_source:detailRows.length&&legacyRows.length?"詳細履歴＋日別集計":detailRows.length?"詳細履歴":legacyRows.length?"日別集計":"未蓄積"});
   }
   return json({date,venue_code:venueCode,venue_name:names[String(venueCode)],race_no:raceNo,boats,source:"boatraceopenapi-v1",generated_at:new Date().toISOString()});
  }catch(e){return json({error:e instanceof Error?e.message:"処理エラー"},500)}
