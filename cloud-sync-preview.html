@@ -623,9 +623,9 @@ async function importMotorHistorySixMonths(){
  for(let d=new Date(start);d<=end;d.setUTCDate(d.getUTCDate()+1))dates.push(fmt(d));
  try{
   out.textContent='保存済みの日付を確認しています…';
-  const {data:existing,error:readError}=await cloudClient.from('historical_motor_daily').select('race_date').gte('race_date','2026-05-24').lte('race_date','2026-11-24');
+  const {data:existing,error:readError}=await cloudClient.from('historical_motor_daily').select('race_date,motor_data').gte('race_date','2026-05-24').lte('race_date','2026-11-24');
   if(readError)throw readError;
-  const have=new Set((existing||[]).map(x=>x.race_date));
+  const have=new Set((existing||[]).filter(x=>Number(x.motor_data?.entries_seen)>0 && x.motor_data?.venues && Object.keys(x.motor_data.venues).length>0).map(x=>x.race_date));
   const missing=dates.filter(d=>!have.has(d));
   if(!missing.length){out.textContent='過去6か月分はすでに取り込み済みです。';return}
   let saved=0,skipped=0,failed=0,totalRaces=0,totalEntries=0;
