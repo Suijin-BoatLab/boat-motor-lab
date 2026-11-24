@@ -63,6 +63,13 @@ footer{color:var(--muted);font-size:11px;text-align:center;padding:24px}
     </div>
   </div>
   <div class="panel">
+    <h2>出走表・直前情報を自動取得</h2>
+    <p class="small muted">選択した日付・競艇場・レース番号の公開データを読み込み、選手名・モーター番号・展示タイム・展示ST・気象情報を入力欄へ反映します。</p>
+    <div class="actions"><button class="btn primary" id="fetchRace">選択レースのデータを取得</button></div>
+    <p class="small muted" id="fetchMsg" aria-live="polite">取得前です。取得データは確認してから保存してください。</p>
+    <div class="notice">非公式APIを利用します。更新遅延・欠損・誤りがあり得ます。取得できない項目は空欄のままです。公式情報と照合してください。</div>
+  </div>
+  <div class="panel">
     <h2>6艇まとめて入力 <span class="tag">展示後</span></h2>
     <div class="muted small">タイムは公式表示に合わせて入力。分からない項目は空欄でOK。</div>
     <div id="boats"></div>
@@ -133,6 +140,40 @@ $('raceNo').innerHTML=Array.from({length:12},(_,i)=>`<option>${i+1}R</option>`).
 $('raceDate').value=new Date().toLocaleDateString('sv-SE');
 document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
 function showTab(tab){document.querySelectorAll('main section').forEach(s=>s.classList.toggle('hidden',s.id!==tab));document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));if(tab==='history')renderHistory();if(tab==='analysis')renderAnalysis();if(tab==='backup')$('backupCount').textContent=races.length+'レース';window.scrollTo(0,0)}
+const stadiumCodes={'桐生':1,'戸田':2,'江戸川':3,'平和島':4,'多摩川':5,'浜名湖':6,'蒲郡':7,'常滑':8,'津':9,'三国':10,'びわこ':11,'住之江':12,'尼崎':13,'鳴門':14,'丸亀':15,'児島':16,'宮島':17,'徳山':18,'下関':19,'若松':20,'芦屋':21,'福岡':22,'唐津':23,'大村':24};
+function setIf(el,value){if(value!==undefined&&value!==null&&value!=='')el.value=String(value)}
+function formatST(value){if(value===undefined||value===null||value==='')return '';let n=Number(value);if(!Number.isFinite(n))return String(value);return n.toFixed(2)}
+$('fetchRace').onclick=async()=>{
+ const venue=$('venue').value,date=$('raceDate').value,raceNo=parseInt($('raceNo').value,10),stadium=stadiumCodes[venue];
+ if(!date){$('fetchMsg').textContent='開催日を選択してください。';return}
+ if(!stadium||!raceNo){$('fetchMsg').textContent='競艇場またはレース番号を確認してください。';return}
+ const compact=date.replaceAll('-',''),year=date.slice(0,4),url=`https://boatraceopenapi.github.io/api/v1/${year}/${compact}.json`;
+ const btn=$('fetchRace');btn.disabled=true;btn.textContent='取得中…';$('fetchMsg').textContent='公開データを読み込んでいます。';
+ try{
+  const response=await fetch(url,{cache:'no-store'});
+  if(!response.ok)throw new Error(response.status===404?'この日付のデータはまだ公開されていないか、対象外です。':`データ取得エラー（${response.status}）`);
+  const data=await response.json();
+  const race=data?.programs?.stadiums?.[String(stadium)]?.races?.[String(raceNo)];
+  if(!race)throw new Error('選択した競艇場・レースのデータが見つかりません。開催日や開催状況を確認してください。');
+  const preview=race.preview||{},result=race.result||{},base=race.racers||{},preR=preview.racers||{},resR=result.racers||{};
+  const boatEls=$('boats').querySelectorAll('.boat'),resultEls=$('results').querySelectorAll('.boat');let filled=0;
+  for(let i=0;i<6;i++){
+   const key=String(i+1),b=base[key]||{},pr=preR[key]||{},rr=resR[key]||{},el=boatEls[i];
+   const vals={racer:b.name,motor:b.motor_number,exhibition:pr.exhibition_time,exSt:formatST(pr.start_timing)};
+   el.querySelectorAll('[data-k]').forEach(x=>{if(vals[x.dataset.k]!==undefined&&vals[x.dataset.k]!==null&&vals[x.dataset.k]!==''){x.value=String(vals[x.dataset.k]);filled++}});
+   const rel=resultEls[i];rel.querySelectorAll('[data-k]').forEach(x=>{
+    if(x.dataset.k==='rank'&&rr.place_number>=1&&rr.place_number<=6)x.value=String(rr.place_number);
+    if(x.dataset.k==='actualSt')setIf(x,formatST(rr.start_timing));
+    if(x.dataset.k==='course')setIf(x,rr.course_number);
+   });
+  }
+  setIf($('wind'),preview.wind_speed);setIf($('wave'),preview.wave_height);setIf($('temp'),preview.air_temperature);
+  const dir=preview.wind_direction_number_source||'';
+  if(dir.includes('向かい'))$('windDir').value='向かい風';else if(dir.includes('追い'))$('windDir').value='追い風';else if(dir.includes('左'))$('windDir').value='左横風';else if(dir.includes('右'))$('windDir').value='右横風';
+  $('fetchMsg').textContent=`取得完了：${venue} ${date} ${raceNo}R。入力反映 ${filled}項目。未公開・欠損項目は空欄です。内容を確認してから保存してください。`;
+ }catch(err){$('fetchMsg').textContent=`取得できませんでした：${err.message} 手入力は引き続き利用できます。`}
+ finally{btn.disabled=false;btn.textContent='選択レースのデータを取得'}
+};
 function collect(){
  const boats=[...$('boats').querySelectorAll('.boat')].map((el,i)=>{let o={lane:i+1};el.querySelectorAll('[data-k]').forEach(x=>o[x.dataset.k]=x.value);return o});
  const results=[...$('results').querySelectorAll('.boat')].map((el,i)=>{let o={lane:i+1};el.querySelectorAll('[data-k]').forEach(x=>o[x.dataset.k]=x.value);return o});
