@@ -313,7 +313,7 @@ $('fetchAllRaces').onclick=async()=>{
     }
    }
    let windDir=windLabel(preview.wind_direction_number);if(!windDir)windDir=existing?.windDir||'';
-   const hasWeather=(preview.wind_speed!==undefined&&preview.wind_speed!==null)||(preview.wave_height!==undefined&&preview.wave_height!==null)||(preview.air_temperature!==undefined&&preview.air_temperature!==null);
+   const hasWeather=(preview.wind_speed!==undefined&&preview.wind_speed!==null)||(preview.wave_height!==undefined&&preview.wave_height!==null)||(preview.air_temperature!==undefined&&preview.air_temperature!==null)||(preview.water_temperature!==undefined&&preview.water_temperature!==null)||!!weatherLabel(preview.weather_number);
    if(existing){
     existing.boats=boats;existing.results=results;
     if(windDir)existing.windDir=windDir;
@@ -321,11 +321,11 @@ $('fetchAllRaces').onclick=async()=>{
     if(preview.wave_height!==undefined&&preview.wave_height!==null)existing.wave=String(preview.wave_height);
     if(preview.air_temperature!==undefined&&preview.air_temperature!==null)existing.temp=String(preview.air_temperature);
     if(preview.water_temperature!==undefined&&preview.water_temperature!==null)existing.waterTemp=String(preview.water_temperature);
-    if(preview.weather_number_source||preview.weather_number_source_text)existing.weather=preview.weather_number_source||preview.weather_number_source_text;
+    if(weatherLabel(preview.weather_number))existing.weather=weatherLabel(preview.weather_number);
     existing.updatedAt=now;
     if(entryChanged||resultChanged||hasWeather)updated++;else unchanged++;
    }else{
-    races.push({id:`bulk-${date}-${stadium}-${n}-${Date.now()}-${iSafeId(n)}`,venue,date,raceNo:`${n}R`,windDir,wind:preview.wind_speed??'',wave:preview.wave_height??'',temp:preview.air_temperature??'',waterTemp:preview.water_temperature??'',weather:preview.weather_number_source||preview.weather_number_source_text||'',water:'',boats,results,memo:'一括取得データ。未取得・欠損項目は空欄。公式情報との照合推奨。',updatedAt:now});
+    races.push({id:`bulk-${date}-${stadium}-${n}-${Date.now()}-${iSafeId(n)}`,venue,date,raceNo:`${n}R`,windDir,wind:preview.wind_speed??'',wave:preview.wave_height??'',temp:preview.air_temperature??'',waterTemp:preview.water_temperature??'',weather:weatherLabel(preview.weather_number),water:'',boats,results,memo:'一括取得データ。未取得・欠損項目は空欄。公式情報との照合推奨。',updatedAt:now});
     added++;
    }
   }
