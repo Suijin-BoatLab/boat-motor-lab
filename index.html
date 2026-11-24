@@ -64,7 +64,7 @@ footer{color:var(--muted);font-size:11px;text-align:center;padding:24px}
   </div>
   <div class="panel">
     <h2>出走表・直前情報を自動取得</h2>
-    <p class="small muted">選択した日付・競艇場・レース番号の公開データを読み込み、選手名・モーター番号・展示タイム・展示ST・気象情報を入力欄へ反映します。</p>
+    <p class="small muted">選択した日付・競艇場・レース番号の公開データを読み込み、選手情報・勝率・モーター／ボート成績・直前情報・気象・結果を取得できる範囲で入力欄へ反映します。</p>
     <div class="actions"><button class="btn primary" id="fetchRace">選択レースのデータを取得</button><button class="btn secondary" id="fetchAllRaces">当日の全12Rを再取得・結果更新</button></div>
     <p class="small muted" id="fetchMsg" aria-live="polite">取得前です。取得データは確認してから保存してください。</p>
     <p class="small muted" id="bulkMsg" aria-live="polite">1R〜12Rを再取得します。既存記録は展示メモ等を残したまま、公開済みのレース結果だけを更新します。</p>
@@ -195,7 +195,7 @@ $('fetchRace').onclick=async()=>{
  if(!date){$('fetchMsg').textContent='開催日を選択してください。';return}
  if(!stadium||!raceNo){$('fetchMsg').textContent='競艇場またはレース番号を確認してください。';return}
  const compact=date.replaceAll('-',''),year=date.slice(0,4),url=`https://boatraceopenapi.github.io/api/v1/${year}/${compact}.json`;
- if(!confirm('取得を実行します。選手名・モーター番号・展示タイム・展示ST・気象・レース結果の欄は、今回の取得内容で更新されます。周回・直線・回り足・展示気配・メモはそのまま残します。よろしいですか？'))return;
+ if(!confirm('取得を実行します。選手情報・勝率・モーター／ボート成績・展示タイム・展示ST・体重・チルト・部品交換・気象・レース結果を取得できた範囲で更新します。周回・直線・回り足・展示気配・メモはそのまま残します。よろしいですか？'))return;
  const btn=$('fetchRace');btn.disabled=true;btn.textContent='取得中…';$('fetchMsg').textContent='公開データを読み込んでいます。';
  // Clear API-managed fields first so data from a previously selected race cannot remain by mistake.
  $('boats').querySelectorAll('.boat').forEach(el=>el.querySelectorAll('[data-k="racer"],[data-k="motor"],[data-k="exhibition"],[data-k="exSt"]').forEach(x=>x.value=''));
@@ -223,7 +223,7 @@ $('fetchRace').onclick=async()=>{
   const dir=preview.wind_direction_number_source||preview.wind_direction_number_source_text||'';
   if(dir.includes('向かい')){$('windDir').value='向かい風';weatherFilled++}else if(dir.includes('追い')){$('windDir').value='追い風';weatherFilled++}else if(dir.includes('左')){$('windDir').value='左横風';weatherFilled++}else if(dir.includes('右')){$('windDir').value='右横風';weatherFilled++}
   const resultMessage=resultFilled>0?`レース結果 ${resultFilled}/18項目`:'レース結果は未公開、または取得対象データがありません';
-  $('fetchMsg').textContent=`取得完了：${venue} ${date} ${raceNo}R。出走表・展示 ${entryFilled}/24項目、気象 ${weatherFilled}/4項目、${resultMessage}。未公開・欠損項目は空欄です。内容を確認してから保存してください。`;
+  $('fetchMsg').textContent=`取得完了：${venue} ${date} ${raceNo}R。出走表・展示 ${entryFilled}項目、気象 ${weatherFilled}項目、${resultMessage}。未公開・欠損項目は空欄です。内容を確認してから保存してください。`;
  }catch(err){$('fetchMsg').textContent=`取得できませんでした：${err.message} 手入力は引き続き利用できます。`}
  finally{btn.disabled=false;btn.textContent='選択レースのデータを取得'}
 };
@@ -232,7 +232,7 @@ $('fetchAllRaces').onclick=async()=>{
  const venue=$('venue').value,date=$('raceDate').value,stadium=stadiumCodes[venue];
  if(!date){$('bulkMsg').textContent='開催日を選択してください。';return}
  if(!stadium){$('bulkMsg').textContent='競艇場を確認してください。';return}
- if(!confirm(`${venue} ${date} の1R〜12Rを再取得します。既存レースは展示データ・メモを残し、公開済みの結果を更新します。よろしいですか？`))return;
+ if(!confirm(`${venue} ${date} の1R〜12Rを再取得します。既存レースは手入力の周回・直線・回り足・展示気配・メモを残し、取得可能な出走表・直前情報・結果を更新します。よろしいですか？`))return;
  const btn=$('fetchAllRaces');btn.disabled=true;btn.textContent='12R再取得中…';$('bulkMsg').textContent='公開データを読み込んでいます。画面を閉じずにお待ちください。';
  try{
   const compact=date.replaceAll('-',''),year=date.slice(0,4),url=`https://boatraceopenapi.github.io/api/v1/${year}/${compact}.json`;
