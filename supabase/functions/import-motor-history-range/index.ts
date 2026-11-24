@@ -86,9 +86,11 @@ Deno.serve(async (req: Request) => {
               add(p.lap_time, "lap_sum", "lap_count");
               add(p.straight_time, "straight_sum", "straight_count");
               add(p.turn_time, "turn_sum", "turn_count");
-              const st = Number(p.start_timing);
-              if (p.start_timing !== null && p.start_timing !== undefined && p.start_timing !== "" && Number.isFinite(st)) {
-                if (st < 0) m.exhibition_f_count++; else { m.exhibition_st_sum += st; m.exhibition_st_count++; }
+              if (exST.isF || (exST.value !== null && exST.value < 0)) {
+                m.exhibition_f_count++;
+              } else if (exST.value !== null) {
+                m.exhibition_st_sum += exST.value;
+                m.exhibition_st_count++;
               }
             }
           }
