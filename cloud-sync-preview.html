@@ -618,7 +618,7 @@ async function cloudBackfillExisting(){
  if(!candidates.length){cloudStatus('補完対象の2026年以降の記録がありません。');return}
  if(!confirm('既存レースの空欄だけを公開データで補完します。入力済みの値・展示メモ・周回・直線・回り足は上書きしません。補完後はクラウドにも保存します。実行しますか？'))return;
  cloudBusy=true;const btn=$('cloudBackfill');btn.disabled=true;
- const cache=new Map();let updated=0,filled=0,missing=0,failed=0;
+ const cache=new Map();let updated=0,filled=0,missing=0,failed=0,uploaded=0,uploadFailed=0;const changedRaces=[];
  const put=(obj,key,value)=>{if(value===undefined||value===null||value==='')return false;if(obj[key]!==undefined&&obj[key]!==null&&obj[key]!=='')return false;obj[key]=value;filled++;return true};
  try{
   for(const r of candidates){
@@ -643,11 +643,20 @@ async function cloudBackfillExisting(){
      put(res,'rank',rr.place_number);put(res,'actualSt',rr.start_timing===undefined?'':formatST(rr.start_timing));put(res,'course',rr.course_number);
     }
     put(r,'wind',preview.wind_speed);put(r,'wave',preview.wave_height);put(r,'temp',preview.air_temperature);put(r,'waterTemp',preview.water_temperature);put(r,'weather',weatherLabel(preview.weather_number));put(r,'windDir',windLabel(preview.wind_direction_number));
-    r.boats.sort((a,b)=>Number(a.lane)-Number(b.lane));r.results.sort((a,b)=>Number(a.lane)-Number(b.lane));r.updatedAt=new Date().toISOString();updated++;
+    r.boats.sort((a,b)=>Number(a.lane)-Number(b.lane));r.results.sort((a,b)=>Number(a.lane)-Number(b.lane));r.updatedAt=new Date().toISOString();updated++;changedRaces.push(r);
    }catch(err){failed++;console.warn('Backfill failed',venue,date,r.raceNo,err)}
   }
-  if(updated){cloudApplyingRemote=true;persist();cloudApplyingRemote=false;await cloudSync()}
-  cloudStatus(`補完完了：対象 ${candidates.length}レース／更新 ${updated}レース／追加 ${filled}項目／データなし ${missing}レース／取得エラー ${failed}レース。既存入力は保持しました。`);
+  if(updated){
+   cloudApplyingRemote=true;persist();cloudApplyingRemote=false;
+   for(const r of changedRaces){try{if(await cloudUploadRace(r))uploaded++;else uploadFailed++}catch(err){uploadFailed++;console.warn('Cloud backfill upload failed',r.venue,r.date,r.raceNo,err)}}
+  }
+  let verifiedEntries=0,verifiedFields=0;
+  if(uploaded){
+   const {data:verifyRows,error:verifyErr}=await cloudClient.from('race_records').select('race_entries(*)').eq('user_id',cloudUser.id).eq('race_date',candidates[0].date);
+   if(verifyErr)throw verifyErr;
+   for(const row of verifyRows||[])for(const e of row.race_entries||[]){verifiedEntries++;if(e.racer_registration_no)verifiedFields++;if(e.racer_national_win_rate!==null)verifiedFields++;if(e.racer_local_win_rate!==null)verifiedFields++;if(e.motor_place2_rate!==null)verifiedFields++;if(e.boat_number!==null)verifiedFields++}
+  }
+  cloudStatus(`補完完了：対象 ${candidates.length}レース／更新 ${updated}レース／追加 ${filled}項目／クラウド保存 ${uploaded}レース／保存失敗 ${uploadFailed}レース／データなし ${missing}レース／取得エラー ${failed}レース。クラウド確認 ${verifiedEntries}艇・主要項目 ${verifiedFields}件。`);
  }catch(err){cloudApplyingRemote=false;cloudStatus('補完エラー：'+(err.message||'不明なエラー'))}
  finally{cloudBusy=false;btn.disabled=false}
 }
