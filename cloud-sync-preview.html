@@ -142,7 +142,20 @@ footer{color:var(--muted);font-size:11px;text-align:center;padding:24px}
   <div class="panel"><h2>登録状況</h2><div class="statgrid" id="stats"></div></div>
   <div class="panel"><h2>モーター別 展示データ</h2><div id="motorTable"></div></div>
   <div class="panel"><h2>過去データ取り込み</h2><p class="small muted">2026/05/24〜2026/11/24の公開データを、7日ずつサーバー側で集計して保存します。取り込み済みの日付は自動で飛ばします。</p><div class="actions"><button class="btn primary" id="historyImportStart">過去6か月分を取り込む</button></div><p class="small muted" id="historyImportStatus" aria-live="polite">ログイン後に実行できます。</p></div>
-  <div class="panel"><h2>モーターの時系列推移</h2><p class="small muted">同じ競艇場・同じモーター番号を日付ごとに集計。記録が複数日ある場合に変化を比較できます。</p><div id="motorTrendTable"></div></div>
+  <div class="panel"><h2>過去データ 時系列推移（クラウド）</h2>
+   <p class="small muted">過去6か月分の日別集計を表示します。全24場は31日以内、6か月表示は競艇場を選択してください。</p>
+   <div class="boatgrid">
+    <div class="field"><label for="historyVenue">競艇場</label><select id="historyVenue"><option value="">全24場（31日以内）</option><option>桐生</option><option>戸田</option><option>江戸川</option><option>平和島</option><option>多摩川</option><option>浜名湖</option><option>蒲郡</option><option>常滑</option><option>津</option><option>三国</option><option>びわこ</option><option>住之江</option><option>尼崎</option><option>鳴門</option><option>丸亀</option><option>児島</option><option>宮島</option><option>徳山</option><option>下関</option><option>若松</option><option>芦屋</option><option>福岡</option><option>唐津</option><option>大村</option></select></div>
+    <div class="field"><label for="historyMotor">モーター番号（任意）</label><input id="historyMotor" type="text" inputmode="numeric" placeholder="例：12"></div>
+    <div class="field"><label for="historyFrom">開始日</label><input id="historyFrom" type="date" value="2026-10-26"></div>
+    <div class="field"><label for="historyTo">終了日</label><input id="historyTo" type="date" value="2026-11-24"></div>
+   </div>
+   <div class="actions"><button class="btn primary" id="historySearch">履歴を表示</button><button class="btn secondary" id="historySixMonths">選択場の6か月</button></div>
+   <p class="small muted" id="historyQueryStatus" aria-live="polite">ログイン後に履歴を読み込めます。</p>
+   <div id="historicalTrendTable"></div>
+   <div class="actions"><button class="btn secondary" id="historyPrev">前へ</button><span class="small muted" id="historyPageLabel">—</span><button class="btn secondary" id="historyNext">次へ</button></div>
+  </div>
+  <div class="panel"><h2>手入力・保存レースの時系列推移</h2><p class="small muted">この端末・クラウドに保存されたレース記録を日付ごとに集計します。</p><div id="motorTrendTable"></div></div>
   <div class="panel"><h2>選手別 成績データ</h2><div id="racerTable"></div><p class="small muted">こちらは保存された本番結果の集計です。選手の能力を因果的に判定するものではなく、モーター評価とは別に確認するための参考値です。</p></div>
   <div class="panel"><h2>読み方</h2><p class="small muted">平均タイムは小さいほど速い傾向です。展示STの平均は数値STのみで計算し、F.表記は平均から除外して別カウントします。モーター番号は競艇場ごとに別集計です。選手成績はモーター性能とは別表で確認してください。出走数が少ない場合や水面・気象条件が異なる場合は単純比較できません。</p></div>
 </section>
@@ -225,7 +238,7 @@ $('venue').innerHTML=venues.map(v=>`<option>${v}</option>`).join('');
 $('raceNo').innerHTML=Array.from({length:12},(_,i)=>`<option>${i+1}R</option>`).join('');
 $('raceDate').value=new Date().toLocaleDateString('sv-SE');
 document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
-function showTab(tab){document.querySelectorAll('main section').forEach(s=>s.classList.toggle('hidden',s.id!==tab));document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));if(tab==='history')renderHistory();if(tab==='analysis')renderAnalysis();if(tab==='backup'){$('backupCount').textContent=races.length+'レース';updateBackupStatus();}window.scrollTo(0,0)}
+function showTab(tab){document.querySelectorAll('main section').forEach(s=>s.classList.toggle('hidden',s.id!==tab));document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));if(tab==='history')renderHistory();if(tab==='analysis'){renderAnalysis();loadHistoricalMotorHistory();}if(tab==='backup'){$('backupCount').textContent=races.length+'レース';updateBackupStatus();}window.scrollTo(0,0)}
 const stadiumCodes={'桐生':1,'戸田':2,'江戸川':3,'平和島':4,'多摩川':5,'浜名湖':6,'蒲郡':7,'常滑':8,'津':9,'三国':10,'びわこ':11,'住之江':12,'尼崎':13,'鳴門':14,'丸亀':15,'児島':16,'宮島':17,'徳山':18,'下関':19,'若松':20,'芦屋':21,'福岡':22,'唐津':23,'大村':24};
 function setIf(el,value){if(value!==undefined&&value!==null&&value!=='')el.value=String(value)}
 const rankLabel=n=>({1:'A1',2:'A2',3:'B1',4:'B2'})[Number(n)]||'';
@@ -427,6 +440,46 @@ function renderAnalysis(){
 }
 
 function avg(a){return a.length?(a.reduce((x,y)=>x+y,0)/a.length).toFixed(2):'—'}
+
+let historicalMotorRows=[],historicalMotorPage=0;
+const HISTORY_PAGE_SIZE=50;
+async function loadHistoricalMotorHistory(){
+ const status=$('historyQueryStatus');
+ if(!cloudClient||!cloudUser){status.textContent='クラウドにログインすると過去データを表示できます。';return}
+ if(!$('historyFrom').value)$('historyFrom').value='2026-10-26';
+ if(!$('historyTo').value)$('historyTo').value='2026-11-24';
+ await queryHistoricalMotorHistory();
+}
+async function queryHistoricalMotorHistory(){
+ const status=$('historyQueryStatus'),table=$('historicalTrendTable');
+ if(!cloudClient||!cloudUser){status.textContent='クラウドにログインしてください。';return}
+ const from=$('historyFrom').value,to=$('historyTo').value,venue=$('historyVenue').value,motor=$('historyMotor').value.trim();
+ if(!from||!to||from>to){status.textContent='開始日と終了日を正しく指定してください。';return}
+ const btn=$('historySearch');btn.disabled=true;status.textContent='クラウドの過去データを集計しています…';table.innerHTML='';
+ try{
+  const {data,error}=await cloudClient.functions.invoke('get-motor-history',{body:{from,to,venue,motor}});
+  if(error){const detail=error?.context?.body?await error.context.body.text().catch(()=> ''):'';throw new Error(detail||error.message)}
+  if(data?.error)throw new Error(data.error);
+  historicalMotorRows=data.rows||[];historicalMotorPage=0;renderHistoricalMotorPage();
+  status.textContent='取得 '+historicalMotorRows.length.toLocaleString()+'件／'+from+'〜'+to+'／'+(venue||'全24場');
+ }catch(err){historicalMotorRows=[];table.innerHTML='<div class="empty">'+(err.message||'履歴を読み込めませんでした')+'</div>';status.textContent='履歴の取得に失敗しました。'}
+ finally{btn.disabled=false}
+}
+function renderHistoricalMotorPage(){
+ const table=$('historicalTrendTable'),start=historicalMotorPage*HISTORY_PAGE_SIZE,items=historicalMotorRows.slice(start,start+HISTORY_PAGE_SIZE);
+ table.innerHTML=items.length?'<div class="tablewrap"><table><thead><tr><th>日付</th><th>競艇場</th><th>モーター</th><th>記録艇数</th><th>平均展示</th><th>通常ST平均</th><th>F</th><th>1着</th></tr></thead><tbody>'+items.map(d=>'<tr><td>'+d.date+'</td><td>'+d.venue+'</td><td>'+d.motor+'</td><td>'+d.count+'</td><td>'+(d.ex==null?'—':Number(d.ex).toFixed(2))+'</td><td>'+(d.st==null?'—':Number(d.st).toFixed(3))+'</td><td>'+d.f+'</td><td>'+d.wins+'</td></tr>').join('')+'</tbody></table></div>':'<div class="empty">該当する履歴データがありません。</div>';
+ const pages=Math.max(1,Math.ceil(historicalMotorRows.length/HISTORY_PAGE_SIZE));
+ $('historyPageLabel').textContent=(historicalMotorRows.length?historicalMotorPage+1:0)+' / '+pages+'ページ（全'+historicalMotorRows.length.toLocaleString()+'件）';
+ $('historyPrev').disabled=historicalMotorPage<=0;$('historyNext').disabled=historicalMotorPage>=pages-1;
+}
+$('historySearch').onclick=queryHistoricalMotorHistory;
+$('historySixMonths').onclick=()=>{
+ if(!$('historyVenue').value){$('historyQueryStatus').textContent='6か月表示には競艇場を選択してください。';return}
+ $('historyFrom').value='2026-05-24';$('historyTo').value='2026-11-24';queryHistoricalMotorHistory();
+};
+$('historyPrev').onclick=()=>{if(historicalMotorPage>0){historicalMotorPage--;renderHistoricalMotorPage()}};
+$('historyNext').onclick=()=>{if((historicalMotorPage+1)*HISTORY_PAGE_SIZE<historicalMotorRows.length){historicalMotorPage++;renderHistoricalMotorPage()}};
+
 $('analysisVenue').onchange=renderAnalysis;
 $('refreshHistory').onclick=renderHistory;
 updateBackupStatus();
