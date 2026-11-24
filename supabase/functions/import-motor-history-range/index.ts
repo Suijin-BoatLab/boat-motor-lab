@@ -23,8 +23,13 @@ Deno.serve(async (req: Request) => {
     if (authError || !auth.user) return json({ error: "認証を確認できません" }, 401);
     const body = await req.json();
     const dates = body?.dates;
-    if (!Array.isArray(dates) || dates.length < 1 || dates.length > 7 || dates.some((d: unknown) => typeof d !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(d))) {
-      return json({ error: "日付は正しい形式で1〜7日分指定してください" }, 400);
+    const validDate = (d: unknown): d is string =>
+      typeof d === "string" &&
+      /^\d{4}-\d{2}-\d{2}$/.test(d) &&
+      !Number.isNaN(Date.parse(d + "T00:00:00Z")) &&
+      new Date(d + "T00:00:00Z").toISOString().slice(0, 10) === d;
+    if (!Array.isArray(dates) || dates.length < 1 || dates.length > 7 || dates.some((d: unknown) => !validDate(d))) {
+      return json({ error: "実在する日付を1〜7日分指定してください（YYYY-MM-DD）" }, 400);
     }
     const uniqueDates = [...new Set(dates)] as string[];
     const saved: any[] = [], skipped: any[] = [], errors: any[] = [];
