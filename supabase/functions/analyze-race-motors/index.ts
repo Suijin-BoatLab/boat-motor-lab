@@ -47,7 +47,7 @@ Deno.serve(async(req:Request)=>{
     if(!found)continue;
     const count=Math.max(1,Number(found.count??found.entries??1)||1);
     const fCount=Math.max(0,Number(found.fCount??found.exhibition_f_count??0)||0);
-    legacyRows.push({race_date:day.race_date,exhibition_time:num(found.exAvg??found.avg_exhibition),exhibition_count:Number(found.exhibition_count??count),lap_time:num(found.avg_lap),straight_time:num(found.avg_straight),turn_time:num(found.avg_turn),exhibition_st:num(found.stAvg??found.avg_exhibition_st),exhibition_st_count:Number(found.exhibition_st_count??Math.max(0,count-fCount)),exhibition_st_is_f:false,_f_count:fCount,_first_places:Number(found.wins??found.first_places??0),_weight:count});
+    legacyRows.push({race_date:day.race_date,exhibition_time:num(found.exAvg??found.avg_exhibition),exhibition_count:Number(found.exhibition_count??count),lap_time:num(found.avg_lap),lap_count:Number(found.lap_count??0),straight_time:num(found.avg_straight),straight_count:Number(found.straight_count??0),turn_time:num(found.avg_turn),turn_count:Number(found.turn_count??0),exhibition_st:num(found.stAvg??found.avg_exhibition_st),exhibition_st_count:Number(found.exhibition_st_count??Math.max(0,count-fCount)),exhibition_st_is_f:false,_f_count:fCount,_first_places:Number(found.wins??found.first_places??0),_weight:count});
    }
    const rows=[...detailRows,...legacyRows].sort((a,b)=>b.race_date.localeCompare(a.race_date));
    const windows=[7,30,90,180].map(days=>{
@@ -56,7 +56,7 @@ Deno.serve(async(req:Request)=>{
     const out:any={days,count:sample.reduce((s,x)=>s+Number((x as any)._weight??1),0),days_with_data:sample.length,first_date:sample.length?sample[sample.length-1].race_date:null,last_date:sample.length?sample[0].race_date:null};
     for(const key of metrics){
      const valid=sample.filter(x=>key!=="exhibition_st"||(!x.exhibition_st_is_f&&(num(x.exhibition_st)??-1)>=0));
-     const values=valid.map(x=>({v:num((x as any)[key]),w:Number((x as any)._weight??1)})).filter(x=>x.v!==null);
+     const countKey=key+"_count";const values=valid.map(x=>({v:num((x as any)[key]),w:Number((x as any)[countKey]??(x as any)._weight??1)})).filter(x=>x.v!==null&&x.w>0);
      const total=values.reduce((s,x)=>s+x.w,0);
      out[key]=total?values.reduce((s,x)=>s+(x.v as number)*x.w,0)/total:null;out[key+"_count"]=total;
     }
