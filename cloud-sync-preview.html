@@ -661,7 +661,7 @@ async function cloudInit(){
  if(cloudUser)await cloudSync();
  cloudClient.auth.onAuthStateChange((_event,sessionNow)=>{
   cloudUser=sessionNow?.user||null;cloudRenderAuth();
-  if(cloudUser)setTimeout(()=>cloudSync(),0);
+  if(cloudUser)setTimeout(()=>{cloudSync();if(!$('analysis').classList.contains('hidden'))loadHistoricalMotorHistory()},0);
   else cloudStatus('ログアウトしました。端末内の記録と自動バックアップは残っています。');
  });
 }
