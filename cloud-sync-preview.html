@@ -599,7 +599,7 @@ async function cloudStorageSelfTest(){
  if(cloudBusy)return;
  cloudBusy=true;const btn=$('cloudTest');btn.disabled=true;
  const testDate='2099-12-31',testVenue='常滑',testRaceNo='11R';
- let recordId=null,cleanupOk=false;
+ let recordId=null,cleanupOk=false,testPassed=false,testError='';
  const sample={id:'cloud-self-test',venue:testVenue,date:testDate,raceNo:testRaceNo,windDir:'追い風',wind:'3',wave:'2',temp:'18',waterTemp:'16',weather:'晴',water:'安定',memo:'自動保存テスト'};
  sample.boats=Array.from({length:6},(_,i)=>({lane:i+1}));
  Object.assign(sample.boats[0],{racer:'保存テスト選手',registration:'9999',racerClass:'A1',branch:'長野',nationalWin:'7.77',national2:'66.6',national3:'77.7',localWin:'6.66',local2:'55.5',local3:'66.6',motor:'99',motor2:'44.4',motor3:'55.5',boatNo:'88',boat2:'33.3',boat3:'44.4',weight:'52.0',weightAdj:'0.5',tilt:'-0.5',propeller:'テスト',parts:'ピストン×2',exhibition:'6.66',lap:'37.00',straight:'7.00',turn:'5.50',exSt:'F.03'});
@@ -632,12 +632,13 @@ async function cloudStorageSelfTest(){
   };
   const failed=Object.entries(checks).filter(([,v])=>!v).map(([k])=>k);
   if(failed.length)throw new Error('保存値の不一致：'+failed.join('、'));
-  cloudStatus('保存テスト成功。追加11項目とF判定を確認しました。テストデータを削除しています…');
- }catch(err){cloudStatus('保存テスト：'+(err.message||'失敗'))}
+  testPassed=true;
+ }catch(err){testError=err.message||'不明なエラー'}
  finally{
   try{
    if(!recordId){
-    const {data:found}=await cloudClient.from('race_records').select('id').eq('user_id',cloudUser.id).eq('venue_code',cloudVenueCode(testVenue)).eq('race_date',testDate).eq('race_no',11).maybeSingle();
+    const {data:found,error:findErr}=await cloudClient.from('race_records').select('id').eq('user_id',cloudUser.id).eq('venue_code',cloudVenueCode(testVenue)).eq('race_date',testDate).eq('race_no',11).maybeSingle();
+    if(findErr)throw findErr;
     recordId=found?.id||null;
    }
    if(recordId){
@@ -647,8 +648,11 @@ async function cloudStorageSelfTest(){
     if(e2)throw e2;
    }
    cleanupOk=true;
-  }catch(cleanErr){cloudStatus('注意：テスト後の自動削除に失敗しました。保存・移行の記録一覧で2099-12-31 常滑11Rを確認してください。'+(cleanErr.message||''))}
-  if(cleanupOk)cloudStatus('保存テスト完了：追加項目・F判定とも正常。テストデータは自動削除済みです。');
+  }catch(cleanErr){cloudStatus('要確認：テスト後の自動削除に失敗しました。2099-12-31 常滑11Rを確認してください。'+(cleanErr.message||''))}
+  if(cleanupOk){
+   if(testPassed)cloudStatus('保存テスト合格：追加項目13件とF判定2件を保存・読み戻し確認。テストデータは自動削除済みです。');
+   else cloudStatus('保存テスト不合格：'+(testError||'テストが完了しませんでした')+'。テストデータは自動削除済みです。');
+  }
   cloudBusy=false;btn.disabled=false;
  }
 }
