@@ -502,11 +502,25 @@ function cloudLegacyFromRow(row){
  const entries=(row.race_entries||[]).slice().sort((a,b)=>a.lane-b.lane);
  const boats=Array.from({length:6},(_,i)=>{
   const e=entries.find(x=>x.lane===i+1)||{};
-  return e.source_data?.legacy_boat||{lane:i+1,racer:e.racer_name||'',motor:e.motor_number==null?'':String(e.motor_number),exhibition:e.exhibition_time??'',lap:e.lap_time??'',straight:e.straight_time??'',turn:e.turn_time??'',exSt:e.exhibition_st_raw||'',feel:e.subjective_feel||''};
+  const fallback={
+   lane:i+1,racer:e.racer_name||'',registration:e.racer_registration_no||'',
+   racerClass:e.racer_class||'',branch:e.racer_branch||'',
+   nationalWin:e.racer_national_win_rate??e.racer_win_rate??'',
+   national2:e.racer_national_place2_rate??e.racer_place_rate??'',
+   national3:e.racer_national_place3_rate??'',
+   localWin:e.racer_local_win_rate??'',local2:e.racer_local_place2_rate??'',local3:e.racer_local_place3_rate??'',
+   motor:e.motor_number==null?'':String(e.motor_number),motor2:e.motor_place2_rate??e.motor_place_rate??'',motor3:e.motor_place3_rate??'',
+   boatNo:e.boat_number==null?'':String(e.boat_number),boat2:e.boat_place2_rate??e.boat_place_rate??'',boat3:e.boat_place3_rate??'',
+   exhibition:e.exhibition_time??'',lap:e.lap_time??'',straight:e.straight_time??'',turn:e.turn_time??'',
+   exSt:e.exhibition_st_raw||'',feel:e.subjective_feel||'',weight:e.body_weight??'',weightAdj:e.weight_adjustment??'',
+   tilt:e.tilt??'',parts:e.parts_exchange||'',propeller:e.propeller_note||''
+  };
+  return {...fallback,...(e.source_data?.legacy_boat||{})};
  });
  const results=Array.from({length:6},(_,i)=>{
   const e=entries.find(x=>x.lane===i+1)||{};
-  return e.source_data?.legacy_result||{lane:i+1,rank:e.finish_rank==null?'':String(e.finish_rank),actualSt:e.actual_st_raw||'',course:e.actual_course==null?'':String(e.actual_course)};
+  const fallback={lane:i+1,rank:e.finish_rank==null?'':String(e.finish_rank),actualSt:e.actual_st_raw||'',course:e.actual_course==null?'':String(e.actual_course)};
+  return {...fallback,...(e.source_data?.legacy_result||{})};
  });
  return {id:row.id,venue:row.venue_name,date:row.race_date,raceNo:row.race_no+'R',windDir:row.wind_direction||'',wind:row.wind_speed??'',wave:row.wave_height??'',temp:row.air_temperature??'',waterTemp:row.water_temperature??'',weather:row.weather||'',water:row.water_condition||'',boats,results,memo:row.notes||'',updatedAt:row.updated_at||new Date().toISOString()};
 }
