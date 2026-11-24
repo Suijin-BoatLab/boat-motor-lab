@@ -40,91 +40,91 @@ footer{color:var(--muted);font-size:11px;text-align:center;padding:24px}
   <div class="brand">BOAT <span>MOTOR</span> LAB</div>
   <div class="sub">MOTOR PERFORMANCE & RACE HISTORY</div>
   <nav>
-    <button class="active" data-tab="entry">ã¬ã¼ã¹å¥å</button>
-    <button data-tab="history">è¨é²ä¸è¦§</button>
-    <button data-tab="analysis">ã¢ã¼ã¿ã¼åæ</button>
-    <button data-tab="backup">ä¿å­ã»ç§»è¡</button>
+    <button class="active" data-tab="entry">レース入力</button>
+    <button data-tab="history">記録一覧</button>
+    <button data-tab="analysis">モーター分析</button>
+    <button data-tab="backup">保存・移行</button>
   </nav>
 </header>
 <main>
 <section id="entry">
-  <h1>ã¬ã¼ã¹ãã¼ã¿å¥å</h1><div class="muted small">å±ç¤ºå¾ã«å¥å â ã¬ã¼ã¹çµäºå¾ã«çµæãè¿½å å¥å</div>
+  <h1>レースデータ入力</h1><div class="muted small">展示後に入力 → レース終了後に結果を追加入力</div>
   <div class="panel">
-    <h2>ã¬ã¼ã¹åºæ¬æå ±</h2>
+    <h2>レース基本情報</h2>
     <div class="grid">
-      <div class="field"><label>ç«¶èå ´</label><select id="venue"></select></div>
-      <div class="field"><label>éå¬æ¥</label><input id="raceDate" type="date"></div>
-      <div class="field"><label>ã¬ã¼ã¹çªå·</label><select id="raceNo"></select></div>
-      <div class="field"><label>é¢¨å</label><select id="windDir"><option value="">æªå¥å</option><option>åããé¢¨</option><option>è¿½ãé¢¨</option><option>å·¦æ¨ªé¢¨</option><option>å³æ¨ªé¢¨</option></select></div>
-      <div class="field"><label>é¢¨éï¼mï¼</label><input id="wind" type="number" min="0" step=".1" placeholder="ä¾ï¼3"></div>
-      <div class="field"><label>æ³¢é«ï¼cmï¼</label><input id="wave" type="number" min="0" step="1" placeholder="ä¾ï¼5"></div>
-      <div class="field"><label>æ°æ¸©ï¼âï¼</label><input id="temp" type="number" step=".1"></div>
-      <div class="field"><label>æ°´é¢ã»æ½®æ±ãªã©</label><input id="water" placeholder="ä¾ï¼å¹²æ½®ã»ãã­ããã"></div>
+      <div class="field"><label>競艇場</label><select id="venue"></select></div>
+      <div class="field"><label>開催日</label><input id="raceDate" type="date"></div>
+      <div class="field"><label>レース番号</label><select id="raceNo"></select></div>
+      <div class="field"><label>風向</label><select id="windDir"><option value="">未入力</option><option>向かい風</option><option>追い風</option><option>左横風</option><option>右横風</option></select></div>
+      <div class="field"><label>風速（m）</label><input id="wind" type="number" min="0" step=".1" placeholder="例：3"></div>
+      <div class="field"><label>波高（cm）</label><input id="wave" type="number" min="0" step="1" placeholder="例：5"></div>
+      <div class="field"><label>気温（℃）</label><input id="temp" type="number" step=".1"></div>
+      <div class="field"><label>水面・潮汐など</label><input id="water" placeholder="例：干潮・うねりあり"></div>
     </div>
   </div>
   <div class="panel">
-    <h2>6èã¾ã¨ãã¦å¥å <span class="tag">å±ç¤ºå¾</span></h2>
-    <div class="muted small">ã¿ã¤ã ã¯å¬å¼è¡¨ç¤ºã«åããã¦å¥åãåãããªãé ç®ã¯ç©ºæ¬ã§OKã</div>
+    <h2>6艇まとめて入力 <span class="tag">展示後</span></h2>
+    <div class="muted small">タイムは公式表示に合わせて入力。分からない項目は空欄でOK。</div>
     <div id="boats"></div>
   </div>
   <div class="panel">
-    <h2>ã¬ã¼ã¹å¾ã®çµæå¥å</h2>
-    <div class="muted small">çé ã»å®éã®STã»é²å¥ã³ã¼ã¹ãå¥åãçµææªç¢ºå®ã®ã¾ã¾ã§ãå±ç¤ºãã¼ã¿ãä¿å­ã§ãã¾ãã</div>
+    <h2>レース後の結果入力</h2>
+    <div class="muted small">着順・実際のST・進入コースを入力。結果未確定のままでも展示データを保存できます。</div>
     <div id="results"></div>
   </div>
   <div class="panel">
-    <h2>ã¡ã¢</h2><textarea id="memo" rows="2" placeholder="æ°ã¥ãããã¨ãå±ç¤ºã¨æ¬çªã®éããªã©"></textarea>
-    <div class="actions"><button class="btn primary" id="save">ãã®ã¬ã¼ã¹ãä¿å­</button><button class="btn secondary" id="clear">å¥åãã¯ãªã¢</button></div>
+    <h2>メモ</h2><textarea id="memo" rows="2" placeholder="気づいたこと、展示と本番の違いなど"></textarea>
+    <div class="actions"><button class="btn primary" id="save">このレースを保存</button><button class="btn secondary" id="clear">入力をクリア</button></div>
     <p class="small muted" id="saveMsg" aria-live="polite"></p>
   </div>
-  <div class="notice">åæã¯ç»é²ãããæ°å¤ã®æ¯è¼ã«ããæ¨å®ã§ãããã­ãã©èª¿æ´ã®å®æ½åå®¹ãç´æ¥å¤å®ãããã®ã§ã¯ããã¾ãããé¸æå·®ã»æ°´é¢å·®ãèæ®ãã¦ç¢ºèªãã¦ãã ããã</div>
+  <div class="notice">分析は登録された数値の比較による推定です。プロペラ調整の実施内容を直接判定するものではありません。選手差・水面差も考慮して確認してください。</div>
 </section>
 
 <section id="history" class="hidden">
-  <h1>è¨é²ä¸è¦§</h1><div class="muted small">ä¿å­ããã¬ã¼ã¹ãã¼ã¿ãã¬ã¼ã¹ãé¸ã¶ã¨åå®¹ãå¥åç»é¢ã¸èª­ã¿è¾¼ãã¾ãã</div>
-  <div class="panel"><div class="actions"><button class="btn secondary" id="refreshHistory">ä¸è¦§ãæ´æ°</button></div><div id="historyList"></div></div>
+  <h1>記録一覧</h1><div class="muted small">保存したレースデータ。レースを選ぶと内容を入力画面へ読み込めます。</div>
+  <div class="panel"><div class="actions"><button class="btn secondary" id="refreshHistory">一覧を更新</button></div><div id="historyList"></div></div>
 </section>
 
 <section id="analysis" class="hidden">
-  <h1>ã¢ã¼ã¿ã¼åæ</h1><div class="muted small">ä¿å­ãã¼ã¿ã«å«ã¾ããå±ç¤ºã¿ã¤ã ãéè¨ãã¾ããç°ãªãç«¶èå ´ã»æ°´é¢ã®æ°å¤ã¯åç´æ¯è¼ã«æ³¨æã</div>
-  <div class="panel"><h2>ç»é²ç¶æ³</h2><div class="statgrid" id="stats"></div></div>
-  <div class="panel"><h2>ã¢ã¼ã¿ã¼å¥ å±ç¤ºãã¼ã¿</h2><div id="motorTable"></div></div>
-  <div class="panel"><h2>èª­ã¿æ¹</h2><p class="small muted">å¹³åå±ç¤ºã¿ã¤ã ã¯å°ããã»ã©éãå¾åã§ããåºèµ°åæ°ãå°ãªãã¢ã¼ã¿ã¼ã¯é ä½ãä¸å®å®ã«ãªãã¾ããå±ç¤ºã¿ã¤ã ã ãã§æ©åãæ¬çªæ§è½ãæ­å®ãããå¨åã»ç´ç·ã»åãè¶³ã»çé ã»STã¨åããã¦è¦ã¦ãã ããã</p></div>
+  <h1>モーター分析</h1><div class="muted small">保存データに含まれる展示タイムを集計します。異なる競艇場・水面の数値は単純比較に注意。</div>
+  <div class="panel"><h2>登録状況</h2><div class="statgrid" id="stats"></div></div>
+  <div class="panel"><h2>モーター別 展示データ</h2><div id="motorTable"></div></div>
+  <div class="panel"><h2>読み方</h2><p class="small muted">平均展示タイムは小さいほど速い傾向です。出走回数が少ないモーターは順位が不安定になります。展示タイムだけで機力や本番性能を断定せず、周回・直線・回り足・着順・STと合わせて見てください。</p></div>
 </section>
 
 <section id="backup" class="hidden">
-  <h1>ä¿å­ã»ãã¼ã¿ç§»è¡</h1>
+  <h1>保存・データ移行</h1>
   <div class="panel">
-    <h2>ãã®ç«¯æ«ã¸ã®ä¿å­</h2>
-    <p class="small muted">ç¾å¨ã®è©¦ä½çã¯ããã®ãã©ã¦ã¶ã®ç«¯æ«åã«ãã¼ã¿ãä¿å­ãã¾ããGitHub Pagesã«å¬éããã ãã§ã¯ãå¥ç«¯æ«ã¨ã®èªåå±æã¯ããã¾ããã</p>
-    <div class="actions"><button class="btn primary" id="export">ãã¼ã¿ãæ¸ãåºã</button><label class="btn secondary" for="importFile">ããã¯ã¢ãããèª­ã¿è¾¼ã</label><input id="importFile" type="file" accept="application/json" class="hidden"></div>
+    <h2>この端末への保存</h2>
+    <p class="small muted">現在の試作版は、このブラウザの端末内にデータを保存します。GitHub Pagesに公開しただけでは、別端末との自動共有はされません。</p>
+    <div class="actions"><button class="btn primary" id="export">データを書き出す</button><label class="btn secondary" for="importFile">バックアップを読み込む</label><input id="importFile" type="file" accept="application/json" class="hidden"></div>
     <p class="small muted" id="backupMsg" aria-live="polite"></p>
   </div>
-  <div class="notice">ã¯ã©ã¦ãåæã¯ã¾ã æªæ¥ç¶ã§ããè¤æ°ç«¯æ«ã§åããã¼ã¿ãä½¿ãæ®µéã§ãã¯ã©ã¦ãä¿å­æ©è½ãè¿½å ãã¾ããå¤§åãªè¨é²ã¯å®æçã«ããã¯ã¢ãããã¦ãã ããã</div>
-  <div class="panel"><h2>ãã¼ã¿ä»¶æ°</h2><div id="backupCount" class="muted">0ã¬ã¼ã¹</div></div>
+  <div class="notice">クラウド同期はまだ未接続です。複数端末で同じデータを使う段階で、クラウド保存機能を追加します。大切な記録は定期的にバックアップしてください。</div>
+  <div class="panel"><h2>データ件数</h2><div id="backupCount" class="muted">0レース</div></div>
 </section>
 </main>
-<footer>BOAT MOTOR LAB Â· è©¦ä½ç / ãã¼ã¿ã¯å¥åèã®ç¢ºèªãåæã¨ããåæç¨è¨é²ã§ã</footer>
+<footer>BOAT MOTOR LAB · 試作版 / データは入力者の確認を前提とした分析用記録です</footer>
 <script>
-const venues=['æ¡ç','æ¸ç°','æ±æ¸å·','å¹³åå³¶','å¤æ©å·','æµåæ¹','è²é¡','å¸¸æ»','æ´¥','ä¸å½','ã³ãã','ä½ä¹æ±','å°¼å´','é³´é','ä¸¸äº','åå³¶','å®®å³¶','å¾³å±±','ä¸é¢','è¥æ¾','è¦å±','ç¦å²¡','åæ´¥','å¤§æ'];
+const venues=['桐生','戸田','江戸川','平和島','多摩川','浜名湖','蒲郡','常滑','津','三国','びわこ','住之江','尼崎','鳴門','丸亀','児島','宮島','徳山','下関','若松','芦屋','福岡','唐津','大村'];
 const $=id=>document.getElementById(id);
 const DBKEY='boatMotorLab_races_v1';
 let races=[];
 try{races=JSON.parse(localStorage.getItem(DBKEY)||'[]')}catch(e){races=[]}
-const lanes=['ç½','é»','èµ¤','é','é»','ç·'];
+const lanes=['白','黒','赤','青','黄','緑'];
 function field(label,key,placeholder='',type='number',step='.01'){return `<div class="field"><label>${label}</label><input data-k="${key}" type="${type}" ${type==='number'?`step="${step}"`:''} placeholder="${placeholder}"></div>`}
 function buildBoats(){
- $('boats').innerHTML=Array.from({length:6},(_,i)=>`<div class="boat"><div class="boathead"><span class="lane l${i+1}">${i+1}</span>${lanes[i]}ã³ã¼ã¹æ³å®</div><div class="boatgrid">
- ${field('é¸æå','racer','é¸æå','text')}${field('ã¢ã¼ã¿ã¼çªå·','motor','çªå·','text')}
- ${field('å±ç¤ºã¿ã¤ã ï¼ç§ï¼','exhibition','ä¾ï¼6.78')}${field('å¨åã¿ã¤ã ï¼ç§ï¼','lap','ä¾ï¼37.20')}
- ${field('ç´ç·ã¿ã¤ã ï¼ç§ï¼','straight','ä¾ï¼7.20')}${field('åãè¶³ã¿ã¤ã ï¼ç§ï¼','turn','ä¾ï¼5.60')}
- ${field('å±ç¤ºST','exSt','ä¾ï¼0.12') }
- <div class="field"><label>å±ç¤ºæ°éï¼ä¸»è¦³ï¼</label><select data-k="feel"><option value="">æªè©ä¾¡</option><option value="1">1ã»å¼±ã</option><option value="2">2ã»ããå¼±ã</option><option value="3">3ã»æ®é</option><option value="4">4ã»è¯ã</option><option value="5">5ã»ããªãè¯ã</option></select></div>
+ $('boats').innerHTML=Array.from({length:6},(_,i)=>`<div class="boat"><div class="boathead"><span class="lane l${i+1}">${i+1}</span>${lanes[i]}コース想定</div><div class="boatgrid">
+ ${field('選手名','racer','選手名','text')}${field('モーター番号','motor','番号','text')}
+ ${field('展示タイム（秒）','exhibition','例：6.78')}${field('周回タイム（秒）','lap','例：37.20')}
+ ${field('直線タイム（秒）','straight','例：7.20')}${field('回り足タイム（秒）','turn','例：5.60')}
+ ${field('展示ST','exSt','例：0.12') }
+ <div class="field"><label>展示気配（主観）</label><select data-k="feel"><option value="">未評価</option><option value="1">1・弱い</option><option value="2">2・やや弱い</option><option value="3">3・普通</option><option value="4">4・良い</option><option value="5">5・かなり良い</option></select></div>
  </div></div>`).join('');
- $('results').innerHTML=Array.from({length:6},(_,i)=>`<div class="boat"><div class="boathead"><span class="lane l${i+1}">${i+1}</span>${i+1}å·èã»ã¬ã¼ã¹å¾</div><div class="boatgrid">
- <div class="field"><label>çé </label><select data-r="${i}" data-k="rank"><option value="">æªå¥å</option>${[1,2,3,4,5,6,'æ¬ '].map(x=>`<option>${x}</option>`).join('')}</select></div>
- ${field('æ¬çªST','actualSt','ä¾ï¼0.15')}
- <div class="field"><label>å®éã®é²å¥ã³ã¼ã¹</label><select data-r="${i}" data-k="course"><option value="">æªå¥å</option>${[1,2,3,4,5,6].map(x=>`<option>${x}</option>`).join('')}</select></div>
+ $('results').innerHTML=Array.from({length:6},(_,i)=>`<div class="boat"><div class="boathead"><span class="lane l${i+1}">${i+1}</span>${i+1}号艇・レース後</div><div class="boatgrid">
+ <div class="field"><label>着順</label><select data-r="${i}" data-k="rank"><option value="">未入力</option>${[1,2,3,4,5,6,'欠'].map(x=>`<option>${x}</option>`).join('')}</select></div>
+ ${field('本番ST','actualSt','例：0.15')}
+ <div class="field"><label>実際の進入コース</label><select data-r="${i}" data-k="course"><option value="">未入力</option>${[1,2,3,4,5,6].map(x=>`<option>${x}</option>`).join('')}</select></div>
  </div></div>`).join('');
 }
 buildBoats();
@@ -132,29 +132,29 @@ $('venue').innerHTML=venues.map(v=>`<option>${v}</option>`).join('');
 $('raceNo').innerHTML=Array.from({length:12},(_,i)=>`<option>${i+1}R</option>`).join('');
 $('raceDate').value=new Date().toLocaleDateString('sv-SE');
 document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
-function showTab(tab){document.querySelectorAll('main section').forEach(s=>s.classList.toggle('hidden',s.id!==tab));document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));if(tab==='history')renderHistory();if(tab==='analysis')renderAnalysis();if(tab==='backup')$('backupCount').textContent=races.length+'ã¬ã¼ã¹';window.scrollTo(0,0)}
+function showTab(tab){document.querySelectorAll('main section').forEach(s=>s.classList.toggle('hidden',s.id!==tab));document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));if(tab==='history')renderHistory();if(tab==='analysis')renderAnalysis();if(tab==='backup')$('backupCount').textContent=races.length+'レース';window.scrollTo(0,0)}
 function collect(){
  const boats=[...$('boats').querySelectorAll('.boat')].map((el,i)=>{let o={lane:i+1};el.querySelectorAll('[data-k]').forEach(x=>o[x.dataset.k]=x.value);return o});
  const results=[...$('results').querySelectorAll('.boat')].map((el,i)=>{let o={lane:i+1};el.querySelectorAll('[data-k]').forEach(x=>o[x.dataset.k]=x.value);return o});
  return {id:Date.now().toString(),venue:$('venue').value,date:$('raceDate').value,raceNo:$('raceNo').value,windDir:$('windDir').value,wind:$('wind').value,wave:$('wave').value,temp:$('temp').value,water:$('water').value,boats,results,memo:$('memo').value,updatedAt:new Date().toISOString()};
 }
 function persist(){localStorage.setItem(DBKEY,JSON.stringify(races))}
-$('save').onclick=()=>{let r=collect();if(!r.date){$('saveMsg').textContent='éå¬æ¥ãå¥åãã¦ãã ãã';return}let ix=races.findIndex(x=>x.id===r.id);races.push(r);persist();$('saveMsg').textContent=`ä¿å­ãã¾ããï¼${r.venue} ${r.date} ${r.raceNo}ï¼åè¨${races.length}ã¬ã¼ã¹ï¼`;};
-$('clear').onclick=()=>{if(!confirm('å¥åæ¬ãã¯ãªã¢ãã¾ããï¼ä¿å­æ¸ã¿ãã¼ã¿ã¯æ¶ãã¾ããã'))return;document.querySelectorAll('#entry input,#entry textarea').forEach(x=>{if(x.type!=='date')x.value=''});document.querySelectorAll('#entry select').forEach(x=>x.selectedIndex=0);$('raceDate').value=new Date().toLocaleDateString('sv-SE');$('saveMsg').textContent='å¥åæ¬ãã¯ãªã¢ãã¾ãã'};
+$('save').onclick=()=>{let r=collect();if(!r.date){$('saveMsg').textContent='開催日を入力してください';return}let ix=races.findIndex(x=>x.id===r.id);races.push(r);persist();$('saveMsg').textContent=`保存しました：${r.venue} ${r.date} ${r.raceNo}（合計${races.length}レース）`;};
+$('clear').onclick=()=>{if(!confirm('入力欄をクリアしますか？保存済みデータは消えません。'))return;document.querySelectorAll('#entry input,#entry textarea').forEach(x=>{if(x.type!=='date')x.value=''});document.querySelectorAll('#entry select').forEach(x=>x.selectedIndex=0);$('raceDate').value=new Date().toLocaleDateString('sv-SE');$('saveMsg').textContent='入力欄をクリアしました'};
 function renderHistory(){
- if(!races.length){$('historyList').innerHTML='<div class="empty">ã¾ã ä¿å­ãããã¬ã¼ã¹ã¯ããã¾ããã</div>';return}
- $('historyList').innerHTML='<div class="tablewrap"><table><thead><tr><th>æ¥ä»</th><th>ç«¶èå ´</th><th>R</th><th>å¥åèæ°</th><th></th></tr></thead><tbody>'+[...races].reverse().map(r=>`<tr><td>${r.date||''}</td><td>${r.venue}</td><td>${r.raceNo}</td><td>${r.boats.filter(b=>b.motor||b.racer||b.exhibition).length}/6</td><td><button class="btn secondary" onclick="loadRace('${r.id}')">éã</button></td></tr>`).join('')+'</tbody></table></div>';
+ if(!races.length){$('historyList').innerHTML='<div class="empty">まだ保存されたレースはありません。</div>';return}
+ $('historyList').innerHTML='<div class="tablewrap"><table><thead><tr><th>日付</th><th>競艇場</th><th>R</th><th>入力艇数</th><th></th></tr></thead><tbody>'+[...races].reverse().map(r=>`<tr><td>${r.date||''}</td><td>${r.venue}</td><td>${r.raceNo}</td><td>${r.boats.filter(b=>b.motor||b.racer||b.exhibition).length}/6</td><td><button class="btn secondary" onclick="loadRace('${r.id}')">開く</button></td></tr>`).join('')+'</tbody></table></div>';
 }
-window.loadRace=id=>{let r=races.find(x=>x.id===id);if(!r)return;showTab('entry');$('venue').value=r.venue;$('raceDate').value=r.date;$('raceNo').value=r.raceNo;$('windDir').value=r.windDir||'';['wind','wave','temp','water','memo'].forEach(k=>$(k).value=r[k]||'');r.boats.forEach((b,i)=>{let el=$('boats').querySelectorAll('.boat')[i];el.querySelectorAll('[data-k]').forEach(x=>x.value=b[x.dataset.k]||'')});r.results.forEach((b,i)=>{let el=$('results').querySelectorAll('.boat')[i];el.querySelectorAll('[data-k]').forEach(x=>x.value=b[x.dataset.k]||'')});$('saveMsg').textContent='éå»ã®è¨é²ãèª­ã¿è¾¼ã¿ã¾ãããä¿å­ããã¨æ°ããè¨é²ã¨ãã¦è¿½å ããã¾ãã'};
+window.loadRace=id=>{let r=races.find(x=>x.id===id);if(!r)return;showTab('entry');$('venue').value=r.venue;$('raceDate').value=r.date;$('raceNo').value=r.raceNo;$('windDir').value=r.windDir||'';['wind','wave','temp','water','memo'].forEach(k=>$(k).value=r[k]||'');r.boats.forEach((b,i)=>{let el=$('boats').querySelectorAll('.boat')[i];el.querySelectorAll('[data-k]').forEach(x=>x.value=b[x.dataset.k]||'')});r.results.forEach((b,i)=>{let el=$('results').querySelectorAll('.boat')[i];el.querySelectorAll('[data-k]').forEach(x=>x.value=b[x.dataset.k]||'')});$('saveMsg').textContent='過去の記録を読み込みました。保存すると新しい記録として追加されます。'};
 function renderAnalysis(){
  const motors={};races.forEach(r=>r.boats.forEach(b=>{if(!b.motor)return;let m=motors[b.motor]||(motors[b.motor]={count:0,ex:[],lap:[],straight:[],turn:[],wins:0});m.count++;['exhibition','lap','straight','turn'].forEach(k=>{let n=parseFloat(b[k]);if(Number.isFinite(n))m[k==='exhibition'?'ex':k].push(n)});let res=r.results.find(x=>x.lane===b.lane);if(res&&res.rank==='1')m.wins++}));
- const vals=Object.values(motors);$('stats').innerHTML=[['ä¿å­ã¬ã¼ã¹',races.length],['ç»é²ã¢ã¼ã¿ã¼',vals.length],['è¨æ¸¬ãã¼ã¿',vals.reduce((a,m)=>a+m.ex.length,0)]].map(x=>`<div class="stat"><b>${x[1]}</b><span>${x[0]}</span></div>`).join('');
+ const vals=Object.values(motors);$('stats').innerHTML=[['保存レース',races.length],['登録モーター',vals.length],['計測データ',vals.reduce((a,m)=>a+m.ex.length,0)]].map(x=>`<div class="stat"><b>${x[1]}</b><span>${x[0]}</span></div>`).join('');
  const rows=Object.entries(motors).map(([id,m])=>({id,...m,avg:m.ex.length?m.ex.reduce((a,b)=>a+b,0)/m.ex.length:null})).sort((a,b)=>(a.avg??99)-(b.avg??99));
- $('motorTable').innerHTML=rows.length?'<div class="tablewrap"><table><thead><tr><th>ã¢ã¼ã¿ã¼</th><th>åæ°</th><th>å¹³åå±ç¤º</th><th>å¹³åå¨å</th><th>å¹³åç´ç·</th><th>å¹³ååãè¶³</th><th>1ç</th></tr></thead><tbody>'+rows.map(m=>`<tr><td>${m.id}</td><td>${m.count}</td><td>${avg(m.ex)}</td><td>${avg(m.lap)}</td><td>${avg(m.straight)}</td><td>${avg(m.turn)}</td><td>${m.wins}</td></tr>`).join('')+'</tbody></table></div>':'<div class="empty">ã¢ã¼ã¿ã¼çªå·ã¨å±ç¤ºãã¼ã¿ãä¿å­ããã¨ãããã«éè¨ããã¾ãã</div>';
+ $('motorTable').innerHTML=rows.length?'<div class="tablewrap"><table><thead><tr><th>モーター</th><th>回数</th><th>平均展示</th><th>平均周回</th><th>平均直線</th><th>平均回り足</th><th>1着</th></tr></thead><tbody>'+rows.map(m=>`<tr><td>${m.id}</td><td>${m.count}</td><td>${avg(m.ex)}</td><td>${avg(m.lap)}</td><td>${avg(m.straight)}</td><td>${avg(m.turn)}</td><td>${m.wins}</td></tr>`).join('')+'</tbody></table></div>':'<div class="empty">モーター番号と展示データを保存すると、ここに集計されます。</div>';
 }
-function avg(a){return a.length?(a.reduce((x,y)=>x+y,0)/a.length).toFixed(2):'â'}
+function avg(a){return a.length?(a.reduce((x,y)=>x+y,0)/a.length).toFixed(2):'—'}
 $('refreshHistory').onclick=renderHistory;
-$('export').onclick=()=>{let blob=new Blob([JSON.stringify({app:'BOAT MOTOR LAB',version:1,races},null,2)],{type:'application/json'});let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='boat-motor-lab-backup.json';a.click();URL.revokeObjectURL(a.href);$('backupMsg').textContent='ããã¯ã¢ãããã¡ã¤ã«ãæ¸ãåºãã¾ããã'};
-$('importFile').onchange=async e=>{let f=e.target.files[0];if(!f)return;try{let data=JSON.parse(await f.text());if(!Array.isArray(data.races))throw Error();if(!confirm(`${data.races.length}ã¬ã¼ã¹ãèª­ã¿è¾¼ã¿ã¾ããç¾å¨ã®è¨é²ã«è¿½å ãã¾ããï¼`))return;const ids=new Set(races.map(x=>x.id));data.races.forEach(r=>{if(!ids.has(r.id)){r.id=Date.now().toString()+Math.random();races.push(r)}});persist();$('backupMsg').textContent='èª­ã¿è¾¼ã¿ã¾ãããç¾å¨ã®åè¨ï¼'+races.length+'ã¬ã¼ã¹';}catch(err){$('backupMsg').textContent='ãã¡ã¤ã«ãèª­ã¿è¾¼ãã¾ããã§ãããæ­£ããããã¯ã¢ãããé¸ãã§ãã ããã'}e.target.value=''};
+$('export').onclick=()=>{let blob=new Blob([JSON.stringify({app:'BOAT MOTOR LAB',version:1,races},null,2)],{type:'application/json'});let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='boat-motor-lab-backup.json';a.click();URL.revokeObjectURL(a.href);$('backupMsg').textContent='バックアップファイルを書き出しました。'};
+$('importFile').onchange=async e=>{let f=e.target.files[0];if(!f)return;try{let data=JSON.parse(await f.text());if(!Array.isArray(data.races))throw Error();if(!confirm(`${data.races.length}レースを読み込みます。現在の記録に追加しますか？`))return;const ids=new Set(races.map(x=>x.id));data.races.forEach(r=>{if(!ids.has(r.id)){r.id=Date.now().toString()+Math.random();races.push(r)}});persist();$('backupMsg').textContent='読み込みました。現在の合計：'+races.length+'レース';}catch(err){$('backupMsg').textContent='ファイルを読み込めませんでした。正しいバックアップを選んでください。'}e.target.value=''};
 </script>
 </body></html>
