@@ -680,21 +680,34 @@ async function importMotorHistorySixMonths(){
   const missing=dates.filter(d=>!have.has(d));
   if(!missing.length){out.textContent='過去6か月分はすでに取り込み済みです。';return}
   let saved=0,skipped=0,failed=0,totalRaces=0,totalEntries=0;
+  const failures=[];
   const chunks=[];for(let i=0;i<missing.length;i+=7)chunks.push(missing.slice(i,i+7));
   for(let i=0;i<chunks.length;i++){
-   out.textContent='取り込み中 '+(i+1)+'/'+chunks.length+'回目（'+(saved+skipped+failed)+'/'+missing.length+'日処理）…';
-   const {data,error}=await cloudClient.functions.invoke('import-motor-history-range',{body:{dates:chunks[i]}});
-   if(error){
-    const detail=error?.context?.body?await error.context.body.text().catch(()=> ''):'';
-    throw new Error(detail||error.message||'サーバーとの通信に失敗しました');
+   out.textContent='取り込み中 '+(i+1)+'/'+chunks.length+'回目（保存'+saved+'日／未開催等'+skipped+'日／エラー'+failed+'日）…';
+   try{
+    const {data,error}=await cloudClient.functions.invoke('import-motor-history-range',{body:{dates:chunks[i]}});
+    if(error){
+     const detail=error?.context?.body?await error.context.body.text().catch(()=> ''):'';
+     throw new Error(detail||error.message||'サーバーとの通信に失敗しました');
+    }
+    if(data?.error)throw new Error(data.error);
+    saved+=data.saved?.length||0;skipped+=data.skipped?.length||0;failed+=data.errors?.length||0;
+    for(const x of data.saved||[]){totalRaces+=Number(x.races_seen)||0;totalEntries+=Number(x.entries_seen)||0}
+    for(const x of data.errors||[])failures.push(x.date+'：'+x.error);
+    for(const x of data.skipped||[])if(x.reason)failures.push(x.date+'：'+x.reason);
+   }catch(chunkError){
+    failed+=chunks[i].length;
+    for(const date of chunks[i])failures.push(date+'：'+(chunkError.message||'通信エラー'));
    }
-   if(data?.error)throw new Error(data.error);
-   saved+=data.saved?.length||0;skipped+=data.skipped?.length||0;failed+=data.errors?.length||0;
-   for(const x of data.saved||[]){totalRaces+=Number(x.races_seen)||0;totalEntries+=Number(x.entries_seen)||0}
-   if(data.errors?.length)out.textContent='一部エラー：'+data.errors.map(x=>x.date+' '+x.error).join(' / ');
   }
-  out.textContent='取り込み完了：保存'+saved+'日／開催なし等'+skipped+'日／エラー'+failed+'日。レース'+totalRaces+'／艇データ'+totalEntries+'件。クラウド保存済み。';
- }catch(err){out.textContent='取り込み中断：'+(err.message||'不明なエラー')+'。もう一度実行すると、保存済みの日付を飛ばして続きから進めます。'}
+  const summary='取り込み結果：保存 '+saved+'日／開催なし等 '+skipped+'日／要確認 '+failed+'日。レース '+totalRaces+'件／艇データ '+totalEntries+'件。';
+  if(failed){
+   out.textContent=summary+' 未完了の日は次回実行時に再確認します。'+failures.slice(0,8).join('　');
+   if(failures.length>8)out.textContent+=' ほか'+(failures.length-8)+'件。';
+  }else{
+   out.textContent=summary+' クラウド保存済み。';
+  }
+ }catch(err){out.textContent='取り込みを開始できませんでした：'+(err.message||'不明なエラー')+'。保存済みデータは残っています。再実行で続きから確認できます。'}
  finally{btn.disabled=false}
 }
 $('historyImportStart').onclick=importMotorHistorySixMonths;
