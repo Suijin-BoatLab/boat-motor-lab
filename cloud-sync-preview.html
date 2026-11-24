@@ -138,8 +138,10 @@ footer{color:var(--muted);font-size:11px;text-align:center;padding:24px}
 
 <section id="analysis" class="hidden">
   <h1>モーター分析</h1><div class="muted small">モーター指標と選手成績を分けて集計。モーター番号は競艇場ごとに区別し、展示Fは通常ST平均に含めません。</div>
+  <div class="panel"><h2>分析対象</h2><div class="field"><label for="analysisVenue">競艇場</label><select id="analysisVenue"><option value="">全24場</option><option>桐生</option><option>戸田</option><option>江戸川</option><option>平和島</option><option>多摩川</option><option>浜名湖</option><option>蒲郡</option><option>常滑</option><option>津</option><option>三国</option><option>びわこ</option><option>住之江</option><option>尼崎</option><option>鳴門</option><option>丸亀</option><option>児島</option><option>宮島</option><option>徳山</option><option>下関</option><option>若松</option><option>芦屋</option><option>福岡</option><option>唐津</option><option>大村</option></select></div></div>
   <div class="panel"><h2>登録状況</h2><div class="statgrid" id="stats"></div></div>
   <div class="panel"><h2>モーター別 展示データ</h2><div id="motorTable"></div></div>
+  <div class="panel"><h2>モーターの時系列推移</h2><p class="small muted">同じ競艇場・同じモーター番号を日付ごとに集計。記録が複数日ある場合に変化を比較できます。</p><div id="motorTrendTable"></div></div>
   <div class="panel"><h2>選手別 成績データ</h2><div id="racerTable"></div><p class="small muted">こちらは保存された本番結果の集計です。選手の能力を因果的に判定するものではなく、モーター評価とは別に確認するための参考値です。</p></div>
   <div class="panel"><h2>読み方</h2><p class="small muted">平均タイムは小さいほど速い傾向です。展示STの平均は数値STのみで計算し、F.表記は平均から除外して別カウントします。モーター番号は競艇場ごとに別集計です。選手成績はモーター性能とは別表で確認してください。出走数が少ない場合や水面・気象条件が異なる場合は単純比較できません。</p></div>
 </section>
@@ -382,43 +384,49 @@ function numericST(value){
 }
 function isFalseStart(value){return /^F(?:\.|-|\s)?\d/i.test(String(value??'').trim());}
 function renderAnalysis(){
- const motors={},racers={};
- races.forEach(r=>{
+ const selected=$('analysisVenue')?.value||'';
+ const sourceRaces=selected?races.filter(r=>r.venue===selected):races;
+ const motors={},racers={},daily={};
+ sourceRaces.forEach(r=>{
   (r.boats||[]).forEach(b=>{
    const motor=String(b.motor||'').trim();
+   const res=(r.results||[]).find(x=>String(x.lane)===String(b.lane));
    if(motor){
     const id=`${r.venue||'競艇場未設定'}::${motor}`;
-    const m=motors[id]||(motors[id]={venue:r.venue||'未設定',motor,count:0,ex:[],lap:[],straight:[],turn:[],st:[],fCount:0,wins:0,rankCount:0});
+    const m=motors[id]||(motors[id]={venue:r.venue||'未設定',motor,count:0,ex:[],lap:[],straight:[],turn:[],st:[],fCount:0,wins:0});
     m.count++;
-    [['exhibition','ex'],['lap','lap'],['straight','straight'],['turn','turn']].forEach(([src,dst])=>{const n=Number(String(b[src]??'').trim());if(String(b[src]??'').trim()!==''&&Number.isFinite(n))m[dst].push(n)});
-    if(isFalseStart(b.exSt))m.fCount++;
-    else {const st=numericST(b.exSt);if(st!==null)m.st.push(st)}
-    const res=(r.results||[]).find(x=>String(x.lane)===String(b.lane));
+    [['exhibition','ex'],['lap','lap'],['straight','straight'],['turn','turn']].forEach(([src,dst])=>{const raw=String(b[src]??'').trim(),n=Number(raw);if(raw!==''&&Number.isFinite(n))m[dst].push(n)});
+    if(isFalseStart(b.exSt))m.fCount++;else{const st=numericST(b.exSt);if(st!==null)m.st.push(st)}
     if(res&&String(res.rank)==='1')m.wins++;
+    const dayKey=`${id}::${r.date||'日付不明'}`;
+    const d=daily[dayKey]||(daily[dayKey]={venue:r.venue||'未設定',motor,date:r.date||'日付不明',count:0,ex:[],lap:[],straight:[],turn:[],st:[],fCount:0,wins:0});
+    d.count++;
+    [['exhibition','ex'],['lap','lap'],['straight','straight'],['turn','turn']].forEach(([src,dst])=>{const raw=String(b[src]??'').trim(),n=Number(raw);if(raw!==''&&Number.isFinite(n))d[dst].push(n)});
+    if(isFalseStart(b.exSt))d.fCount++;else{const st=numericST(b.exSt);if(st!==null)d.st.push(st)}
+    if(res&&String(res.rank)==='1')d.wins++;
    }
    const racer=String(b.racer||'').trim();
    if(racer){
     const a=racers[racer]||(racers[racer]={starts:0,wins:0,places:[],st:[],fCount:0});
-    const res=(r.results||[]).find(x=>String(x.lane)===String(b.lane));
     if(res){
-     if(String(res.rank||'').trim()){
-      if(/^\d+$/.test(String(res.rank))){const rank=Number(res.rank);if(rank>=1&&rank<=6){a.starts++;a.places.push(rank);if(rank===1)a.wins++}}
-     }
-     if(isFalseStart(res.actualSt))a.fCount++;
-     else {const st=numericST(res.actualSt);if(st!==null)a.st.push(st)}
+     if(/^\d+$/.test(String(res.rank||'').trim())){const rank=Number(res.rank);if(rank>=1&&rank<=6){a.starts++;a.places.push(rank);if(rank===1)a.wins++}}
+     if(isFalseStart(res.actualSt))a.fCount++;else{const st=numericST(res.actualSt);if(st!==null)a.st.push(st)}
     }
    }
   });
  });
- const vals=Object.values(motors);
- const totalF=vals.reduce((n,m)=>n+m.fCount,0);
- $('stats').innerHTML=[['保存レース',races.length],['登録モーター',vals.length],['展示F回数',totalF]].map(x=>`<div class="stat"><b>${x[1]}</b><span>${x[0]}</span></div>`).join('');
- const rows=Object.values(motors).map(m=>({...m,avg:m.ex.length?m.ex.reduce((a,b)=>a+b,0)/m.ex.length:null})).sort((a,b)=>a.venue.localeCompare(b.venue,'ja')||a.motor.localeCompare(b.motor,'ja', {numeric:true}));
- $('motorTable').innerHTML=rows.length?'<div class="tablewrap"><table><thead><tr><th>競艇場</th><th>モーター</th><th>記録数</th><th>平均展示</th><th>平均周回</th><th>平均直線</th><th>平均回り足</th><th>通常ST平均</th><th>展示F</th><th>1着</th></tr></thead><tbody>'+rows.map(m=>`<tr><td>${m.venue}</td><td>${m.motor}</td><td>${m.count}</td><td>${avg(m.ex)}</td><td>${avg(m.lap)}</td><td>${avg(m.straight)}</td><td>${avg(m.turn)}</td><td>${avg(m.st)}</td><td>${m.fCount}</td><td>${m.wins}</td></tr>`).join('')+'</tbody></table></div>':'<div class="empty">モーター番号と展示データを保存すると、ここに集計されます。</div>';
+ const vals=Object.values(motors),totalF=vals.reduce((n,m)=>n+m.fCount,0);
+ $('stats').innerHTML=[['対象レース',sourceRaces.length],['登録モーター',vals.length],['展示F回数',totalF]].map(x=>`<div class="stat"><b>${x[1]}</b><span>${x[0]}</span></div>`).join('');
+ const rows=vals.map(m=>({...m})).sort((a,b)=>a.venue.localeCompare(b.venue,'ja')||a.motor.localeCompare(b.motor,'ja',{numeric:true}));
+ $('motorTable').innerHTML=rows.length?'<div class="tablewrap"><table><thead><tr><th>競艇場</th><th>モーター</th><th>記録数</th><th>平均展示</th><th>平均周回</th><th>平均直線</th><th>平均回り足</th><th>通常ST平均</th><th>展示F</th><th>1着</th></tr></thead><tbody>'+rows.map(m=>`<tr><td>${m.venue}</td><td>${m.motor}</td><td>${m.count}</td><td>${avg(m.ex)}</td><td>${avg(m.lap)}</td><td>${avg(m.straight)}</td><td>${avg(m.turn)}</td><td>${avg(m.st)}</td><td>${m.fCount}</td><td>${m.wins}</td></tr>`).join('')+'</tbody></table></div>':'<div class="empty">対象レースがありません。</div>';
+ const trend=Object.values(daily).sort((a,b)=>a.venue.localeCompare(b.venue,'ja')||a.motor.localeCompare(b.motor,'ja',{numeric:true})||a.date.localeCompare(b.date));
+ $('motorTrendTable').innerHTML=trend.length?'<div class="tablewrap"><table><thead><tr><th>日付</th><th>競艇場</th><th>モーター</th><th>記録艇数</th><th>平均展示</th><th>平均周回</th><th>平均直線</th><th>平均回り足</th><th>通常ST平均</th><th>F</th><th>1着</th></tr></thead><tbody>'+trend.map(d=>`<tr><td>${d.date}</td><td>${d.venue}</td><td>${d.motor}</td><td>${d.count}</td><td>${avg(d.ex)}</td><td>${avg(d.lap)}</td><td>${avg(d.straight)}</td><td>${avg(d.turn)}</td><td>${avg(d.st)}</td><td>${d.fCount}</td><td>${d.wins}</td></tr>`).join('')+'</tbody></table></div>':'<div class="empty">日付ごとの記録がありません。</div>';
  const racerRows=Object.entries(racers).map(([name,a])=>({name,...a,avgRank:a.places.length?a.places.reduce((x,y)=>x+y,0)/a.places.length:null})).sort((a,b)=>b.wins-a.wins||((a.avgRank??99)-(b.avgRank??99)));
  $('racerTable').innerHTML=racerRows.length?'<div class="tablewrap"><table><thead><tr><th>選手</th><th>着順記録数</th><th>1着</th><th>平均着順</th><th>本番ST平均</th><th>本番F</th></tr></thead><tbody>'+racerRows.map(a=>`<tr><td>${a.name}</td><td>${a.starts}</td><td>${a.wins}</td><td>${a.avgRank===null?'—':a.avgRank.toFixed(2)}</td><td>${avg(a.st)}</td><td>${a.fCount}</td></tr>`).join('')+'</tbody></table></div>':'<div class="empty">選手名とレース結果を保存すると、ここに集計されます。</div>';
 }
+
 function avg(a){return a.length?(a.reduce((x,y)=>x+y,0)/a.length).toFixed(2):'—'}
+$('analysisVenue').onchange=renderAnalysis;
 $('refreshHistory').onclick=renderHistory;
 updateBackupStatus();
 $('export').onclick=async()=>{
