@@ -7,6 +7,8 @@ export const COURSE_PROFILE_WEIGHTS = {
   2: { courseRecord: 0.35, last10St: 0.25, last90dSt: 0.15, venueSt: 0.10, racerForm90d: 0.15 },
 } as const;
 
+export type ProfileFeature = "courseRecord" | "last10St" | "last90dSt" | "venueSt" | "racerForm90d";
+
 export type HistoricalStart = {
   race_date: string;
   race_no?: number | null;
@@ -23,7 +25,7 @@ export function validActualSt(row: HistoricalStart): number | null {
 }
 
 function beforeTarget(row: HistoricalStart, targetDate: string): boolean {
-  return /^\d{4}-\d{2}-\d{2}$/.test(row.race_date) && row.race_date < targetDate;
+  return /^\\d{4}-\\d{2}-\\d{2}$/.test(row.race_date) && row.race_date < targetDate;
 }
 
 function newestFirst(a: HistoricalStart, b: HistoricalStart): number {
@@ -65,18 +67,20 @@ function shiftDate(date: string, days: number): string {
 // Missing features are omitted and remaining weights are renormalized.
 export function calculateWeightedProfileScore(
   lane: number,
-  featureRanks: Partial<Record<"courseRecord" | "last10St" | "last90dSt" | "venueSt" | "racerForm90d", number>>,
+  featureRanks: Partial<Record<ProfileFeature, number>>,
 ) {
   const weights = lane === 1 ? COURSE_PROFILE_WEIGHTS[1] : COURSE_PROFILE_WEIGHTS[2];
   let weighted = 0;
   let availableWeight = 0;
-  for (const [key, weight] of Object.entries(weights) as [keyof typeof weights, number][]) {
+  let featuresUsed = 0;
+  for (const [key, weight] of Object.entries(weights) as [ProfileFeature, number][]) {
     const rank = featureRanks[key];
     if (typeof rank !== "number" || !Number.isFinite(rank)) continue;
     weighted += rank * weight;
     availableWeight += weight;
+    featuresUsed++;
   }
   return availableWeight > 0
-    ? { score: weighted / availableWeight, coverage: availableWeight, features_used: Object.keys(featureRanks).filter((key) => Number.isFinite(featureRanks[key as keyof typeof featureRanks])).length }
+    ? { score: weighted / availableWeight, coverage: availableWeight, features_used: featuresUsed }
     : { score: null, coverage: 0, features_used: 0 };
 }
