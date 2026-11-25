@@ -353,8 +353,13 @@ function persist(){
  const payload=JSON.stringify(races);
  localStorage.setItem(DBKEY,payload);
  const snapshot={app:'BOAT MOTOR LAB',version:1,savedAt:new Date().toISOString(),raceCount:races.length,races};
- localStorage.setItem(BACKUPKEY,JSON.stringify(snapshot));
- updateBackupStatus();
+ try{
+  localStorage.setItem(BACKUPKEY,JSON.stringify(snapshot));
+  updateBackupStatus();
+ }catch(e){
+  const el=$('autoBackupStatus');if(el)el.textContent='自動バックアップを保存できません（端末の空き容量を確認してください）';
+  const msg=$('backupMsg');if(msg)msg.textContent='記録本体は保存しましたが、自動バックアップの更新に失敗しました。端末の空き容量を確認してください。';
+ }
 }
 function updateBackupStatus(){
  const el=$('autoBackupStatus');if(!el)return;
@@ -566,7 +571,7 @@ $('restoreLocal').onclick=()=>{
  try{const b=JSON.parse(localStorage.getItem(BACKUPKEY)||'null');if(!b||!Array.isArray(b.races)||!b.races.length){$('backupMsg').textContent='復元できる自動バックアップがありません。';return;}
  if(!confirm(`端末内バックアップの${b.races.length}レースを確認しました。現在の記録に追加復元しますか？同じレースは重複登録しません。`))return;
  const keys=new Set(races.map(r=>raceKey(r))),ids=new Set(races.map(r=>String(r.id??'')));let added=0,skipped=0;
- for(const src of b.races){if(!src||typeof src!=='object'||!Array.isArray(src.boats)||!venues.includes(src.venue)||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(String(src.date||''))||(()=>{const d=new Date(src.date+'T00:00:00');return Number.isNaN(d.getTime())||d.toLocaleDateString('sv-SE')!==src.date})()||!Number.isInteger(parseInt(src.raceNo,10))||parseInt(src.raceNo,10)<1||parseInt(src.raceNo,10)>12||src.boats.some((b,i)=>!b||typeof b!=='object'||!Number.isInteger(Number(b.lane??i+1))||Number(b.lane??i+1)<1||Number(b.lane??i+1)>6||(b.exSt!==undefined&&String(b.exSt).trim()!==''&&!/^(?:F)?(?:0?\.\\d{1,2})$/i.test(String(b.exSt).trim())))||new Set(src.boats.map((b,i)=>Number(b?.lane??i+1))).size!==src.boats.length||(src.results!==undefined&&(!Array.isArray(src.results)||new Set(src.results.map((x,i)=>Number(x?.lane??i+1))).size!==src.results.length||src.results.some((x,i)=>!x||typeof x!=='object'||!Number.isInteger(Number(x.lane??i+1))||Number(x.lane??i+1)<1||Number(x.lane??i+1)>6||(x.rank!==undefined&&String(x.rank).trim()!==''&&(!Number.isInteger(Number(x.rank))||Number(x.rank)<1||Number(x.rank)>6))||(x.course!==undefined&&String(x.course).trim()!==''&&(!Number.isInteger(Number(x.course))||Number(x.course)<1||Number(x.course)>6))||(x.actualSt!==undefined&&String(x.actualSt).trim()!==''&&!/^(?:F)?(?:0?\.\\d{1,2})$/i.test(String(x.actualSt).trim())))))){skipped++;continue;}const k=raceKey(src),id=String(src.id??'');if(keys.has(k)||(id&&ids.has(id))){skipped++;continue;}const cp={...src,id:id&&!ids.has(id)?id:`restore-${Date.now()}-${added}`};races.push(cp);keys.add(k);ids.add(String(cp.id));added++;}
+ for(const src of b.races){if(!src||typeof src!=='object'||!Array.isArray(src.boats)||!venues.includes(src.venue)||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(String(src.date||''))||(()=>{const d=new Date(src.date+'T00:00:00');return Number.isNaN(d.getTime())||d.toLocaleDateString('sv-SE')!==src.date})()||!Number.isInteger(parseInt(src.raceNo,10))||parseInt(src.raceNo,10)<1||parseInt(src.raceNo,10)>12||src.boats.some((b,i)=>!b||typeof b!=='object'||!Number.isInteger(Number(b.lane??i+1))||Number(b.lane??i+1)<1||Number(b.lane??i+1)>6||(b.exSt!==undefined&&String(b.exSt).trim()!==''&&!/^(?:F)?(?:0?\.\d{1,2})$/i.test(String(b.exSt).trim())))||new Set(src.boats.map((b,i)=>Number(b?.lane??i+1))).size!==src.boats.length||(src.results!==undefined&&(!Array.isArray(src.results)||new Set(src.results.map((x,i)=>Number(x?.lane??i+1))).size!==src.results.length||src.results.some((x,i)=>!x||typeof x!=='object'||!Number.isInteger(Number(x.lane??i+1))||Number(x.lane??i+1)<1||Number(x.lane??i+1)>6||(x.rank!==undefined&&String(x.rank).trim()!==''&&(!Number.isInteger(Number(x.rank))||Number(x.rank)<1||Number(x.rank)>6))||(x.course!==undefined&&String(x.course).trim()!==''&&(!Number.isInteger(Number(x.course))||Number(x.course)<1||Number(x.course)>6))||(x.actualSt!==undefined&&String(x.actualSt).trim()!==''&&!/^(?:F)?(?:0?\.\d{1,2})$/i.test(String(x.actualSt).trim())))))){skipped++;continue;}const k=raceKey(src),id=String(src.id??'');if(keys.has(k)||(id&&ids.has(id))){skipped++;continue;}const cp={...src,id:id&&!ids.has(id)?id:`restore-${Date.now()}-${added}`};races.push(cp);keys.add(k);ids.add(String(cp.id));added++;}
  persist();renderHistory();$('backupCount').textContent=races.length+'レース';$('backupMsg').textContent=`復元完了：追加${added}件／重複・形式不備でスキップ${skipped}件（合計${races.length}レース）`;
  }catch(e){$('backupMsg').textContent='自動バックアップを復元できませんでした。';}
 };
