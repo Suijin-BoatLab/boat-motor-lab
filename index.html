@@ -154,6 +154,7 @@ footer{color:var(--muted);font-size:11px;text-align:center;padding:24px}
 
 <section id="backup" class="hidden">
   <h1>保存・データ移行</h1>
+  <div class="notice hidden" id="storageRecoveryNotice" role="alert">端末内のメイン保存データを正常に読み込めませんでした。自動バックアップが残っている可能性があります。新しい記録を保存する前に「自動バックアップから復元」またはバックアップファイルの読み込みを行ってください。</div>
 
   <div class="panel" id="cloudPanel">
     <h2>☁ クラウド保存・アカウント</h2>
@@ -186,8 +187,8 @@ const venues=['桐生','戸田','江戸川','平和島','多摩川','浜名湖',
 const $=id=>document.getElementById(id);
 const DBKEY='boatMotorLab_races_v1';
 const BACKUPKEY='boatMotorLab_races_autobackup_v1';
-let races=[];
-try{races=JSON.parse(localStorage.getItem(DBKEY)||'[]');if(!Array.isArray(races))races=[]}catch(e){races=[]}
+let races=[],startupStorageIssue=false;
+try{const stored=localStorage.getItem(DBKEY);races=stored===null?[]:JSON.parse(stored);if(!Array.isArray(races))throw new Error('保存データの形式が正しくありません')}catch(e){races=[];startupStorageIssue=true}
 // Main data missing/corrupt? Keep the independent local snapshot available for explicit recovery.
 let startupBackup=null;
 try{startupBackup=JSON.parse(localStorage.getItem(BACKUPKEY)||'null')}catch(e){startupBackup=null}
@@ -231,7 +232,7 @@ $('venue').innerHTML=venues.map(v=>`<option>${v}</option>`).join('');
 $('raceNo').innerHTML=Array.from({length:12},(_,i)=>`<option>${i+1}R</option>`).join('');
 $('raceDate').value=new Date().toLocaleDateString('sv-SE');
 document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
-function showTab(tab){document.querySelectorAll('main section').forEach(s=>s.classList.toggle('hidden',s.id!==tab));document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));if(tab==='history')renderHistory();if(tab==='analysis'){renderAnalysis();loadHistoricalMotorHistory();}if(tab==='backup'){$('backupCount').textContent=races.length+'レース';updateBackupStatus();}window.scrollTo(0,0)}
+function showTab(tab){document.querySelectorAll('main section').forEach(s=>s.classList.toggle('hidden',s.id!==tab));document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));if(tab==='history')renderHistory();if(tab==='analysis'){renderAnalysis();loadHistoricalMotorHistory();}if(tab==='backup'){$('backupCount').textContent=races.length+'レース';updateBackupStatus();const notice=$('storageRecoveryNotice');if(notice)notice.classList.toggle('hidden',!startupStorageIssue);}window.scrollTo(0,0)}
 const stadiumCodes={'桐生':1,'戸田':2,'江戸川':3,'平和島':4,'多摩川':5,'浜名湖':6,'蒲郡':7,'常滑':8,'津':9,'三国':10,'びわこ':11,'住之江':12,'尼崎':13,'鳴門':14,'丸亀':15,'児島':16,'宮島':17,'徳山':18,'下関':19,'若松':20,'芦屋':21,'福岡':22,'唐津':23,'大村':24};
 function setIf(el,value){if(value!==undefined&&value!==null&&value!=='')el.value=String(value)}
 const rankLabel=n=>({1:'A1',2:'A2',3:'B1',4:'B2'})[Number(n)]||'';
@@ -354,6 +355,8 @@ function collect(){
 function persist(){
  const payload=JSON.stringify(races);
  localStorage.setItem(DBKEY,payload);
+ startupStorageIssue=false;
+ const recoveryNotice=$('storageRecoveryNotice');if(recoveryNotice)recoveryNotice.classList.add('hidden');
  const snapshot={app:'BOAT MOTOR LAB',version:1,savedAt:new Date().toISOString(),raceCount:races.length,races};
  try{
   localStorage.setItem(BACKUPKEY,JSON.stringify(snapshot));
@@ -368,6 +371,7 @@ function updateBackupStatus(){
  try{const b=JSON.parse(localStorage.getItem(BACKUPKEY)||'null');el.textContent=b&&Array.isArray(b.races)?`端末内の自動バックアップ：${b.races.length}レース／${b.savedAt?new Date(b.savedAt).toLocaleString('ja-JP'):'日時不明'}`:'自動バックアップはまだありません';}catch(e){el.textContent='自動バックアップを読み取れません';}
 }
 $('save').onclick=()=>{
+ if(startupStorageIssue){$('saveMsg').textContent='保存データの異常を検出しています。先に「保存・設定」から自動バックアップを復元してください。';return;}
  let r=collect();
  if(!r.venue){$('saveMsg').textContent='競艇場を選択してください';return}
  const parsedDate=new Date(r.date+'T00:00:00');
