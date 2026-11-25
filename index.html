@@ -175,6 +175,15 @@ footer{color:var(--muted);font-size:11px;text-align:center;padding:24px}
   <div class="panel" id="racerCsvPanel">
     <h2>選手別・決まり手履歴 CSV一括取込</h2>
     <p class="small muted">過去レースの選手別成績CSVをクラウドへまとめて保存します。1レースにつき1〜6艇分の行を用意してください。決まり手は同じレースの各行に入れても、1着の行だけに入れても構いません。既存のモーター履歴は変更しません。</p>
+    <h3 style="margin:18px 0 8px">公開データから自動取得</h3>
+    <p class="small muted">公開CSVの確定レース結果と出走表を照合し、登録番号・着順・実進入・本番ST・決まり手を自動で取り込みます。1回の通信は7日ずつに分けて処理します。</p>
+    <div class="grid">
+      <div class="field"><label>開始日</label><input id="racerPublicFrom" type="date"></div>
+      <div class="field"><label>終了日</label><input id="racerPublicTo" type="date"></div>
+    </div>
+    <div class="actions"><button class="btn primary" id="racerPublicImport">公開CSVから履歴を自動取得</button></div>
+    <p class="small muted" id="racerPublicStatus" aria-live="polite">初期期間は直近180日です。必要に応じて変更できます。</p>
+    <div class="notice">データ提供元は非公式の公開CSVです。欠損・誤りの可能性があるため、重要な確認は公式結果と照合します。</div>
     <div class="actions"><button class="btn secondary" id="racerCsvTemplate">CSV見本を保存</button><label class="btn secondary" for="racerCsvFile">CSVファイルを選択</label><input id="racerCsvFile" type="file" accept=".csv,text/csv" class="hidden"></div>
     <p class="small muted" id="racerCsvFileName">ファイル未選択</p>
     <div class="actions"><button class="btn primary" id="racerCsvImport">選手別CSVを一括取り込み</button></div>
@@ -992,6 +1001,41 @@ async function loadRaceMotors(){
   $('raceAnalysisStatus').textContent='機力分析を完了できませんでした：'+(e.message||'不明なエラー')+'。ログイン状態と過去データの取り込み状況を確認してください。';
  }
 }
+
+// Public daily CSV backfill. The server limits each request to seven days.
+const publicToday=new Date();const publicYesterday=new Date(publicToday);publicYesterday.setDate(publicYesterday.getDate()-1);
+const publicStart=new Date(publicToday);publicStart.setDate(publicStart.getDate()-180);
+const dateValue=d=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
+$('racerPublicFrom').value=dateValue(publicStart);$('racerPublicTo').value=dateValue(publicYesterday);
+$('racerPublicImport').addEventListener('click',async()=>{
+ const out=$('racerPublicStatus'),btn=$('racerPublicImport');
+ if(!cloudClient||!cloudUser){out.textContent='先に「保存・設定」でログインしてください。';return;}
+ const from=$('racerPublicFrom').value,to=$('racerPublicTo').value;
+ if(!from||!to||from>to){out.textContent='開始日と終了日を正しく指定してください。';return;}
+ const days=Math.round((Date.parse(to+'T00:00:00Z')-Date.parse(from+'T00:00:00Z'))/86400000)+1;
+ if(days>180){out.textContent='一度に取り込める期間は最大180日です。';return;}
+ if(btn.disabled)return;btn.disabled=true;
+ let saved=0,races=0,daysFound=0,missing=0;
+ try{
+  let cursor=from;
+  while(cursor<=to){
+   const endDate=new Date(cursor+'T00:00:00Z');endDate.setUTCDate(endDate.getUTCDate()+6);
+   const batchTo=endDate.toISOString().slice(0,10)<to?endDate.toISOString().slice(0,10):to;
+   out.textContent='公開CSVを取得中：'+cursor+' 〜 '+batchTo+'（全'+days+'日）';
+   const {data,error}=await cloudClient.functions.invoke('import-racer-history-public',{body:{from_date:cursor,to_date:batchTo}});
+   if(error){
+    const detail=typeof error?.context?.body?.text==='function'?await error.context.body.text().catch(()=> ''):'';
+    throw new Error(detail||error.message||'公開CSV取込に失敗しました');
+   }
+   if(data?.error)throw new Error(data.error);
+   saved+=Number(data.saved)||0;races+=Number(data.races_parsed)||0;daysFound+=Number(data.days_with_data)||0;
+   missing+=Number(data.missing_results_days)||0;
+   const next=new Date(batchTo+'T00:00:00Z');next.setUTCDate(next.getUTCDate()+1);cursor=next.toISOString().slice(0,10);
+  }
+  out.textContent='自動取込完了：'+saved+'行（'+races+'レース）を保存。データあり '+daysFound+'日／結果CSVなし '+missing+'日。分析画面を再読み込みすると反映されます。';
+ }catch(err){out.textContent='自動取込を中断しました：'+(err.message||'不明なエラー')+'。再実行すると同じレースは重複せず更新されます。';}
+ finally{btn.disabled=false;}
+});
 
 // Bulk CSV import for historical racer entries. Auth is inherited from the active Supabase session.
 let selectedRacerCsv=null;
