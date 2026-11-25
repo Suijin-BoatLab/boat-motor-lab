@@ -1,40 +1,7 @@
+import { parseDecision } from "./decision-parser.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type","Access-Control-Allow-Methods":"POST, OPTIONS"};
 const venues:Record<number,string>={1:"01",2:"02",3:"03",4:"04",5:"05",6:"06",7:"07",8:"08",9:"09",10:"10",11:"11",12:"12",13:"13",14:"14",15:"15",16:"16",17:"17",18:"18",19:"19",20:"20",21:"21",22:"22",23:"23",24:"24"};
-type AnyObj=Record<string,unknown>;
-const norm=(v:string)=>v.toLowerCase().replace(/[\\s_\\-・]/g,"");
-const keyMatch=(obj:AnyObj,aliases:string[])=>{
- const wanted=aliases.map(norm);
- for(const [k,v] of Object.entries(obj))if(wanted.includes(norm(k)))return v;
- return undefined;
-};
-const walk=(v:unknown,fn:(o:AnyObj)=>void)=>{
- if(Array.isArray(v)){for(const x of v)walk(x,fn);return;}
- if(v&&typeof v==="object"){const o=v as AnyObj;fn(o);for(const x of Object.values(o))walk(x,fn);}
-};
-const parseDecision=(source:unknown)=>{
- const root=(source&&typeof source==="object"?source:{}) as AnyObj;
- const race=(root.race&&typeof root.race==="object"?root.race:{}) as AnyObj;
- const entries=Array.isArray(root.entries)?root.entries as AnyObj[]:[];
- const directMethod=race.kimarite??race.decision_method??race.kimari??root.decision_method??root.kimarite;
- let method=typeof directMethod==="string"&&directMethod.trim()?directMethod.trim():null;
- let winner=entries.find((entry)=>Number(entry.rank??entry.finish_rank??entry着順)===1)??null;
- if(!winner){
-  walk(source,o=>{
-   if(!winner){
-    const rank=Number(keyMatch(o,["finish_rank","rank","着順","着"]));
-    if(rank===1)winner=o;
-   }
-   if(!method){
-    const v=keyMatch(o,["decision_method","kimarite","kimari","決まり手"]);
-    if(typeof v==="string"&&v.trim())method=v.trim();
-   }
-  });
- }
- const registration=winner?(winner.regno??winner.racer_registration_no??winner.registration_no??winner.touban??winner["登録番号"]):undefined;
- const course=winner?Number(winner.course??winner.actual_course??winner.entry_course??winner["進入コース"]??winner["コース"]):NaN;
- return {method,registration:registration===undefined||registration===null?null:String(registration),course:Number.isInteger(course)&&course>=1&&course<=6?course:null,status:method&&winner?"parsed":method?"method_only":"unparsed"};
-};
 Deno.serve(async(req:Request)=>{
  if(req.method==="OPTIONS")return new Response("ok",{headers:cors});
  const json=(data:unknown,status=200)=>new Response(JSON.stringify(data),{status,headers:{...cors,"Content-Type":"application/json"}});
