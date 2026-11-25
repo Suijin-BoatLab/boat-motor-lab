@@ -798,7 +798,42 @@ function renderRaces(){const rs=homePayload?.programs?.stadiums?.[String(venueCo
 function fmt(v){return v===null||v===undefined||v===''?'—':v}
 function mean(rows,k){const a=rows.map(x=>x?.[k]).filter(v=>v!==null&&v!==undefined&&v!=='').map(Number).filter(Number.isFinite);return a.length?a.reduce((p,c)=>p+c,0)/a.length:null}
 function validCount(rows,k){return rows.filter(x=>x?.[k]!==null&&x?.[k]!==undefined&&x?.[k]!==''&&Number.isFinite(Number(x[k]))).length}
-async function loadRaceMotors(){const date=$('homeDate').value,code=venueCodes[homeVenue],race=homePayload?.programs?.stadiums?.[String(code)]?.races?.[String(homeRace)];$('selectedRaceTitle').textContent=homeVenue+' '+homeRace+'R｜'+date;$('raceAnalysisStatus').textContent='6艇のモーター履歴を照合中…';$('raceMotorCards').innerHTML='';if(!race){$('raceAnalysisStatus').textContent='出走データがありません。';return}let history=[];try{if(!cloudClient||!cloudUser)throw Error('過去履歴を見るには保存・設定からログインしてください。');const end=new Date(date+'T00:00:00Z');end.setUTCDate(end.getUTCDate()-1);const start=new Date(end);start.setUTCDate(start.getUTCDate()-179);const {data,error}=await cloudClient.functions.invoke('get-motor-history',{body:{from:start.toISOString().slice(0,10),to:end.toISOString().slice(0,10),venue:homeVenue,motor:''}});if(error)throw error;if(data.error)throw Error(data.error);history=data.rows||[];}catch(e){$('raceAnalysisStatus').textContent=e.message+' 出走表は表示します。';}const racers=race.racers||{},preview=race.preview?.racers||{},colors=['#fff','#222','#df5252','#4d8df0','#f0d44c','#37bd83'],cards=[];for(let n=1;n<=6;n++){const b=racers[String(n)]||{},p=preview[String(n)]||{},motor=String(b.motor_number??''),rows=history.filter(x=>String(x.motor)===motor),recent=rows.filter(x=>x.date>=new Date(Date.parse(date+'T00:00:00Z')-30*86400000).toISOString().slice(0,10)),prior=rows.filter(x=>x.date<new Date(Date.parse(date+'T00:00:00Z')-30*86400000).toISOString().slice(0,10)&&x.date>=new Date(Date.parse(date+'T00:00:00Z')-60*86400000).toISOString().slice(0,10)),a=mean(recent,'ex'),old=mean(prior,'ex'),diff=a!==null&&old!==null?old-a:null,label=diff===null?'比較データ不足':diff>.015?'上昇傾向':diff<-.015?'下降傾向':'横ばい',cls=diff===null?'trend-flat':diff>.015?'trend-up':diff<-.015?'trend-down':'trend-flat',score=null;cards.push({n,b,p,motor,rows,recent,a,old,label,cls,score,avg180:mean(rows,'ex')});}const ranked=cards.filter(c=>c.a!==null).sort((x,y)=>x.a-y.a);ranked.forEach((c,i)=>c.score=ranked.length===1?100:Math.round(100*(1-i/(ranked.length-1))));$('raceMotorCards').innerHTML=cards.map(c=>'<div class="motor-boat"><div class="motor-head"><span class="motor-lane" style="background:'+colors[c.n-1]+';'+(c.n===2?'color:white':'')+'">'+c.n+'</span><div style="flex:1"><b>'+fmt(c.b.racer_name||c.b.name)+'</b><div class="home-sub">モーター '+fmt(c.motor)+'号機｜2連対率 '+fmt(c.b.motor_top_2_percent)+'%</div></div><div style="text-align:right"><div class="motor-score">'+(c.score===null?'—':c.score)+'</div><div class="'+c.cls+'">'+c.label+'</div></div></div><div class="scorebar"><i style="width:'+(c.score??0)+'%"></i></div><div class="home-sub">過去30日 展示 '+(c.a===null?'—':c.a.toFixed(2)+'秒')+'｜180日平均 '+(c.avg180===null?'—':c.avg180.toFixed(2)+'秒')+'｜展示記録 '+validCount(c.recent,'ex')+'件<br>過去180日 展示記録 '+validCount(c.rows,'ex')+'件｜F '+c.rows.reduce((t,x)=>t+(Number(x.f)||0),0)+'回｜1着 '+c.rows.reduce((t,x)=>t+(Number(x.wins)||0),0)+'回<br>当日展示 '+fmt(c.p.exhibition_time)+'</div></div>').join('');if(history.length)$('raceAnalysisStatus').textContent='6艇の出走表と過去180日分の履歴を照合しました。機力目安は展示タイムを中心とした参考値です。';else $('raceAnalysisStatus').textContent+=' 履歴がないモーターは比較データ不足です。';}
+async function loadRaceMotors(){
+ const date=$('homeDate').value,code=venueCodes[homeVenue],race=homePayload?.programs?.stadiums?.[String(code)]?.races?.[String(homeRace)];
+ $('selectedRaceTitle').textContent=homeVenue+' '+homeRace+'R｜'+date;
+ $('raceAnalysisStatus').textContent='6艇の機力履歴を詳しく分析中…';
+ $('raceMotorCards').innerHTML='';
+ if(!race){$('raceAnalysisStatus').textContent='出走データがありません。';return}
+ if(!cloudClient||!cloudUser){$('raceAnalysisStatus').textContent='過去履歴の分析には「保存・設定」からログインしてください。出走表は取得済みです。';return}
+ try{
+  const {data,error}=await cloudClient.functions.invoke('analyze-race-motors',{body:{date,venue_code:code,race_no:homeRace}});
+  if(error){
+   const detail=error?.context?.body?await error.context.body.text().catch(()=> ''):'';
+   throw new Error(detail||error.message||'分析サーバーとの通信に失敗しました');
+  }
+  if(data?.error)throw new Error(data.error);
+  const colors=['#fff','#222','#df5252','#4d8df0','#f0d44c','#37bd83'];
+  const boats=Array.isArray(data.boats)?data.boats:[];
+  const ranked=boats.filter(x=>x.motor_number&&x.history?.find(h=>h.days===30)?.exhibition_time!==null&&x.history?.find(h=>h.days===30)?.exhibition_time!==undefined)
+   .sort((x,y)=>x.history.find(h=>h.days===30).exhibition_time-y.history.find(h=>h.days===30).exhibition_time);
+  const scores=new Map(ranked.map((x,i)=>[x.lane,ranked.length===1?100:Math.round(100*(1-i/(ranked.length-1)))]));
+  const safe=v=>String(v??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const fmtTime=v=>v===null||v===undefined?'—':Number(v).toFixed(2)+'秒';
+  const windowFor=(boat,days)=>boat.history?.find(h=>h.days===days)||{};
+  $('raceMotorCards').innerHTML=boats.map(c=>{
+   const h7=windowFor(c,7),h30=windowFor(c,30),h90=windowFor(c,90),h180=windowFor(c,180),score=scores.has(c.lane)?scores.get(c.lane):null;
+   const label=score===null?'比較データ不足':score>=80?'上位傾向':score>=40?'中位傾向':'下位傾向';
+   const cls=score===null?'trend-flat':score>=60?'trend-up':score<40?'trend-down':'trend-flat';
+   const current=c.current||{},r=c.racer||{},rates=c.motor_rates||{};
+   const sample=Number(h30.count)||0;
+   return '<div class="motor-boat"><div class="motor-head"><span class="motor-lane" style="background:'+colors[(c.lane||1)-1]+';'+(c.lane===2?'color:white':'')+'">'+safe(c.lane)+'</span><div style="flex:1"><b>'+safe(r.name||'選手情報なし')+'</b><div class="home-sub">モーター '+safe(c.motor_number)+'号機｜2連対率 '+safe(rates.place===null?'—':rates.place)+'%</div></div><div style="text-align:right"><div class="motor-score">'+(score===null?'—':score)+'</div><div class="'+cls+'">'+label+'</div></div></div><div class="scorebar"><i style="width:'+(score??0)+'%"></i></div><div class="home-sub">展示平均：7日 '+fmtTime(h7.exhibition_time)+'｜30日 '+fmtTime(h30.exhibition_time)+'｜90日 '+fmtTime(h90.exhibition_time)+'｜180日 '+fmtTime(h180.exhibition_time)+'<br>30日：出走 '+sample+'件／展示 '+(Number(h30.exhibition_time_count)||0)+'件／F '+(Number(h30.exhibition_f_count)||0)+'回／1着 '+(Number(h30.first_places)||0)+'回<br>180日：出走 '+(Number(h180.count)||0)+'件／展示 '+(Number(h180.exhibition_time_count)||0)+'件｜周回 '+fmtTime(h30.lap_time)+'｜直線 '+fmtTime(h30.straight_time)+'｜回り足 '+fmtTime(h30.turn_time)+'<br>当日展示 '+fmtTime(current.exhibition_time)+'｜展示ST '+safe(current.exhibition_st?.raw??'—')+'｜履歴 '+safe(c.history_source||'未蓄積')+'</div></div>';
+  }).join('');
+  const withHistory=boats.filter(x=>Number(x.history_rows)>0).length;
+  $('raceAnalysisStatus').textContent='分析完了：'+withHistory+'艇に過去履歴あり。順位目安は30日間の平均展示タイム（小さいほど上位）で比較。データ件数・F回数・周回/直線/回り足も併記しています。履歴のない艇は比較対象外です。';
+ }catch(e){
+  $('raceAnalysisStatus').textContent='機力分析を完了できませんでした：'+(e.message||'不明なエラー')+'。ログイン状態と過去データの取り込み状況を確認してください。';
+ }
+}
 const localToday=new Date();$('homeDate').value=[localToday.getFullYear(),String(localToday.getMonth()+1).padStart(2,'0'),String(localToday.getDate()).padStart(2,'0')].join('-');$('homeDateLabel').textContent=$('homeDate').value;
 loadSchedule();
 
