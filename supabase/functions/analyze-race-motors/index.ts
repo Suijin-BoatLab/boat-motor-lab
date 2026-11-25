@@ -81,6 +81,8 @@ Deno.serve(async(req:Request)=>{
   const racerHistorySeen=new Set<string>();
   const racerRankSeen=new Set<string>();
   const racerStSeen=new Set<string>();
+  const racerStFSeen=new Set<string>();
+  const courseStFSeen=new Set<string>();
   const courseHistorySeen=new Set<string>();
   const courseStSeen=new Set<string>();
   const registrationNos=[...new Set(Array.from({length:6},(_,i)=>String(racers[String(i+1)]?.number??racers[String(i+1)]?.registration_number??"").trim()).filter(x=>/^\d+$/.test(x)))];
@@ -102,7 +104,8 @@ Deno.serve(async(req:Request)=>{
        cs.starts++;if(courseRank===1)cs.wins++;if(courseRank<=2)cs.top2++;if(courseRank<=3)cs.top3++;cs.finishSum+=courseRank;
       }
       const courseSt=num(row.actual_st);
-      if(!courseStSeen.has(key)&&!row.actual_st_is_f&&courseSt!==null&&courseSt>=0&&courseSt<=0.99){
+      if(row.actual_st_is_f)courseStFSeen.add(key);
+      if(!courseStSeen.has(key)&&!courseStFSeen.has(key)&&!row.actual_st_is_f&&courseSt!==null&&courseSt>=0&&courseSt<=0.99){
        courseStSeen.add(key);cs.stSum+=courseSt;cs.stCount++;
       }
       byCourse.set(actualCourse,cs);courseStatsByNo.set(reg,byCourse);
@@ -112,6 +115,7 @@ Deno.serve(async(req:Request)=>{
      if(Number.isInteger(rank)&&rank>=1&&rank<=6){racerRankSeen.add(key);s.starts++;if(rank===1)s.wins++;if(rank<=2)s.top2++;if(rank<=3)s.top3++;s.finishSum+=rank;if(row.race_date>=racer90MinDate){s.starts90++;if(rank===1)s.wins90++;if(rank<=2)s.top2_90++;if(rank<=3)s.top3_90++;s.finishSum90+=rank;}}
      const actualSt=num(row.actual_st);
      s.recentRaces.push({date:row.race_date,race_no:Number(row.race_no)||0,venue_code:Number(row.venue_code)||0,venue_name:row.venue_name??names[String(row.venue_code)]??"場不明",st:!row.actual_st_is_f&&actualSt!==null&&actualSt>=0&&actualSt<=0.99?actualSt:null,is_f:!!row.actual_st_is_f});
+     if(row.actual_st_is_f)racerStFSeen.add(key);
      if(!row.actual_st_is_f&&actualSt!==null&&actualSt>=0&&actualSt<=0.99){
       racerStSeen.add(key);
       const stRow={date:row.race_date,race_no:Number(row.race_no)||0,venue_code:Number(row.venue_code)||0,venue_name:row.venue_name??names[String(row.venue_code)]??"場不明",st:actualSt};
@@ -138,7 +142,8 @@ Deno.serve(async(req:Request)=>{
        cs.starts++;if(rankForCourse===1)cs.wins++;if(rankForCourse<=2)cs.top2++;if(rankForCourse<=3)cs.top3++;cs.finishSum+=rankForCourse;
       }
       const courseSt=num(row.actual_st);
-      if(!courseStSeen.has(key)&&!row.actual_st_is_f&&courseSt!==null&&courseSt>=0&&courseSt<=0.99){
+      if(row.actual_st_is_f)courseStFSeen.add(key);
+      if(!courseStSeen.has(key)&&!courseStFSeen.has(key)&&!row.actual_st_is_f&&courseSt!==null&&courseSt>=0&&courseSt<=0.99){
        courseStSeen.add(key);cs.stSum+=courseSt;cs.stCount++;
       }
       byCourse.set(actualCourse,cs);courseStatsByNo.set(reg,byCourse);
@@ -151,9 +156,10 @@ Deno.serve(async(req:Request)=>{
      if(!racerRankSeen.has(key)&&Number.isInteger(rank)&&rank>=1&&rank<=6){racerRankSeen.add(key);s.starts++;if(rank===1)s.wins++;if(rank<=2)s.top2++;if(rank<=3)s.top3++;s.finishSum+=rank;if(row.race_date>=racer90MinDate){s.starts90++;if(rank===1)s.wins90++;if(rank<=2)s.top2_90++;if(rank<=3)s.top3_90++;s.finishSum90+=rank;}}
      const actualSt=num(row.actual_st);
      const validSt=!row.actual_st_is_f&&actualSt!==null&&actualSt>=0&&actualSt<=0.99;
+     if(row.actual_st_is_f)racerStFSeen.add(key);
      let recent=s.recentRaces.find((x:any)=>x.date===row.race_date&&x.race_no===(Number(row.race_no)||0)&&x.venue_code===(Number(row.venue_code)||0));
      if(!recent){recent={date:row.race_date,race_no:Number(row.race_no)||0,venue_code:Number(row.venue_code)||0,venue_name:row.venue_name??names[String(row.venue_code)]??"場不明",st:null,is_f:!!row.actual_st_is_f};s.recentRaces.push(recent);}
-     if(!racerStSeen.has(key)&&validSt){
+     if(!racerStSeen.has(key)&&!racerStFSeen.has(key)&&validSt){
       racerStSeen.add(key);recent.st=actualSt;recent.is_f=false;
       const stRow={date:row.race_date,race_no:Number(row.race_no)||0,venue_code:Number(row.venue_code)||0,venue_name:row.venue_name??names[String(row.venue_code)]??"場不明",st:actualSt};
       s.stRows.push(stRow);if(Number(row.venue_code)===venueCode&&row.race_date>=racerMinDate)s.venueStRows.push(stRow);
