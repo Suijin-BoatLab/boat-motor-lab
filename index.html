@@ -362,7 +362,10 @@ function updateBackupStatus(){
 }
 $('save').onclick=()=>{
  let r=collect();
- if(!r.date){$('saveMsg').textContent='開催日を入力してください';return}
+ if(!r.venue){$('saveMsg').textContent='競艇場を選択してください';return}
+ if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(r.date)||Number.isNaN(Date.parse(r.date+'T00:00:00'))){$('saveMsg').textContent='正しい開催日を入力してください';return}
+ const raceNo=Number(r.raceNo);
+ if(!Number.isInteger(raceNo)||raceNo<1||raceNo>12){$('saveMsg').textContent='レース番号は1〜12の数字で入力してください';return}
  // If a loaded record's venue/date/race number changed, treat it as a new race.
  if(editingRaceId&&editingRaceKey!==raceKey(r)){editingRaceId=null;editingRaceKey=null;r.id=Date.now().toString()}
  let ix=editingRaceId?races.findIndex(x=>x.id===editingRaceId):-1;
