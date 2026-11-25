@@ -77,7 +77,10 @@ Deno.serve(async (req: Request) => {
     const eventStart = Number.isInteger(eventDay) && eventDay >= 1 && eventDay <= 7
       ? new Date(Date.parse(date + "T00:00:00Z") - (eventDay - 1) * 86400000).toISOString().slice(0, 10)
       : null;
-    const seriesByRegistration = new Map<string, { starts: number; wins: number; top2: number; top3: number; stTotal: number; stCount: number }>();
+    // Provisional series points: standard ordinary-race scoring only.
+    // Special race bonus points and official deductions are intentionally not inferred.
+    const seriesByRegistration = new Map<string, { starts: number; wins: number; top2: number; top3: number; points: number; stTotal: number; stCount: number }>();
+    const standardPoints: Record<number, number> = { 1: 10, 2: 8, 3: 6, 4: 4, 5: 2, 6: 1, 14: 0, 15: 0 };
     if (eventStart) {
       for (let cursor = Date.parse(eventStart + "T00:00:00Z"); cursor <= Date.parse(date + "T00:00:00Z"); cursor += 86400000) {
         const eventDate = new Date(cursor).toISOString().slice(0, 10);
@@ -93,9 +96,10 @@ Deno.serve(async (req: Request) => {
           for (const resultEntry of Object.values(eventRace.result.racers) as any[]) {
             const registration = String(resultEntry?.number ?? "").trim();
             const place = Number(resultEntry?.place_number);
-            if (!registration || !Number.isInteger(place) || place < 1 || place > 6) continue;
-            const stat = seriesByRegistration.get(registration) ?? { starts: 0, wins: 0, top2: 0, top3: 0, stTotal: 0, stCount: 0 };
-            stat.starts++; if (place === 1) stat.wins++; if (place <= 2) stat.top2++; if (place <= 3) stat.top3++;
+            if (!registration || !Object.prototype.hasOwnProperty.call(standardPoints, place)) continue;
+            const stat = seriesByRegistration.get(registration) ?? { starts: 0, wins: 0, top2: 0, top3: 0, points: 0, stTotal: 0, stCount: 0 };
+            stat.starts++; stat.points += standardPoints[place];
+            if (place === 1) stat.wins++; if (place <= 2) stat.top2++; if (place <= 3) stat.top3++;
             const actualSt = Number(resultEntry?.start_timing); if (Number.isFinite(actualSt) && actualSt >= 0 && actualSt <= 0.99) { stat.stTotal += actualSt; stat.stCount++; }
             seriesByRegistration.set(registration, stat);
           }
@@ -186,7 +190,7 @@ Deno.serve(async (req: Request) => {
         entry: racers[String(lane)] ?? null,
         preview: race.preview?.racers?.[String(lane)] ?? null,
         result: race.result?.racers?.[String(lane)] ?? null,
-        series: (() => { const stat = seriesByRegistration.get(String(racers[String(lane)]?.number ?? "")); return stat ? { ...stat, average_st: stat.stCount ? stat.stTotal / stat.stCount : null } : null; })(),
+        series: (() => { const stat = seriesByRegistration.get(String(racers[String(lane)]?.number ?? "")); return stat ? { ...stat, average_st: stat.stCount ? stat.stTotal / stat.stCount : null, point_rate: stat.starts ? stat.points / stat.starts : null, provisional: true } : null; })(),
         motor_history: motorHistory.filter((row: any) => Number(row.motor_number) === Number(racers[String(lane)]?.motor_number)),
         motor_sections: {
           current: sectionStats(motorHistory.filter((row: any) => Number(row.motor_number) === Number(racers[String(lane)]?.motor_number) && eventStart && row.race_date >= eventStart)),
