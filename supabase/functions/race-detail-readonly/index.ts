@@ -149,6 +149,28 @@ Deno.serve(async (req: Request) => {
           .gte("race_date", previousEventStart).lt("race_date", eventStart)
           .order("race_date", { ascending: false }).range(from, to))
       : [];
+    const sectionUsers = (rows: any[]) => {
+      const byRacer = new Map<string, any>();
+      for (const row of rows) {
+        const key = String(row.racer_registration_no ?? row.racer_name ?? "unknown");
+        if (key === "unknown") continue;
+        const item = byRacer.get(key) ?? { registration_no: row.racer_registration_no ?? null, racer_name: row.racer_name ?? null, races: 0, finishes: [], wins: 0, top2: 0, top3: 0 };
+        item.races++;
+        const finish = Number(row.finish_rank);
+        if (Number.isInteger(finish) && finish >= 1 && finish <= 6) {
+          item.finishes.push(finish);
+          if (finish === 1) item.wins++;
+          if (finish <= 2) item.top2++;
+          if (finish <= 3) item.top3++;
+        }
+        byRacer.set(key, item);
+      }
+      return [...byRacer.values()].map((item) => ({
+        registration_no: item.registration_no, racer_name: item.racer_name, races: item.races,
+        result_count: item.finishes.length, wins: item.wins, top2: item.top2, top3: item.top3,
+        average_finish: item.finishes.length ? item.finishes.reduce((a: number, b: number) => a + b, 0) / item.finishes.length : null,
+      })).sort((a, b) => b.races - a.races || (a.average_finish ?? 99) - (b.average_finish ?? 99));
+    };
     const sectionStats = (rows: any[]) => {
       const average = (field: string, source = rows) => {
         const values = source.filter((x) => x[field] !== null && x[field] !== undefined && Number.isFinite(Number(x[field]))).map((x) => Number(x[field]));
@@ -171,6 +193,8 @@ Deno.serve(async (req: Request) => {
           previous: sectionStats(previousSectionRows.filter((row: any) => Number(row.motor_number) === Number(racers[String(lane)]?.motor_number))),
           current_start_date: eventStart, previous_start_date: previousEventStart,
           comparison_available: Boolean(eventStart && previousEventStart),
+          previous_users: sectionUsers(previousSectionRows.filter((row: any) => Number(row.motor_number) === Number(racers[String(lane)]?.motor_number))),
+          current_users: sectionUsers(motorHistory.filter((row: any) => Number(row.motor_number) === Number(racers[String(lane)]?.motor_number) && eventStart && row.race_date >= eventStart)),
         },
         racer_history: racerHistory.filter((row: any) =>
           String(row.racer_registration_no) === String(racers[String(lane)]?.number ?? racers[String(lane)]?.registration_number ?? "")),
