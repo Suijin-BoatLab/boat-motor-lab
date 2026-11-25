@@ -369,6 +369,19 @@ $('save').onclick=()=>{
  if(!Number.isInteger(raceNo)||raceNo<1||raceNo>12){$('saveMsg').textContent='レース番号は1〜12の数字で入力してください';return}
  const percentKeys=['national2','national3','local2','local3','motor2','motor3','boat2','boat3'];
  const timeKeys=['exhibition','lap','straight','turn'];
+ const stPattern=/^(?:F)?(?:0?\\.\\d{1,2})$/i;
+ for(let i=0;i<r.boats.length;i++){
+  const value=String(r.boats[i]?.exSt??'').trim();
+  if(value&&!stPattern.test(value)){
+   $('saveMsg').textContent=(i+1)+'号艇の展示STは「0.12」または「F.05」の形式で入力してください';return;
+  }
+ }
+ for(let i=0;i<r.results.length;i++){
+  const value=String(r.results[i]?.actualSt??'').trim();
+  if(value&&!stPattern.test(value)){
+   $('saveMsg').textContent=(i+1)+'号艇の本番STは「0.12」または「F.05」の形式で入力してください';return;
+  }
+ }
  for(let i=0;i<r.boats.length;i++){
   const boat=r.boats[i]||{};
   for(const key of percentKeys){
