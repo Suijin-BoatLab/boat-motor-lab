@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f4f5f7">
+<title>BOAT MOTOR LAB｜レース詳細プレビュー</title>
+<style>
+:root{--ink:#25272c;--muted:#9299a3;--line:#dfe3e8;--bg:#f4f5f7;--blue:#1761e8;--head:#5f80d2;--red:#ef6c70;--gold:#ffe84c}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif}
+header{background:#fff;border-bottom:1px solid var(--line);padding:15px max(16px,calc((100vw - 1120px)/2));position:sticky;top:0;z-index:5}
+.brand{font-size:22px;font-weight:950;letter-spacing:.02em}.brand span{font-style:italic}.sub{font-size:10px;letter-spacing:.18em;color:#8792a2}
+main{max-width:1120px;margin:auto;padding:14px 12px 50px}
+.context{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:#e9edf2;padding:12px;border-radius:9px;margin-bottom:12px}
+select,input{font:inherit;border:1px solid var(--line);border-radius:8px;padding:9px;background:white;color:var(--ink)}
+.context strong{font-size:17px}.race-nav{display:flex;gap:7px;overflow:auto;padding:10px 0}.race-nav button,.tabs button{border:1px solid var(--line);background:#fff;padding:10px 16px;border-radius:6px;font-weight:800;white-space:nowrap;color:#596273}.race-nav button.active{background:#25272c;color:#fff}
+.meeting{font-weight:800;font-size:16px;padding:8px 0 13px}.subnav{display:flex;gap:22px;overflow:auto;border-bottom:1px solid var(--line);white-space:nowrap}.subnav button{background:none;border:0;padding:13px 3px;color:#a0a5ad;font-size:15px;font-weight:800}.subnav button.active{color:#25272c;border-bottom:3px solid #25272c}
+h1{font-size:22px;margin:20px 0 12px}h2{font-size:18px;margin:0 0 13px}.panel{background:white;border:1px solid #e4e7ec;border-radius:10px;padding:15px;margin:14px 0}.muted{color:var(--muted)}.small{font-size:12px}.notice{padding:11px;background:#f2f5fb;border-left:4px solid #7b9ae4;border-radius:5px;color:#56647b;font-size:12px;margin:12px 0}
+.tabs{display:flex;gap:7px;overflow:auto;margin:14px 0}.tabs button.active{background:#25272c;color:white}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);background:#fff}table{border-collapse:collapse;width:100%;min-width:760px;font-size:13px;text-align:center}th,td{border:1px solid var(--line);padding:10px 8px;white-space:nowrap}thead th{color:#646b75;background:#fff;font-weight:800}.section-row th{background:#2459df;color:#fff;text-align:center;font-size:14px}.rowhead{background:var(--head);color:white;font-weight:800;min-width:100px}.lane{font-weight:900;width:48px}.lane1{background:#f0f0f0}.lane2{background:#161616;color:white}.lane3{background:#d92e35;color:white}.lane4{background:#1673c9;color:white}.lane5{background:#ffe83c}.lane6{background:#079d82;color:white}
+.value{font-weight:800;font-size:16px}.missing{color:#aeb4bd;font-weight:600}.hot{background:#ffe3df}.warm{background:#fff3a8}.up{color:#13865c;font-weight:900}.down{color:#c44e4e;font-weight:900}
+.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.metric{background:#f6f8fb;border:1px solid var(--line);border-radius:8px;padding:12px}.metric b{display:block;font-size:22px}.metric span{font-size:11px;color:#7c8797}
+.result-state{display:inline-block;border-radius:5px;padding:5px 9px;background:#edf1f7;color:#6d7787;font-size:12px;font-weight:800}
+.tab-panel[hidden]{display:none!important}.tab-panel{animation:fade .12s ease}@keyframes fade{from{opacity:.65}to{opacity:1}}
+@media(max-width:600px){header{padding:12px}.brand{font-size:19px}main{padding:10px 8px 35px}.panel{padding:11px;margin:10px 0}.cards{grid-template-columns:repeat(2,minmax(0,1fr))}.context{gap:7px}.context select{max-width:48%}h1{font-size:20px}}
+</style>
+</head>
+<body>
+<header><div class="brand">BOAT <span>MOTOR</span> LAB</div><div class="sub">RACE DETAIL / DEVELOPMENT PREVIEW</div></header>
+<main>
+<div class="context"><strong id="venueLabel">レース詳細</strong><select id="venue"><option>常滑</option><option>鳴門</option><option>住之江</option><option>蒲郡</option></select><select id="race"><option>1R</option><option>2R</option><option>3R</option><option>4R</option><option>5R</option><option>6R</option><option>7R</option><option>8R</option><option>9R</option><option>10R</option><option>11R</option><option>12R</option></select><input id="date" type="date" value="2026-11-26"><span class="result-state" id="raceState">結果未確定</span></div>
+<div class="meeting">出走表・選手・モーター分析</div>
+<div class="race-nav" id="raceNav"></div>
+<div class="subnav" id="tabs">
+<button class="active" data-tab="entry">出走表</button><button data-tab="pair">連対率・枠別勝率</button><button data-tab="original">オリジナル展示</button><button data-tab="growth">モーター成長率</button><button data-tab="st">ST考察</button><button data-tab="incident">事故・F休み</button><button data-tab="series">今節データ</button><button data-tab="result">レース結果</button>
+</div>
+<div id="entry" class="tab-panel">
+<h1>出走表・基本情報</h1><div class="notice">この画面は統合レイアウトの開発プレビューです。出走選手・モーター番号などの実データ連携は次工程で接続します。</div>
+<div class="tablewrap"><table><thead><tr><th>枠</th><th>選手</th><th>級別</th><th>登録番号</th><th>モーター</th><th>モーター2連対率</th><th>ボート2連対率</th></tr></thead><tbody id="entryRows"></tbody></table></div>
+</div>
+<div id="pair" class="tab-panel" hidden>
+<h1>連対率・枠別勝率</h1><div class="notice">直近10走・直近6か月・当地・今期・SG/G1〜3・一般戦を切り替える構成。集計値は実績データ接続後に表示します。</div>
+<div class="tabs"><button class="active">直近10走</button><button>直近6か月</button><button>当地</button><button>今期</button><button>SG/G1〜3</button><button>一般戦</button></div>
+<div class="tablewrap"><table><thead><tr><th>枠</th><th>レーサー</th><th>AI3連対率</th><th>3連対率</th><th>1着率</th><th>2着率</th><th>3着率</th></tr></thead><tbody id="pairRows"></tbody></table></div>
+</div>
+<div id="original" class="tab-panel" hidden>
+<h1>オリジナル展示</h1><div class="notice">展示タイム・周回・直線・回り足・展示STなど、取得できる項目を艇ごとに一覧化。未取得データを推定値で補いません。</div>
+<div class="tablewrap"><table><thead><tr><th>枠</th><th>モーターNo.</th><th>選手</th><th>展示タイム</th><th>周回</th><th>直線</th><th>回り足</th><th>展示ST</th><th>展示評価</th></tr></thead><tbody id="originalRows"></tbody></table></div>
+</div>
+<div id="growth" class="tab-panel" hidden>
+<h1>モーター成長率・前節から今節への変化</h1><div class="notice">前節の使用選手・着順・展示タイムと、今節の推移を比較します。成長率は展示タイム等の同一指標を同条件で比較できる場合のみ算出します。</div>
+<div class="tablewrap"><table><thead><tr><th>枠</th><th>モーター</th><th>前節使用選手</th><th>前節成績</th><th>前節平均展示</th><th>今節平均展示</th><th>変化</th><th>成長評価</th></tr></thead><tbody id="growthRows"></tbody></table></div>
+<h2 style="margin-top:18px">モーター直近10走</h2>
+<div class="tablewrap"><table><thead><tr><th>枠</th><th>モーター</th><th>項目</th><th>前走</th><th>2走前</th><th>3走前</th><th>4走前</th><th>5走前</th></tr></thead><tbody id="lastRuns"></tbody></table></div>
+</div>
+<div id="st" class="tab-panel" hidden>
+<h1>ST考察</h1><div class="notice">展示STと本番STの差、直近10走・直近3か月・場別の平均ST、スタートの安定度を分けて表示します。Fは数値ST平均から除外し、F回数は別表示します。</div>
+<div class="tablewrap"><table><thead><tr><th>枠</th><th>展示平均ST</th><th>本番平均ST</th><th>平均誤差</th><th>直近10走</th><th>直近3か月</th><th>当地平均</th><th>ST安定率</th><th>F回数</th></tr></thead><tbody id="stRows"></tbody></table></div>
+</div>
+<div id="incident" class="tab-panel" hidden>
+<h1>事故率・フライング情報</h1><div class="notice">F回数・事故点・事故率は別指標です。休みの消化状況・開始日・復帰予定日は根拠データが確認できた場合のみ表示します。</div>
+<div class="tablewrap"><table><thead><tr><th>枠</th><th>選手</th><th>今期F</th><th>未消化F</th><th>前期F</th><th>事故点</th><th>事故率</th><th>F休み状態</th><th>開始日</th><th>復帰予定</th></tr></thead><tbody id="incidentRows"></tbody></table></div>
+</div>
+<div id="series" class="tab-panel" hidden>
+<h1>今節データ・勝負がけ</h1><div class="notice">得点率・順位・残り出走数・準優／優勝戦の進出条件を表示。具体的な必要着順は開催条件と全艇の成績を確認できた場合のみ算出します。</div>
+<div class="tablewrap"><table><thead><tr><th>枠</th><th>選手</th><th>今節順位</th><th>得点率</th><th>得点合計</th><th>出走数</th><th>平均ST</th><th>平均展示</th><th>残り</th><th>勝負がけ条件</th></tr></thead><tbody id="seriesRows"></tbody></table></div>
+</div>
+<div id="result" class="tab-panel" hidden>
+<h1>レース結果</h1><div class="notice">公式または信頼できる結果データの取得・確定を確認してから結果表示へ切り替える設計です。時刻経過だけでは確定扱いにしません。</div>
+<div class="cards"><div class="metric"><span>レース状態</span><b id="resultStatus">未確定</b></div><div class="metric"><span>確定時刻</span><b class="missing">未取得</b></div><div class="metric"><span>決まり手</span><b class="missing">未取得</b></div></div>
+<h2 style="margin-top:18px">レース結果</h2><div class="tablewrap"><table><thead><tr><th>着</th><th>枠</th><th>選手</th><th>タイム</th><th>進入</th><th>本番ST</th></tr></thead><tbody id="resultRows"></tbody></table></div>
+</div>
+<div class="panel"><b>データ連携状況</b><p class="small muted" id="dataStatus">画面レイアウト確認用。実データは未接続の項目があります。</p><p class="small muted">表示の「未取得」は0を意味しません。取得元・更新時刻・集計対象期間を実装時に併記します。</p></div>
+</main>
+<script>
+const laneClass=['lane1','lane2','lane3','lane4','lane5','lane6'];
+const no='<span class="missing">未取得</span>';
+const row=(i,cells)=>'<tr><th class="lane '+laneClass[i]+'">'+(i+1)+'</th>'+cells.map(v=>'<td>'+v+'</td>').join('')+'</tr>';
+const empty=(id,cols)=>{document.getElementById(id).innerHTML=Array.from({length:6},(_,i)=>row(i,Array(cols).fill(no))).join('')};
+empty('entryRows',6);empty('pairRows',6);empty('originalRows',8);empty('growthRows',7);empty('stRows',8);empty('incidentRows',9);empty('seriesRows',9);empty('resultRows',5);
+document.getElementById('lastRuns').innerHTML=Array.from({length:6},(_,i)=>'<tr><th class="lane '+laneClass[i]+'" rowspan="2">'+(i+1)+'</th><th rowspan="2">'+no+'</th><th>展示タイム</th>'+Array.from({length:5},()=>'<td>'+no+'</td>').join('')+'</tr><tr><th>進入／着順</th>'+Array.from({length:5},()=>'<td>'+no+'</td>').join('')+'</tr>').join('');
+const tabs=[...document.querySelectorAll('[data-tab]')];
+tabs.forEach(b=>b.addEventListener('click',()=>{tabs.forEach(x=>x.classList.toggle('active',x===b));document.querySelectorAll('.tab-panel').forEach(p=>p.hidden=p.id!==b.dataset.tab)}));
+const raceNav=document.getElementById('raceNav');raceNav.innerHTML=Array.from({length:12},(_,i)=>'<button class="'+(i===0?'active':'')+'" data-r="'+(i+1)+'">'+(i+1)+'R</button>').join('');
+raceNav.querySelectorAll('button').forEach(b=>b.onclick=()=>{raceNav.querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));document.getElementById('race').value=b.dataset.r;});
+function updateContext(){document.getElementById('venueLabel').textContent=document.getElementById('venue').value;document.getElementById('raceState').textContent='結果未確定';}
+document.getElementById('venue').onchange=updateContext;document.getElementById('race').onchange=()=>{raceNav.querySelectorAll('button').forEach(x=>x.classList.toggle('active',x.dataset.r===document.getElementById('race').value));};updateContext();
+</script>
+</body></html>
