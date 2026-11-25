@@ -134,6 +134,9 @@ Deno.serve(async(req:Request)=>{
     for(const row of importedPage??[]){
      const reg=String(row.racer_registration_no),key=[reg,row.race_date,row.venue_code,row.race_no].join(':');
      const actualCourse=Number(row.actual_course),rankForCourse=Number(row.finish_rank);
+     // A primary F marker applies to this start even if its course field is missing.
+     // Carry it into the course-ST guard before considering fallback course data.
+     if(racerStFSeen.has(key))courseStFSeen.add(key);
      if(Number.isInteger(actualCourse)&&actualCourse>=1&&actualCourse<=6){
       const byCourse=courseStatsByNo.get(reg)??new Map<number,any>();
       const cs=byCourse.get(actualCourse)??{starts:0,wins:0,top2:0,top3:0,finishSum:0,stSum:0,stCount:0};
