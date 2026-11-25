@@ -78,6 +78,8 @@ Deno.serve(async(req:Request)=>{
   const courseStatsByNo=new Map<string,Map<number,any>>();
   const racerStatsByNo=new Map<string,any>();
   const racerHistorySeen=new Set<string>();
+  const racerRankSeen=new Set<string>();
+  const racerStSeen=new Set<string>();
   const courseHistorySeen=new Set<string>();
   const registrationNos=[...new Set(Array.from({length:6},(_,i)=>String(racers[String(i+1)]?.number??racers[String(i+1)]?.registration_number??"").trim()).filter(x=>/^\d+$/.test(x)))];
   const racerMinDate=new Date(Date.parse(date+"T00:00:00Z")-180*86400000).toISOString().slice(0,10);
@@ -103,10 +105,11 @@ Deno.serve(async(req:Request)=>{
      }
      const s=racerStatsByNo.get(reg)??{starts:0,wins:0,top2:0,top3:0,finishSum:0,starts90:0,wins90:0,top2_90:0,top3_90:0,finishSum90:0,stRows:[],venueStRows:[],recentRaces:[]};
      const rank=Number(row.finish_rank);
-     if(Number.isInteger(rank)&&rank>=1&&rank<=6){s.starts++;if(rank===1)s.wins++;if(rank<=2)s.top2++;if(rank<=3)s.top3++;s.finishSum+=rank;if(row.race_date>=racer90MinDate){s.starts90++;if(rank===1)s.wins90++;if(rank<=2)s.top2_90++;if(rank<=3)s.top3_90++;s.finishSum90+=rank;}}
+     if(Number.isInteger(rank)&&rank>=1&&rank<=6){racerRankSeen.add(key);s.starts++;if(rank===1)s.wins++;if(rank<=2)s.top2++;if(rank<=3)s.top3++;s.finishSum+=rank;if(row.race_date>=racer90MinDate){s.starts90++;if(rank===1)s.wins90++;if(rank<=2)s.top2_90++;if(rank<=3)s.top3_90++;s.finishSum90+=rank;}}
      const actualSt=num(row.actual_st);
      s.recentRaces.push({date:row.race_date,race_no:Number(row.race_no)||0,venue_code:Number(row.venue_code)||0,venue_name:row.venue_name??names[String(row.venue_code)]??"場不明",st:!row.actual_st_is_f&&actualSt!==null&&actualSt>=0&&actualSt<=0.99?actualSt:null,is_f:!!row.actual_st_is_f});
      if(!row.actual_st_is_f&&actualSt!==null&&actualSt>=0&&actualSt<=0.99){
+      racerStSeen.add(key);
       const stRow={date:row.race_date,race_no:Number(row.race_no)||0,venue_code:Number(row.venue_code)||0,venue_name:row.venue_name??names[String(row.venue_code)]??"場不明",st:actualSt};
       s.stRows.push(stRow);
       if(Number(row.venue_code)===venueCode&&row.race_date>=racerMinDate)s.venueStRows.push(stRow);
@@ -134,14 +137,18 @@ Deno.serve(async(req:Request)=>{
        byCourse.set(actualCourse,cs);courseStatsByNo.set(reg,byCourse);
       }
      }
-     if(racerHistorySeen.has(key))continue;
+     const alreadySeen=racerHistorySeen.has(key);
+     if(alreadySeen&&racerRankSeen.has(key)&&racerStSeen.has(key))continue;
      racerHistorySeen.add(key);
      const s=racerStatsByNo.get(reg)??{starts:0,wins:0,top2:0,top3:0,finishSum:0,starts90:0,wins90:0,top2_90:0,top3_90:0,finishSum90:0,stRows:[],venueStRows:[],recentRaces:[]};
      const rank=Number(row.finish_rank);
-     if(Number.isInteger(rank)&&rank>=1&&rank<=6){s.starts++;if(rank===1)s.wins++;if(rank<=2)s.top2++;if(rank<=3)s.top3++;s.finishSum+=rank;if(row.race_date>=racer90MinDate){s.starts90++;if(rank===1)s.wins90++;if(rank<=2)s.top2_90++;if(rank<=3)s.top3_90++;s.finishSum90+=rank;}}
+     if(!racerRankSeen.has(key)&&Number.isInteger(rank)&&rank>=1&&rank<=6){racerRankSeen.add(key);s.starts++;if(rank===1)s.wins++;if(rank<=2)s.top2++;if(rank<=3)s.top3++;s.finishSum+=rank;if(row.race_date>=racer90MinDate){s.starts90++;if(rank===1)s.wins90++;if(rank<=2)s.top2_90++;if(rank<=3)s.top3_90++;s.finishSum90+=rank;}}
      const actualSt=num(row.actual_st);
-     s.recentRaces.push({date:row.race_date,race_no:Number(row.race_no)||0,venue_code:Number(row.venue_code)||0,venue_name:row.venue_name??names[String(row.venue_code)]??"場不明",st:!row.actual_st_is_f&&actualSt!==null&&actualSt>=0&&actualSt<=0.99?actualSt:null,is_f:!!row.actual_st_is_f});
-     if(!row.actual_st_is_f&&actualSt!==null&&actualSt>=0&&actualSt<=0.99){
+     const validSt=!row.actual_st_is_f&&actualSt!==null&&actualSt>=0&&actualSt<=0.99;
+     let recent=s.recentRaces.find((x:any)=>x.date===row.race_date&&x.race_no===(Number(row.race_no)||0)&&x.venue_code===(Number(row.venue_code)||0));
+     if(!recent){recent={date:row.race_date,race_no:Number(row.race_no)||0,venue_code:Number(row.venue_code)||0,venue_name:row.venue_name??names[String(row.venue_code)]??"場不明",st:null,is_f:!!row.actual_st_is_f};s.recentRaces.push(recent);}
+     if(!racerStSeen.has(key)&&validSt){
+      racerStSeen.add(key);recent.st=actualSt;recent.is_f=false;
       const stRow={date:row.race_date,race_no:Number(row.race_no)||0,venue_code:Number(row.venue_code)||0,venue_name:row.venue_name??names[String(row.venue_code)]??"場不明",st:actualSt};
       s.stRows.push(stRow);if(Number(row.venue_code)===venueCode&&row.race_date>=racerMinDate)s.venueStRows.push(stRow);
      }
