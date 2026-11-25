@@ -367,6 +367,16 @@ $('save').onclick=()=>{
  if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(r.date)||Number.isNaN(parsedDate.getTime())||parsedDate.toLocaleDateString('sv-SE')!==r.date){$('saveMsg').textContent='実在する開催日を入力してください';return}
  const raceNo=Number(r.raceNo);
  if(!Number.isInteger(raceNo)||raceNo<1||raceNo>12){$('saveMsg').textContent='レース番号は1〜12の数字で入力してください';return}
+ const winRateKeys=['nationalWin','localWin'];
+ for(let i=0;i<r.boats.length;i++){
+  const boat=r.boats[i]||{};
+  for(const key of winRateKeys){
+   const raw=String(boat[key]??'').trim();
+   if(raw!==''&&(!Number.isFinite(Number(raw))||Number(raw)<0||Number(raw)>10)){
+    $('saveMsg').textContent=(i+1)+'号艇の'+(key==='nationalWin'?'全国勝率':'当地勝率')+'は0〜10の範囲で入力してください';return;
+   }
+  }
+ }
  const percentKeys=['national2','national3','local2','local3','motor2','motor3','boat2','boat3'];
  const timeKeys=['exhibition','lap','straight','turn'];
  const stPattern=/^(?:F)?(?:0?\\.\\d{1,2})$/i;
