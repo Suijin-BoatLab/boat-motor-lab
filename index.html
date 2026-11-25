@@ -952,7 +952,7 @@ async function loadRaceMotors(){
   }).join('');
   const withHistory=boats.filter(x=>Number(x.history_rows)>0).length;
   const capture=data.original_capture||{};const captureMsg=capture.status==='saved'?'当日オリジナル展示をクラウド保存：'+capture.saved+'艇。':capture.status==='save_failed'?'当日オリジナル展示は取得しましたが、履歴保存に失敗：'+safe(capture.message||'保存エラー')+'。':'当日オリジナル展示は未取得（公開前・非対応・取得元停止の可能性）。';
-  const t=data.timings||{};const timingMsg=Object.keys(t).length?' 処理時間：出走データ '+(t.open_api_fetch_ms??'-')+'ms／BOATCAST '+(t.boatcast_fetch_parse_ms??'-')+'ms／履歴取得 '+(t.history_fetch_ms??'-')+'ms／分析・保存 '+(t.calculate_and_save_ms??'-')+'ms／合計 '+(t.total_ms??'-')+'ms。':'';
+  const t=data.timings||{};const timingMsg=Object.keys(t).length?' 処理時間：出走データ '+(t.open_api_fetch_ms??'-')+'ms／BOATCAST '+(t.boatcast_fetch_parse_ms??'-')+'ms／履歴取得 '+(t.racer_history_fetch_ms??'-')+'ms（選手90日）／分析・保存 '+(t.calculate_and_save_ms??'-')+'ms／合計 '+(t.total_ms??'-')+'ms。':'';
   $('raceAnalysisStatus').textContent='分析完了：'+withHistory+'艇に過去履歴あり。'+captureMsg+timingMsg+'順位目安は30日展示平均50％・180日展示平均30％・30日ST平均20％を基本にした相対比較です。各項目は必要件数を満たす場合のみ使用し、使えない項目の重みは残りに配分します。比較できる項目が不足する場合はスコアを表示しません。これは着順や舟券的中率の予測値ではありません。データ件数・F回数を併記しています。周回/直線/回り足は公開元から取得できた場合のみ表示します。';
  }catch(e){
   if(requestId!==motorRequestId)return;
