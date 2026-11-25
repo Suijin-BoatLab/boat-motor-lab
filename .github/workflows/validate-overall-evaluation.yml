@@ -22,9 +22,9 @@ jobs:
         with:
           deno-version: v2.x
       - name: Check Supabase Edge Function types
-        run: deno check supabase/functions/analyze-race-motors/index.ts supabase/functions/analyze-race-motors/course-profile.ts
+        run: deno check supabase/functions/analyze-race-motors/index.ts supabase/functions/analyze-race-motors/course-profile.ts supabase/functions/analyze-race-motors/decision-methods.ts
       - name: Run course profile unit tests
-        run: deno test supabase/functions/analyze-race-motors/course-profile_test.ts
+        run: deno test supabase/functions/analyze-race-motors/course-profile_test.ts supabase/functions/analyze-race-motors/decision-methods_test.ts
       - name: Check browser JavaScript syntax
         run: |
           node <<'NODE'
