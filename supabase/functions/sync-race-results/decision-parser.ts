@@ -64,11 +64,13 @@ export function parseDecision(source: unknown): DecisionParseResult {
   const root = asObject(source);
   const race = asObject(root.race);
   // Prefer race-level official field; only use root-level aliases as fallback.
+  const winner = findWinner(source);
+  const winnerObject = winner ?? {};
   const method = firstText([
     race.kimarite, race.decision_method, race.kimari, race["決まり手"],
     root.decision_method, root.kimarite, root.kimari, root["決まり手"],
+    winnerObject.kimarite, winnerObject.decision_method, winnerObject.kimari, winnerObject["決まり手"],
   ]);
-  const winner = findWinner(source);
 
   const registration = winner
     ? winner.regno ?? winner.racer_registration_no ?? winner.registration_no ?? winner.touban ?? winner["登録番号"]
