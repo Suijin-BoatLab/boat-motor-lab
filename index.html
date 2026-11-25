@@ -171,6 +171,16 @@ footer{color:var(--muted);font-size:11px;text-align:center;padding:24px}
 
   <div class="panel"><h2>過去データ取り込み</h2><p class="small muted">直近6か月分のレース別・艇別データを7日ずつ取得し、詳細履歴と日別集計を保存します。日別集計がすでにあっても、詳細履歴が不足している日は再取得します。取得元の更新遅延・欠損・開催なしの日は保存されない場合があります。</p><div class="actions"><button class="btn primary" id="historyImportStart">過去6か月分の詳細履歴を取り込む</button></div><p class="small muted" id="historyImportStatus" aria-live="polite">ログイン後に実行できます。</p></div>
 
+
+  <div class="panel" id="racerCsvPanel">
+    <h2>選手別・決まり手履歴 CSV一括取込</h2>
+    <p class="small muted">過去レースの選手別成績CSVをクラウドへまとめて保存します。1レースにつき1〜6艇分の行を用意してください。決まり手は同じレースの各行に入れても、1着の行だけに入れても構いません。既存のモーター履歴は変更しません。</p>
+    <div class="actions"><button class="btn secondary" id="racerCsvTemplate">CSV見本を保存</button><label class="btn secondary" for="racerCsvFile">CSVファイルを選択</label><input id="racerCsvFile" type="file" accept=".csv,text/csv" class="hidden"></div>
+    <p class="small muted" id="racerCsvFileName">ファイル未選択</p>
+    <div class="actions"><button class="btn primary" id="racerCsvImport">選手別CSVを一括取り込み</button></div>
+    <p class="small muted" id="racerCsvStatus" aria-live="polite">ログイン後にCSVを取り込めます。</p>
+    <div class="notice">必須項目：日付（YYYY-MM-DD）・競艇場・レース番号・艇番・登録番号。任意項目：選手名・進入コース・着順・本番ST・決まり手。STのF表記は平均STから除外して記録します。</div>
+  </div>
   <div class="panel">
     <h2>この端末への保存</h2>
     <p class="small muted">現在の試作版は、このブラウザの端末内にデータを保存します。GitHub Pagesに公開しただけでは、別端末との自動共有はされません。</p>
@@ -982,6 +992,40 @@ async function loadRaceMotors(){
   $('raceAnalysisStatus').textContent='機力分析を完了できませんでした：'+(e.message||'不明なエラー')+'。ログイン状態と過去データの取り込み状況を確認してください。';
  }
 }
+
+// Bulk CSV import for historical racer entries. Auth is inherited from the active Supabase session.
+let selectedRacerCsv=null;
+$('racerCsvFile').addEventListener('change',e=>{
+ const file=e.target.files?.[0]||null;selectedRacerCsv=file;
+ $('racerCsvFileName').textContent=file?('選択中：'+file.name+'（'+Math.ceil(file.size/1024)+'KB）'):'ファイル未選択';
+ $('racerCsvStatus').textContent='';
+});
+$('racerCsvTemplate').addEventListener('click',()=>{
+ const csv='date,venue_code,venue_name,race_no,lane,racer_registration_no,racer_name,actual_course,finish_rank,actual_st,decision_method\n2026-11-24,8,常滑,12,1,4320,峰竜太,1,1,0.12,逃げ\n2026-11-24,8,常滑,12,2,0000,サンプル選手,2,2,0.15,\n';
+ const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
+ const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='boat_motor_lab_racer_history_template.csv';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+});
+$('racerCsvImport').addEventListener('click',async()=>{
+ const out=$('racerCsvStatus'),btn=$('racerCsvImport');
+ if(!cloudClient||!cloudUser){out.textContent='先に「保存・設定」でログインしてください。';return;}
+ if(!selectedRacerCsv){out.textContent='先にCSVファイルを選択してください。';return;}
+ if(btn.disabled)return;
+ btn.disabled=true;
+ try{
+  if(selectedRacerCsv.size>12*1024*1024)throw new Error('CSVは12MB以下にしてください。');
+  out.textContent='CSVを読み込んでいます…';
+  const csv=await selectedRacerCsv.text();
+  const {data,error}=await cloudClient.functions.invoke('import-racer-history-csv',{body:{csv}});
+  if(error){
+   const detail=typeof error?.context?.body?.text==='function'?await error.context.body.text().catch(()=> ''):'';
+   throw new Error(detail||error.message||'CSV取込サーバーとの通信に失敗しました');
+  }
+  if(data?.error)throw new Error(data.error+(data.invalid_rows?'：'+data.invalid_rows.join('／'):''));
+  out.textContent='取込完了：'+Number(data.saved||0)+'行をクラウドに保存しました。同じレース・艇番の再取込は上書き更新されます。';
+ }catch(err){out.textContent='取込できませんでした：'+(err.message||'不明なエラー');}
+ finally{btn.disabled=false;}
+});
+
 const localToday=new Date();$('homeDate').value=[localToday.getFullYear(),String(localToday.getMonth()+1).padStart(2,'0'),String(localToday.getDate()).padStart(2,'0')].join('-');$('homeDateLabel').textContent=$('homeDate').value;
 loadSchedule();
 
