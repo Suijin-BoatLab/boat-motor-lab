@@ -367,6 +367,24 @@ $('save').onclick=()=>{
  if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(r.date)||Number.isNaN(parsedDate.getTime())||parsedDate.toLocaleDateString('sv-SE')!==r.date){$('saveMsg').textContent='実在する開催日を入力してください';return}
  const raceNo=Number(r.raceNo);
  if(!Number.isInteger(raceNo)||raceNo<1||raceNo>12){$('saveMsg').textContent='レース番号は1〜12の数字で入力してください';return}
+ const percentKeys=['national2','national3','local2','local3','motor2','motor3','boat2','boat3'];
+ const timeKeys=['exhibition','lap','straight','turn'];
+ for(let i=0;i<r.boats.length;i++){
+  const boat=r.boats[i]||{};
+  for(const key of percentKeys){
+   if(boat[key]!==''&&(!Number.isFinite(Number(boat[key]))||Number(boat[key])<0||Number(boat[key])>100)){
+    $('saveMsg').textContent=(i+1)+'号艇の'+({national2:'全国2連対率',national3:'全国3連対率',local2:'当地2連対率',local3:'当地3連対率',motor2:'モーター2連対率',motor3:'モーター3連対率',boat2:'ボート2連対率',boat3:'ボート3連対率'}[key])+'は0〜100の範囲で入力してください';return;
+   }
+  }
+  for(const key of timeKeys){
+   if(boat[key]!==''&&(!Number.isFinite(Number(boat[key]))||Number(boat[key])<=0)){
+    $('saveMsg').textContent=(i+1)+'号艇のタイムは0より大きい数字で入力してください';return;
+   }
+  }
+  if(boat.weight!==''&&(!Number.isFinite(Number(boat.weight))||Number(boat.weight)<=0)){
+   $('saveMsg').textContent=(i+1)+'号艇の体重は0より大きい数字で入力してください';return;
+  }
+ }
  // If a loaded record's venue/date/race number changed, treat it as a new race.
  if(editingRaceId&&editingRaceKey!==raceKey(r)){editingRaceId=null;editingRaceKey=null;r.id=Date.now().toString()}
  let ix=editingRaceId?races.findIndex(x=>x.id===editingRaceId):-1;
