@@ -404,8 +404,17 @@ $('save').onclick=()=>{
    $('saveMsg').textContent=(i+1)+'号艇の展示STは「0.12」または「F.05」の形式で入力してください';return;
   }
  }
+ const usedCourses=new Map();
  for(let i=0;i<r.results.length;i++){
   const result=r.results[i]||{};
+  const courseRaw=String(result.course??'').trim();
+  if(courseRaw){
+   const course=Number(courseRaw);
+   if(usedCourses.has(course)){
+    $('saveMsg').textContent='進入コース'+course+'が重複しています。結果データを確認してください。';return;
+   }
+   usedCourses.set(course,i+1);
+  }
   for(const key of ['rank','course']){
    const raw=String(result[key]??'').trim();
    if(raw!==''&&(!Number.isInteger(Number(raw))||Number(raw)<1||Number(raw)>6)){
