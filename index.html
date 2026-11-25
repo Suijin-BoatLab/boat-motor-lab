@@ -820,9 +820,12 @@ async function loadRaceMotors(){
   if(data?.error)throw new Error(data.error);
   const colors=['#fff','#222','#df5252','#4d8df0','#f0d44c','#37bd83'];
   const boats=Array.isArray(data.boats)?data.boats:[];
-  const ranked=boats.filter(x=>x.motor_number&&x.history?.find(h=>h.days===30)?.exhibition_time!==null&&x.history?.find(h=>h.days===30)?.exhibition_time!==undefined)
-   .sort((x,y)=>x.history.find(h=>h.days===30).exhibition_time-y.history.find(h=>h.days===30).exhibition_time);
-  const scores=new Map(ranked.map((x,i)=>[x.lane,ranked.length===1?100:Math.round(100*(1-i/(ranked.length-1)))]));
+  const ranked=boats.filter(x=>{
+   const h=x.history?.find(v=>v.days===30);
+   return !!x.motor_number&&h?.exhibition_time!==null&&h?.exhibition_time!==undefined&&Number(h.exhibition_time_count)>=3;
+  }).sort((x,y)=>x.history.find(h=>h.days===30).exhibition_time-y.history.find(h=>h.days===30).exhibition_time);
+  // A relative score is shown only when at least two motors have three or more measured exhibitions.
+  const scores=new Map(ranked.length>=2?ranked.map((x,i)=>[x.lane,Math.round(100*(1-i/(ranked.length-1)))]):[]);
   const safe=v=>String(v??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const fmtTime=v=>v===null||v===undefined?'—':Number(v).toFixed(2)+'秒';
   const windowFor=(boat,days)=>boat.history?.find(h=>h.days===days)||{};
@@ -835,7 +838,7 @@ async function loadRaceMotors(){
    return '<div class="motor-boat"><div class="motor-head"><span class="motor-lane" style="background:'+colors[(c.lane||1)-1]+';'+(c.lane===2?'color:white':'')+'">'+safe(c.lane)+'</span><div style="flex:1"><b>'+safe(r.name||'選手情報なし')+'</b><div class="home-sub">モーター '+safe(c.motor_number)+'号機｜2連対率 '+safe(rates.place===null?'—':rates.place)+'%</div></div><div style="text-align:right"><div class="motor-score">'+(score===null?'—':score)+'</div><div class="'+cls+'">'+label+'</div></div></div><div class="scorebar"><i style="width:'+(score??0)+'%"></i></div><div class="home-sub">展示平均：7日 '+fmtTime(h7.exhibition_time)+'｜30日 '+fmtTime(h30.exhibition_time)+'｜90日 '+fmtTime(h90.exhibition_time)+'｜180日 '+fmtTime(h180.exhibition_time)+'<br>30日：出走 '+sample+'件／展示 '+(Number(h30.exhibition_time_count)||0)+'件／F '+(Number(h30.exhibition_f_count)||0)+'回／1着 '+(Number(h30.first_places)||0)+'回<br>180日：出走 '+(Number(h180.count)||0)+'件／展示 '+(Number(h180.exhibition_time_count)||0)+'件｜周回 '+fmtTime(h30.lap_time)+'｜直線 '+fmtTime(h30.straight_time)+'｜回り足 '+fmtTime(h30.turn_time)+'<br>当日展示 '+fmtTime(current.exhibition_time)+'｜展示ST '+safe(current.exhibition_st?.raw??'—')+'｜履歴 '+safe(c.history_source||'未蓄積')+'</div></div>';
   }).join('');
   const withHistory=boats.filter(x=>Number(x.history_rows)>0).length;
-  $('raceAnalysisStatus').textContent='分析完了：'+withHistory+'艇に過去履歴あり。順位目安は30日間の平均展示タイム（小さいほど上位）で比較。データ件数・F回数・周回/直線/回り足も併記しています。履歴のない艇は比較対象外です。';
+  $('raceAnalysisStatus').textContent='分析完了：'+withHistory+'艇に過去履歴あり。順位目安は30日間の平均展示タイム（小さいほど上位）での相対比較です。各モーター展示3件未満、または比較対象が2艇未満の場合はスコアを表示しません。これは着順や舟券的中率の予測値ではありません。データ件数・F回数・周回/直線/回り足も併記しています。';
  }catch(e){
   $('raceAnalysisStatus').textContent='機力分析を完了できませんでした：'+(e.message||'不明なエラー')+'。ログイン状態と過去データの取り込み状況を確認してください。';
  }
