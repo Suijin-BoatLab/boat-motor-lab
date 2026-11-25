@@ -85,7 +85,7 @@ Deno.serve(async(req:Request)=>{
   if(registrationNos.length){
    let racerOffset=0;
    while(true){
-    const {data:racerPage,error:racerError}=await supabase.from("historical_motor_entries").select("id,race_date,venue_code,venue_name,race_no,racer_registration_no,finish_rank,actual_course,actual_st,actual_st_is_f").eq("user_id",auth.user.id).in("racer_registration_no",registrationNos).lt("race_date",date).gte("race_date",racerMinDate).order("race_date",{ascending:false}).order("race_no",{ascending:false}).order("id",{ascending:false}).range(racerOffset,racerOffset+999);
+    const {data:racerPage,error:racerError}=await supabase.from("historical_motor_entries").select("id,race_date,venue_code,venue_name,race_no,racer_registration_no,finish_rank,actual_course,actual_st,actual_st_is_f").eq("user_id",auth.user.id).in("racer_registration_no",registrationNos).lt("race_date",date).order("race_date",{ascending:false}).order("race_no",{ascending:false}).order("id",{ascending:false}).range(racerOffset,racerOffset+999);
     if(racerError)return json({error:"選手履歴取得失敗: "+racerError.message},500);
     for(const row of racerPage??[]){
      const reg=String(row.racer_registration_no),key=[reg,row.race_date,row.venue_code,row.race_no].join(':');racerHistorySeen.add(key);
@@ -109,7 +109,7 @@ Deno.serve(async(req:Request)=>{
      if(!row.actual_st_is_f&&actualSt!==null&&actualSt>=0&&actualSt<=0.99){
       const stRow={date:row.race_date,race_no:Number(row.race_no)||0,venue_code:Number(row.venue_code)||0,venue_name:row.venue_name??names[String(row.venue_code)]??"場不明",st:actualSt};
       s.stRows.push(stRow);
-      if(Number(row.venue_code)===venueCode)s.venueStRows.push(stRow);
+      if(Number(row.venue_code)===venueCode&&row.race_date>=racerMinDate)s.venueStRows.push(stRow);
      }
      racerStatsByNo.set(reg,s);
     }
@@ -118,7 +118,7 @@ Deno.serve(async(req:Request)=>{
    }
    let importedOffset=0;
    while(true){
-    const {data:importedPage,error:importedError}=await supabase.from("historical_racer_entries").select("id,race_date,venue_code,venue_name,race_no,lane,racer_registration_no,actual_course,finish_rank,actual_st,actual_st_is_f").eq("user_id",auth.user.id).in("racer_registration_no",registrationNos).lt("race_date",date).gte("race_date",racerMinDate).order("race_date",{ascending:false}).order("race_no",{ascending:false}).range(importedOffset,importedOffset+999);
+    const {data:importedPage,error:importedError}=await supabase.from("historical_racer_entries").select("id,race_date,venue_code,venue_name,race_no,lane,racer_registration_no,actual_course,finish_rank,actual_st,actual_st_is_f").eq("user_id",auth.user.id).in("racer_registration_no",registrationNos).lt("race_date",date).order("race_date",{ascending:false}).order("race_no",{ascending:false}).range(importedOffset,importedOffset+999);
     if(importedError)return json({error:"CSV選手履歴取得失敗: "+importedError.message},500);
     for(const row of importedPage??[]){
      const reg=String(row.racer_registration_no),key=[reg,row.race_date,row.venue_code,row.race_no].join(':');
@@ -143,7 +143,7 @@ Deno.serve(async(req:Request)=>{
      s.recentRaces.push({date:row.race_date,race_no:Number(row.race_no)||0,venue_code:Number(row.venue_code)||0,venue_name:row.venue_name??names[String(row.venue_code)]??"場不明",st:!row.actual_st_is_f&&actualSt!==null&&actualSt>=0&&actualSt<=0.99?actualSt:null,is_f:!!row.actual_st_is_f});
      if(!row.actual_st_is_f&&actualSt!==null&&actualSt>=0&&actualSt<=0.99){
       const stRow={date:row.race_date,race_no:Number(row.race_no)||0,venue_code:Number(row.venue_code)||0,venue_name:row.venue_name??names[String(row.venue_code)]??"場不明",st:actualSt};
-      s.stRows.push(stRow);if(Number(row.venue_code)===venueCode)s.venueStRows.push(stRow);
+      s.stRows.push(stRow);if(Number(row.venue_code)===venueCode&&row.race_date>=racerMinDate)s.venueStRows.push(stRow);
      }
      racerStatsByNo.set(reg,s);
     }
