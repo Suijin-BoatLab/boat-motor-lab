@@ -895,8 +895,10 @@ async function syncSelectedRaceResult(){
   if(data?.error)throw new Error(data.error);
   const raw=data?.source_data??{},keys=Object.keys(raw);
   const safe=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  panel.innerHTML='<div class="panel"><b>結果データをクラウドに保存しました</b><p class="home-sub">保存先：レース結果・払戻データ／取得元：艇愛ボートレースDB</p><p class="home-sub">取得データ項目：'+safe(keys.join('、')||'確認中')+'</p><details><summary>取得した元データを確認</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere;font-size:11px">'+safe(JSON.stringify(raw,null,2))+'</pre></details></div>';
-  status.textContent='保存完了。次の工程で3連単の組番・払戻金・人気順位を自動抽出し、回収率検証につなげます。';
+  const decisionLabel=data?.decision_method?safe(data.decision_method):'未解析（元データ保存済み）';
+  const winnerLabel=data?.winning_racer_registration_no?'登録番号 '+safe(data.winning_racer_registration_no)+'／進入 '+safe(data.winning_course??'—')+'コース':'勝者情報は未解析';
+  panel.innerHTML='<div class="panel"><b>結果データをクラウドに保存しました</b><p class="home-sub">保存先：レース結果・払戻データ</p><p class="home-sub">決まり手：<b>'+decisionLabel+'</b>｜'+winnerLabel+'</p><p class="home-sub">解析状態：'+safe(data?.decision_parse_status||'確認中')+'／取得元：<a href="https://boatrace-db.jp/" target="_blank" rel="noopener">艇愛ボートレースDB</a></p><p class="home-sub">取得データ項目：'+safe(keys.join('、')||'確認中')+'</p><details><summary>取得した元データを確認</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere;font-size:11px">'+safe(JSON.stringify(raw,null,2))+'</pre></details></div>';
+  status.textContent=data?.decision_parse_status==='parsed'?'保存完了。決まり手と勝者情報を取得しました。':'保存完了。決まり手データの項目構造を確認するため、元データを保持しました。';
  }catch(err){status.textContent='取得できませんでした：'+(err?.message||String(err))}
  finally{btn.disabled=false}
 }
