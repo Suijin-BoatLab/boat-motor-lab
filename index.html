@@ -367,6 +367,13 @@ $('save').onclick=()=>{
  if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(r.date)||Number.isNaN(parsedDate.getTime())||parsedDate.toLocaleDateString('sv-SE')!==r.date){$('saveMsg').textContent='実在する開催日を入力してください';return}
  const raceNo=Number(r.raceNo);
  if(!Number.isInteger(raceNo)||raceNo<1||raceNo>12){$('saveMsg').textContent='レース番号は1〜12の数字で入力してください';return}
+ const conditions=[['wind','風速',0,30],['wave','波高',0,100],['temp','気温',-20,60],['waterTemp','水温',0,40]];
+ for(const [key,label,min,max] of conditions){
+  const raw=String(r[key]??'').trim();
+  if(raw!==''&&(!Number.isFinite(Number(raw))||Number(raw)<min||Number(raw)>max)){
+   $('saveMsg').textContent=label+'は'+min+'〜'+max+'の範囲で入力してください';return;
+  }
+ }
  const winRateKeys=['nationalWin','localWin'];
  for(let i=0;i<r.boats.length;i++){
   const boat=r.boats[i]||{};
