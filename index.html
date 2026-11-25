@@ -911,29 +911,33 @@ async function loadRaceMotors(){
   if(data?.error)throw new Error(data.error);
   const colors=['#fff','#222','#df5252','#4d8df0','#f0d44c','#37bd83'];
   const boats=Array.isArray(data.boats)?data.boats:[];
-  const ranked=boats.filter(x=>{
-   const h=x.history?.find(v=>v.days===30);
-   return !!x.motor_number&&h?.exhibition_time!==null&&h?.exhibition_time!==undefined&&Number(h.exhibition_time_count)>=3;
-  }).sort((x,y)=>x.history.find(h=>h.days===30).exhibition_time-y.history.find(h=>h.days===30).exhibition_time);
-  // A relative score is shown only when at least two motors have three or more measured exhibitions.
-  // Motors with effectively identical average exhibition times receive the same score.
-  const scores=new Map();
-  if(ranked.length>=2){
+  // Composite trend score: 30-day exhibition 50%, 180-day exhibition 30%, 30-day ST 20%.
+  // Only metrics with enough samples are used; remaining weights are normalized.
+  const scores=new Map(),scoreParts=new Map();
+  const metricSpecs=[
+   {key:'exhibition_time',days:30,min:3,weight:0.5},
+   {key:'exhibition_time',days:180,min:10,weight:0.3},
+   {key:'exhibition_st',days:30,min:5,weight:0.2}
+  ];
+  for(const spec of metricSpecs){
+   const eligible=boats.filter(x=>{
+    const h=x.history?.find(v=>v.days===spec.days);
+    return !!x.motor_number&&h?.[spec.key]!==null&&h?.[spec.key]!==undefined&&Number(h[spec.key+'_count'])>=spec.min;
+   }).sort((x,y)=>Number(x.history.find(h=>h.days===spec.days)[spec.key])-Number(y.history.find(h=>h.days===spec.days)[spec.key]));
+   if(eligible.length<2)continue;
    let start=0;
-   while(start<ranked.length){
-    let end=start;
-    const base=Number(ranked[start].history.find(h=>h.days===30).exhibition_time);
-    while(end+1<ranked.length){
-     const next=Number(ranked[end+1].history.find(h=>h.days===30).exhibition_time);
-     if(Math.abs(next-base)>0.000001)break;
-     end++;
+   while(start<eligible.length){
+    let end=start;const base=Number(eligible[start].history.find(h=>h.days===spec.days)[spec.key]);
+    while(end+1<eligible.length&&Math.abs(Number(eligible[end+1].history.find(h=>h.days===spec.days)[spec.key])-base)<=0.000001)end++;
+    const rankScore=100*(1-((start+end)/2)/(eligible.length-1));
+    for(let i=start;i<=end;i++){
+     const lane=eligible[i].lane,part=scoreParts.get(lane)||{weighted:0,weight:0};
+     part.weighted+=rankScore*spec.weight;part.weight+=spec.weight;scoreParts.set(lane,part);
     }
-    const averagePosition=(start+end)/2;
-    const score=Math.round(100*(1-averagePosition/(ranked.length-1)));
-    for(let i=start;i<=end;i++)scores.set(ranked[i].lane,score);
     start=end+1;
    }
   }
+  for(const [lane,part] of scoreParts)if(part.weight>0)scores.set(lane,Math.round(part.weighted/part.weight));
   const safe=v=>String(v??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const fmtTime=v=>v===null||v===undefined?'—':Number(v).toFixed(2)+'秒';
   const fmtHistoryTime=(v,n)=>Number(n)>0?fmtTime(v):'未取得（公開データなし）';
@@ -949,7 +953,7 @@ async function loadRaceMotors(){
   const withHistory=boats.filter(x=>Number(x.history_rows)>0).length;
   const capture=data.original_capture||{};const captureMsg=capture.status==='saved'?'当日オリジナル展示をクラウド保存：'+capture.saved+'艇。':capture.status==='save_failed'?'当日オリジナル展示は取得しましたが、履歴保存に失敗：'+safe(capture.message||'保存エラー')+'。':'当日オリジナル展示は未取得（公開前・非対応・取得元停止の可能性）。';
   const t=data.timings||{};const timingMsg=Object.keys(t).length?' 処理時間：出走データ '+(t.open_api_fetch_ms??'-')+'ms／BOATCAST '+(t.boatcast_fetch_parse_ms??'-')+'ms／履歴取得 '+(t.history_fetch_ms??'-')+'ms／分析・保存 '+(t.calculate_and_save_ms??'-')+'ms／合計 '+(t.total_ms??'-')+'ms。':'';
-  $('raceAnalysisStatus').textContent='分析完了：'+withHistory+'艇に過去履歴あり。'+captureMsg+timingMsg+'順位目安は30日間の平均展示タイム（小さいほど上位）での相対比較です。各モーター展示3件未満、または比較対象が2艇未満の場合はスコアを表示しません。これは着順や舟券的中率の予測値ではありません。データ件数・F回数を併記しています。周回/直線/回り足は公開元から取得できた場合のみ表示します。';
+  $('raceAnalysisStatus').textContent='分析完了：'+withHistory+'艇に過去履歴あり。'+captureMsg+timingMsg+'順位目安は30日展示平均50％・180日展示平均30％・30日ST平均20％を基本にした相対比較です。各項目は必要件数を満たす場合のみ使用し、使えない項目の重みは残りに配分します。比較できる項目が不足する場合はスコアを表示しません。これは着順や舟券的中率の予測値ではありません。データ件数・F回数を併記しています。周回/直線/回り足は公開元から取得できた場合のみ表示します。';
  }catch(e){
   if(requestId!==motorRequestId)return;
   $('raceAnalysisStatus').textContent='機力分析を完了できませんでした：'+(e.message||'不明なエラー')+'。ログイン状態と過去データの取り込み状況を確認してください。';
