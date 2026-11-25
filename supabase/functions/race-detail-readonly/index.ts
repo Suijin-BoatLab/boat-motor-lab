@@ -102,6 +102,18 @@ Deno.serve(async (req: Request) => {
         }
       }
     }
+    let previousEventStart: string | null = null;
+    if (eventStart) {
+      for (let offset = 1; offset <= 30 && !previousEventStart; offset++) {
+        const priorDate = new Date(Date.parse(eventStart + "T00:00:00Z") - offset * 86400000).toISOString().slice(0, 10);
+        const priorUrl = `https://boatraceopenapi.github.io/api/v1/${priorDate.slice(0, 4)}/${priorDate.replaceAll("-", "")}.json`;
+        const priorResponse = await fetch(priorUrl, { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(8000) });
+        if (!priorResponse.ok) continue;
+        const priorPayload = await priorResponse.json();
+        const priorRaces = priorPayload?.programs?.stadiums?.[String(venueCode)]?.races ?? {};
+        if (Object.values(priorRaces).some((item: any) => Number(item?.day_number) === 1)) previousEventStart = priorDate;
+      }
+    }
     const motorNumbers = [...new Set(Array.from({ length: 6 }, (_, i) => {
       const n = Number(racers[String(i + 1)]?.motor_number);
       return Number.isInteger(n) && n > 0 ? n : null;
@@ -130,6 +142,21 @@ Deno.serve(async (req: Request) => {
       ) : Promise.resolve([]),
     ]);
 
+    const previousSectionRows = previousEventStart && eventStart && motorNumbers.length
+      ? await readAll<any>((from, to) => supabase.from("historical_motor_entries")
+          .select("race_date,motor_number,exhibition_time,lap_time,straight_time,turn_time,exhibition_st,exhibition_st_is_f,finish_rank")
+          .eq("user_id", auth.user.id).eq("venue_code", venueCode).in("motor_number", motorNumbers)
+          .gte("race_date", previousEventStart).lt("race_date", eventStart)
+          .order("race_date", { ascending: false }).range(from, to))
+      : [];
+    const sectionStats = (rows: any[]) => {
+      const average = (field: string, source = rows) => {
+        const values = source.filter((x) => x[field] !== null && x[field] !== undefined && Number.isFinite(Number(x[field]))).map((x) => Number(x[field]));
+        return values.length ? values.reduce((a, b) => a + b, 0) / values.length : null;
+      };
+      const results = rows.filter((x) => Number.isInteger(Number(x.finish_rank)) && Number(x.finish_rank) >= 1 && Number(x.finish_rank) <= 6);
+      return { races: rows.length, exhibition_time: average("exhibition_time"), lap_time: average("lap_time"), straight_time: average("straight_time"), turn_time: average("turn_time"), exhibition_st: average("exhibition_st", rows.filter((x) => !x.exhibition_st_is_f)), top2_rate: results.length ? results.filter((x) => Number(x.finish_rank) <= 2).length / results.length : null, top3_rate: results.length ? results.filter((x) => Number(x.finish_rank) <= 3).length / results.length : null };
+    };
     const boats = Array.from({ length: 6 }, (_, i) => {
       const lane = i + 1;
       return {
@@ -139,6 +166,12 @@ Deno.serve(async (req: Request) => {
         result: race.result?.racers?.[String(lane)] ?? null,
         series: (() => { const stat = seriesByRegistration.get(String(racers[String(lane)]?.number ?? "")); return stat ? { ...stat, average_st: stat.stCount ? stat.stTotal / stat.stCount : null } : null; })(),
         motor_history: motorHistory.filter((row: any) => Number(row.motor_number) === Number(racers[String(lane)]?.motor_number)),
+        motor_sections: {
+          current: sectionStats(motorHistory.filter((row: any) => Number(row.motor_number) === Number(racers[String(lane)]?.motor_number) && eventStart && row.race_date >= eventStart)),
+          previous: sectionStats(previousSectionRows.filter((row: any) => Number(row.motor_number) === Number(racers[String(lane)]?.motor_number))),
+          current_start_date: eventStart, previous_start_date: previousEventStart,
+          comparison_available: Boolean(eventStart && previousEventStart),
+        },
         racer_history: racerHistory.filter((row: any) =>
           String(row.racer_registration_no) === String(racers[String(lane)]?.number ?? racers[String(lane)]?.registration_number ?? "")),
       };
@@ -147,7 +180,7 @@ Deno.serve(async (req: Request) => {
     return json({
       date, venue_code: venueCode, venue_name: venueNames[String(venueCode)],
       race_no: raceNo, race_status: race.result ? "result_available" : "program_available",
-      event_day_number: race.day_number ?? null, event_start_date: eventStart,
+      event_day_number: race.day_number ?? null, event_start_date: eventStart, previous_event_start_date: previousEventStart,
       boats, sources: ["boatraceopenapi-v1", "historical_motor_entries", "historical_racer_entries"],
       history_window: { from: fromDate, to: date, days: 180 },
       read_only: true, generated_at: new Date().toISOString(),
