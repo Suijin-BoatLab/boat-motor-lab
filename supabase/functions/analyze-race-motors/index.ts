@@ -78,6 +78,7 @@ Deno.serve(async(req:Request)=>{
   const courseStatsByNo=new Map<string,Map<number,any>>();
   const racerStatsByNo=new Map<string,any>();
   const racerHistorySeen=new Set<string>();
+  const courseHistorySeen=new Set<string>();
   const registrationNos=[...new Set(Array.from({length:6},(_,i)=>String(racers[String(i+1)]?.number??racers[String(i+1)]?.registration_number??"").trim()).filter(x=>/^\d+$/.test(x)))];
   const racerMinDate=new Date(Date.parse(date+"T00:00:00Z")-180*86400000).toISOString().slice(0,10);
   const racer90MinDate=new Date(Date.parse(date+"T00:00:00Z")-90*86400000).toISOString().slice(0,10);
@@ -91,15 +92,6 @@ Deno.serve(async(req:Request)=>{
      const s=racerStatsByNo.get(reg)??{starts:0,wins:0,top2:0,top3:0,finishSum:0,starts90:0,wins90:0,top2_90:0,top3_90:0,finishSum90:0,stRows:[],venueStRows:[],recentRaces:[]};
      const rank=Number(row.finish_rank);
      if(Number.isInteger(rank)&&rank>=1&&rank<=6){s.starts++;if(rank===1)s.wins++;if(rank<=2)s.top2++;if(rank<=3)s.top3++;s.finishSum+=rank;if(row.race_date>=racer90MinDate){s.starts90++;if(rank===1)s.wins90++;if(rank<=2)s.top2_90++;if(rank<=3)s.top3_90++;s.finishSum90+=rank;}}
-     const actualCourse=Number(row.actual_course);
-     if(Number.isInteger(actualCourse)&&actualCourse>=1&&actualCourse<=6&&Number.isInteger(rank)&&rank>=1&&rank<=6){
-      const byCourse=courseStatsByNo.get(reg)??new Map<number,any>();
-      const cs=byCourse.get(actualCourse)??{starts:0,wins:0,top2:0,top3:0,finishSum:0,stSum:0,stCount:0};
-      cs.starts++;if(rank===1)cs.wins++;if(rank<=2)cs.top2++;if(rank<=3)cs.top3++;cs.finishSum+=rank;
-      const courseSt=num(row.actual_st);
-      if(!row.actual_st_is_f&&courseSt!==null&&courseSt>=0&&courseSt<=0.99){cs.stSum+=courseSt;cs.stCount++;}
-      byCourse.set(actualCourse,cs);courseStatsByNo.set(reg,byCourse);
-     }
      const actualSt=num(row.actual_st);
      s.recentRaces.push({date:row.race_date,race_no:Number(row.race_no)||0,venue_code:Number(row.venue_code)||0,venue_name:row.venue_name??names[String(row.venue_code)]??"場不明",st:!row.actual_st_is_f&&actualSt!==null&&actualSt>=0&&actualSt<=0.99?actualSt:null,is_f:!!row.actual_st_is_f});
      if(!row.actual_st_is_f&&actualSt!==null&&actualSt>=0&&actualSt<=0.99){
@@ -118,6 +110,18 @@ Deno.serve(async(req:Request)=>{
     if(importedError)return json({error:"CSV選手履歴取得失敗: "+importedError.message},500);
     for(const row of importedPage??[]){
      const reg=String(row.racer_registration_no),key=[reg,row.race_date,row.venue_code,row.race_no].join(':');
+     if(!courseHistorySeen.has(key)){
+      courseHistorySeen.add(key);
+      const actualCourse=Number(row.actual_course),rankForCourse=Number(row.finish_rank);
+      if(Number.isInteger(actualCourse)&&actualCourse>=1&&actualCourse<=6&&Number.isInteger(rankForCourse)&&rankForCourse>=1&&rankForCourse<=6){
+       const byCourse=courseStatsByNo.get(reg)??new Map<number,any>();
+       const cs=byCourse.get(actualCourse)??{starts:0,wins:0,top2:0,top3:0,finishSum:0,stSum:0,stCount:0};
+       cs.starts++;if(rankForCourse===1)cs.wins++;if(rankForCourse<=2)cs.top2++;if(rankForCourse<=3)cs.top3++;cs.finishSum+=rankForCourse;
+       const courseSt=num(row.actual_st);
+       if(!row.actual_st_is_f&&courseSt!==null&&courseSt>=0&&courseSt<=0.99){cs.stSum+=courseSt;cs.stCount++;}
+       byCourse.set(actualCourse,cs);courseStatsByNo.set(reg,byCourse);
+      }
+     }
      if(racerHistorySeen.has(key))continue;
      racerHistorySeen.add(key);
      const s=racerStatsByNo.get(reg)??{starts:0,wins:0,top2:0,top3:0,finishSum:0,starts90:0,wins90:0,top2_90:0,top3_90:0,finishSum90:0,stRows:[],venueStRows:[],recentRaces:[]};
