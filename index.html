@@ -673,18 +673,15 @@ async function importMotorHistorySixMonths(){
  const range=getSixMonthRange(),start=new Date(range.from+'T00:00:00Z'),end=new Date(range.to+'T00:00:00Z');
  for(let d=new Date(start);d<=end;d.setUTCDate(d.getUTCDate()+1))dates.push(fmt(d));
  try{
-  out.textContent='保存済みの日付を確認しています…';
-  const have=new Set();
-  let offset=0;
-  while(true){
-   const {data:existing,error:readError}=await cloudClient.from('historical_motor_entries').select('race_date').gte('race_date',range.from).lte('race_date',range.to).order('race_date',{ascending:true}).range(offset,offset+999);
-   if(readError)throw readError;
-   for(const row of existing||[])have.add(row.race_date);
-   if(!existing||existing.length<1000)break;
-   offset+=existing.length;
-  }
-  const missing=dates.filter(d=>!have.has(d));
-  if(!missing.length){out.textContent='過去6か月分の詳細履歴はすでに取り込み済みです。';return}
+  out.textContent='詳細履歴の不足日を確認しています…';
+  const {data:dailyMeta,error:readError}=await cloudClient.from('historical_motor_daily').select('race_date,motor_data').gte('race_date',range.from).lte('race_date',range.to);
+  if(readError)throw readError;
+  const complete=new Set((dailyMeta||[]).filter(row=>{
+   const m=row.motor_data||{},entries=Number(m.entries_seen)||0,detailed=Number(m.detailed_entries)||0,races=Number(m.races_seen)||0;
+   return (entries>0&&detailed>=entries)||(entries===0&&races===0);
+  }).map(row=>row.race_date));
+  const missing=dates.filter(d=>!complete.has(d));
+  if(!missing.length){out.textContent='過去6か月分の詳細履歴はすでに揃っています。';return}
   let saved=0,skipped=0,failed=0,totalRaces=0,totalEntries=0;
   const failures=[];
   const chunks=[];for(let i=0;i<missing.length;i+=7)chunks.push(missing.slice(i,i+7));
