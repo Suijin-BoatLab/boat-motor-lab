@@ -85,3 +85,22 @@ Deno.test("different lanes and racers are never collapsed into one start", () =>
   );
   assertEquals(rows.length, 2);
 });
+
+Deno.test("same race and lane with different registration numbers are not merged", () => {
+  const rows = mergeRacerStartHistory(
+    [base({ lane: 2, racer_registration_no: "4700", finish_rank: 1 })],
+    [base({ lane: 2, racer_registration_no: "1234", finish_rank: 3 })],
+  );
+  assertEquals(rows.length, 2);
+  assertEquals(rows.map((row) => String(row.racer_registration_no)).sort(), ["1234", "4700"]);
+});
+
+Deno.test("primary F marker is preserved even when fallback has numeric ST", () => {
+  const rows = mergeRacerStartHistory(
+    [base({ actual_st: null, actual_st_is_f: true })],
+    [base({ actual_st: "0.15", actual_st_is_f: false })],
+  );
+  assertEquals(rows.length, 1);
+  assertEquals(rows[0].actual_st, null);
+  assertEquals(rows[0].actual_st_is_f, true);
+});
