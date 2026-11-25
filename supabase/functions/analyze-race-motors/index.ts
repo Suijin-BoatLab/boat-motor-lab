@@ -118,7 +118,7 @@ Deno.serve(async(req:Request)=>{
    }
    let importedOffset=0;
    while(true){
-    const {data:importedPage,error:importedError}=await supabase.from("historical_racer_entries").select("id,race_date,venue_code,venue_name,race_no,lane,racer_registration_no,finish_rank,actual_st,actual_st_is_f").eq("user_id",auth.user.id).in("racer_registration_no",registrationNos).lt("race_date",date).gte("race_date",racerMinDate).order("race_date",{ascending:false}).order("race_no",{ascending:false}).range(importedOffset,importedOffset+999);
+    const {data:importedPage,error:importedError}=await supabase.from("historical_racer_entries").select("id,race_date,venue_code,venue_name,race_no,lane,racer_registration_no,actual_course,finish_rank,actual_st,actual_st_is_f").eq("user_id",auth.user.id).in("racer_registration_no",registrationNos).lt("race_date",date).gte("race_date",racerMinDate).order("race_date",{ascending:false}).order("race_no",{ascending:false}).range(importedOffset,importedOffset+999);
     if(importedError)return json({error:"CSV選手履歴取得失敗: "+importedError.message},500);
     for(const row of importedPage??[]){
      const reg=String(row.racer_registration_no),key=[reg,row.race_date,row.venue_code,row.race_no].join(':');
