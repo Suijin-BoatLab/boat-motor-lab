@@ -537,7 +537,7 @@ async function queryHistoricalMotorHistory(){
  const btn=$('historySearch');btn.disabled=true;status.textContent='クラウドの過去データを集計しています…';table.innerHTML='';
  try{
   const {data,error}=await cloudClient.functions.invoke('get-motor-history',{body:{from,to,venue,motor}});
-  if(error){const detail=error?.context?.body?await error.context.body.text().catch(()=> ''):'';throw new Error(detail||error.message)}
+  if(error){const detail=typeof error?.context?.body?.text==='function'?await error.context.body.text().catch(()=> ''):'';throw new Error(detail||error.message)}
   if(data?.error)throw new Error(data.error);
   historicalMotorRows=data.rows||[];historicalMotorPage=0;renderHistoricalMotorPage();
   status.textContent='取得 '+historicalMotorRows.length.toLocaleString()+'件／'+from+'〜'+to+'／'+(venue||'全24場');
@@ -772,7 +772,7 @@ async function importMotorHistorySixMonths(){
    try{
     const {data,error}=await cloudClient.functions.invoke('import-motor-history-range',{body:{dates:chunks[i]}});
     if(error){
-     const detail=error?.context?.body?await error.context.body.text().catch(()=> ''):'';
+     const detail=typeof error?.context?.body?.text==='function'?await error.context.body.text().catch(()=> ''):'';
      throw new Error(detail||error.message||'サーバーとの通信に失敗しました');
     }
     if(data?.error)throw new Error(data.error);
@@ -905,7 +905,7 @@ async function loadRaceMotors(){
   const {data,error}=await cloudClient.functions.invoke('analyze-race-motors',{body:{date,venue_code:code,race_no:homeRace}});
   if(requestId!==motorRequestId)return;
   if(error){
-   const detail=error?.context?.body?await error.context.body.text().catch(()=> ''):'';
+   const detail=typeof error?.context?.body?.text==='function'?await error.context.body.text().catch(()=> ''):'';
    throw new Error(detail||error.message||'分析サーバーとの通信に失敗しました');
   }
   if(data?.error)throw new Error(data.error);
