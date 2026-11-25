@@ -119,7 +119,7 @@ function renderRaceDetail(data){
  document.getElementById('raceState').textContent=data.race_status==='result_available'?'結果データあり':'出走データ取得済み';
  document.getElementById('resultStatus').textContent=data.race_status==='result_available'?'結果データあり':'未確定';
  const resultRows=boats.filter(b=>b.result).map(b=>({lane:b.lane,entry:b.entry||{},result:b.result})).sort((a,b)=>{const pa=Number(a.result.place_number),pb=Number(b.result.place_number);const ra=pa>=1&&pa<=6?pa:99,rb=pb>=1&&pb<=6?pb:99;return ra-rb||a.lane-b.lane;});
- putRows('resultRows',resultRows.map(({lane,entry:x,result:r})=>'<tr><th class="lane '+laneClass[lane-1]+'">'+lane+'</th><td>'+esc(placeLabel(r.place_number))+'</td><td>'+esc(x.racer_name??x.name??'未取得')+'</td><td>'+fmt(r.race_time)+'</td><td>'+txt(r.course_number)+'</td><td>'+fmt(r.start_timing)+'</td></tr>'));
+ putRows('resultRows',resultRows.map(({lane,entry:x,result:r})=>'<tr><td>'+esc(placeLabel(r.place_number))+'</td><th class="lane '+laneClass[lane-1]+'">'+lane+'</th><td>'+esc(x.racer_name??x.name??'未取得')+'</td><td>'+fmt(r.race_time)+'</td><td>'+txt(r.course_number)+'</td><td>'+fmt(r.start_timing)+'</td></tr>'));
  raceStatus.textContent='取得成功：出走表と過去180日分の選手・モーター履歴。連対率は取得できた過去履歴からの暫定集計です。事故点・F休み・節間得点率・決まり手などは専用データ取得が必要です。取得時刻：'+new Date(data.generated_at).toLocaleString('ja-JP');
 }
 async function loadReadOnlyRace(){
