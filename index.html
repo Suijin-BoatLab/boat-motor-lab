@@ -620,9 +620,9 @@ async function runAnalysisForSelectedRace(){
  }finally{btn.disabled=false;btn.textContent='このレースを分析'}
 }
 $('runAnalysisRace').onclick=runAnalysisForSelectedRace;
-$('analysisRaceDate').value=localDate();
-$('analysisRaceVenue').value=venues.includes(homeVenue)?homeVenue:'桐生';
-$('analysisRaceNo').value=String(homeRace||1);
+$('analysisRaceDate').value=new Date().toLocaleDateString('sv-SE');
+$('analysisRaceVenue').value='桐生';
+$('analysisRaceNo').value='1';
 $('analysisVenue').onchange=renderAnalysis;
 $('refreshHistory').onclick=renderHistory;
 updateBackupStatus();
