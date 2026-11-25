@@ -133,6 +133,17 @@ footer{color:var(--muted);font-size:11px;text-align:center;padding:24px}
  <p class="muted small">登録済みのF履歴とF休みの日程を確認・更新できます。休み日程が未登録の場合、消化済みとは判定しません。</p>
  <div class="panel">
   <div class="actions"><button class="btn secondary" id="refreshFHistory">F履歴を更新</button></div>
+  <h2>F履歴を追加</h2>
+  <div class="grid">
+   <div class="field"><label for="fNewReg">選手登録番号</label><input id="fNewReg" inputmode="numeric" placeholder="例：3812"></div>
+   <div class="field"><label for="fNewName">選手名</label><input id="fNewName" placeholder="選手名"></div>
+   <div class="field"><label for="fNewDate">F発生日</label><input id="fNewDate" type="date"></div>
+   <div class="field"><label for="fNewVenue">競艇場</label><select id="fNewVenue"><option value="">選択してください</option><option>桐生</option><option>戸田</option><option>江戸川</option><option>平和島</option><option>多摩川</option><option>浜名湖</option><option>蒲郡</option><option>常滑</option><option>津</option><option>三国</option><option>びわこ</option><option>住之江</option><option>尼崎</option><option>鳴門</option><option>丸亀</option><option>児島</option><option>宮島</option><option>徳山</option><option>下関</option><option>若松</option><option>芦屋</option><option>福岡</option><option>唐津</option><option>大村</option></select></div>
+   <div class="field"><label for="fNewRace">レース番号</label><select id="fNewRace"><option value="">未選択</option><option value="1">1R</option><option value="2">2R</option><option value="3">3R</option><option value="4">4R</option><option value="5">5R</option><option value="6">6R</option><option value="7">7R</option><option value="8">8R</option><option value="9">9R</option><option value="10">10R</option><option value="11">11R</option><option value="12">12R</option></select></div>
+   <div class="field"><label for="fNewLane">艇番</label><select id="fNewLane"><option value="">未選択</option><option value="1">1号艇</option><option value="2">2号艇</option><option value="3">3号艇</option><option value="4">4号艇</option><option value="5">5号艇</option><option value="6">6号艇</option></select></div>
+   <div class="field"><label for="fNewType">Fの種類</label><select id="fNewType"><option value="本番F">本番F</option><option value="その他">その他（内容をメモ）</option></select></div>
+  </div>
+  <div class="actions"><button class="btn primary" id="addFIncident">F履歴を登録</button></div>
   <p class="small muted" id="fHistoryStatus" aria-live="polite">ログイン後にF履歴を読み込みます。</p>
   <div id="fHistorySummary" class="statgrid"></div>
   <div class="tablewrap" id="fHistoryList"></div>
@@ -306,6 +317,24 @@ async function renderFHistory(){
  }));
 }
 $('refreshFHistory').addEventListener('click',renderFHistory);
+$('addFIncident').addEventListener('click',async()=>{
+ const status=$('fHistoryStatus'),btn=$('addFIncident');
+ if(!cloudClient||!cloudUser){status.textContent='先に「保存・設定」からログインしてください。';return}
+ const reg=$('fNewReg').value.trim(),name=$('fNewName').value.trim()||null,date=$('fNewDate').value,venue=$('fNewVenue').value;
+ const raceNo=$('fNewRace').value?Number($('fNewRace').value):null,lane=$('fNewLane').value?Number($('fNewLane').value):null,type=$('fNewType').value;
+ if(!/^\d{4}$/.test(reg)||!date||!venue){status.textContent='登録番号（4桁）・F発生日・競艇場を入力してください。';return}
+ if(date>new Date().toLocaleDateString('sv-SE')){status.textContent='F発生日に未来の日付は登録できません。';return}
+ btn.disabled=true;btn.textContent='登録中…';
+ const {error}=await cloudClient.from('racer_f_incidents').insert({
+  user_id:cloudUser.id,racer_registration_no:reg,racer_name:name,incident_date:date,
+  venue_code:stadiumCodes[venue]||null,venue_name:venue,race_no:raceNo,lane,
+  f_type:type,source_name:'manual',source_data:{entry_method:'F管理画面'}
+ });
+ if(error){status.textContent=error.code==='23505'?'同じ選手・日付・レースのF記録が既に登録されています。':'登録できませんでした：'+error.message;btn.disabled=false;btn.textContent='F履歴を登録';return}
+ $('fNewReg').value='';$('fNewName').value='';$('fNewDate').value='';$('fNewVenue').value='';$('fNewRace').value='';$('fNewLane').value='';
+ status.textContent='F履歴を登録しました。';btn.disabled=false;btn.textContent='F履歴を登録';await renderFHistory();
+});
+
 
 const stadiumCodes={'桐生':1,'戸田':2,'江戸川':3,'平和島':4,'多摩川':5,'浜名湖':6,'蒲郡':7,'常滑':8,'津':9,'三国':10,'びわこ':11,'住之江':12,'尼崎':13,'鳴門':14,'丸亀':15,'児島':16,'宮島':17,'徳山':18,'下関':19,'若松':20,'芦屋':21,'福岡':22,'唐津':23,'大村':24};
 function setIf(el,value){if(value!==undefined&&value!==null&&value!=='')el.value=String(value)}
