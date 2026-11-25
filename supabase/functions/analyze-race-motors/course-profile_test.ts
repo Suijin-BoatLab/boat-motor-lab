@@ -22,11 +22,14 @@ Deno.test("last ten window keeps F starts in race count but excludes their ST", 
   assertEquals(stats.last10.eligible, true);
 });
 
-Deno.test("minimum sample thresholds are exact", () => {
+Deno.test("minimum sample thresholds are exact at 5 and 10 valid ST observations", () => {
   const five = Array.from({ length: 5 }, (_, i) => ({ race_date: `2026-11-${25-i}`, venue_code: 9, actual_st: 0.1 }));
   const nine = Array.from({ length: 9 }, (_, i) => ({ race_date: `2026-11-${25-i}`, venue_code: 9, actual_st: 0.1 }));
+  const ten = Array.from({ length: 10 }, (_, i) => ({ race_date: `2026-11-${25-i}`, venue_code: 9, actual_st: 0.1 }));
   assertEquals(summarizeStartTimes(five, "2026-11-26", 9).last10.eligible, true);
   assertEquals(summarizeStartTimes(nine, "2026-11-26", 9).last90d.eligible, false);
+  assertEquals(summarizeStartTimes(ten, "2026-11-26", 9).last90d.eligible, true);
+  assertEquals(summarizeStartTimes(five, "2026-11-26", 9).venue.eligible, true);
 });
 
 Deno.test("target date and same-day rows are excluded", () => {
