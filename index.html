@@ -758,7 +758,8 @@ async function importMotorHistorySixMonths(){
   if(readError)throw readError;
   const complete=new Set((dailyMeta||[]).filter(row=>{
    const m=row.motor_data||{},entries=Number(m.entries_seen)||0,detailed=Number(m.detailed_entries)||0,races=Number(m.races_seen)||0;
-   return (entries>0&&detailed>=entries)||(entries===0&&races===0);
+   const hasImportMetadata=Object.prototype.hasOwnProperty.call(m,'entries_seen')&&Object.prototype.hasOwnProperty.call(m,'races_seen');
+   return (entries>0&&detailed>=entries)||(hasImportMetadata&&entries===0&&races===0);
   }).map(row=>row.race_date));
   const missing=dates.filter(d=>!complete.has(d));
   if(!missing.length){out.textContent='過去6か月分の詳細履歴はすでに揃っています。';return}
