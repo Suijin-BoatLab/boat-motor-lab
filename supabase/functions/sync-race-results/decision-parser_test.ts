@@ -55,3 +55,15 @@ Deno.test("rejects invalid course values but keeps the winner", () => {
   assertEquals(result.registration, "9999");
   assertEquals(result.status, "parsed");
 });
+
+Deno.test("uses the winner entry method when no race-level method exists", () => {
+  const result = parseDecision({
+    entries: [
+      { rank: 1, regno: 2222, course: 2, decision_method: "差し" },
+      { rank: 2, regno: 3333, course: 1 },
+    ],
+  });
+  assertEquals(result.method, "差し");
+  assertEquals(result.registration, "2222");
+  assertEquals(result.status, "parsed");
+});
