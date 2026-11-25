@@ -50,6 +50,15 @@ Deno.test("lane-specific weights and missing-feature renormalization", () => {
   assertAlmostEquals(outer.score!, (0.35 * 1) / 0.6);
 });
 
+Deno.test("only supported, weighted features count toward coverage", () => {
+  const result = calculateWeightedProfileScore(1, {
+    courseRecord: 0.2,
+    unknownFeature: 0.9,
+  } as any);
+  assertAlmostEquals(result.coverage, 0.5);
+  assertEquals(result.features_used, 1);
+});
+
 Deno.test("no available feature returns null rather than a fabricated score", () => {
   assertEquals(calculateWeightedProfileScore(2, {}).score, null);
 });
