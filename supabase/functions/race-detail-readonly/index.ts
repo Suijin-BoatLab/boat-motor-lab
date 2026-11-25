@@ -19,7 +19,7 @@ const json = (body: unknown, status = 200) =>
   });
 
 async function readAll<T>(
-  queryFactory: (from: number, to: number) => Promise<{ data: T[] | null; error: { message: string } | null }>,
+  queryFactory: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
 ): Promise<T[]> {
   const rows: T[] = [];
   for (let offset = 0; ; offset += 1000) {
