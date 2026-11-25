@@ -81,7 +81,7 @@ footer{color:var(--muted);font-size:11px;text-align:center;padding:24px}
 <body>
 <header><div class="brand">BOAT <span>MOTOR</span> LAB</div><div class="sub">MOTOR PERFORMANCE & RACE HISTORY</div><nav><button class="active" data-tab="home">🚩<br>開催一覧</button><button data-tab="analysis">📊<br>機力分析</button><button data-tab="history">🗂️<br>記録一覧</button><button data-tab="backup">☁️<br>保存・設定</button></nav></header>
 <main>
-<section id="home"><div class="home-toolbar"><b id="homeDateLabel">開催日</b><input id="homeDate" type="date"><button class="btn primary" id="reloadSchedule">開催情報更新</button></div><p class="home-sub" id="scheduleStatus">開催情報を取得しています…</p><p class="home-sub">データ出典：<a href="https://boatraceopenapi.github.io/" target="_blank" rel="noopener">Boatrace Open API（非公式）</a>。更新遅延や欠損の可能性があるため、重要な情報は公式発表でも確認してください。</p><div class="home-title">全国24場 開催一覧</div><div class="venue-grid" id="venueGrid"></div><div class="panel"><div class="home-title" id="selectedVenueTitle">競艇場を選択</div><div class="race-pills" id="racePills"></div></div><div class="panel"><div class="home-title" id="selectedRaceTitle">6艇のモーター機力比較</div><p class="home-sub">過去30日・180日の展示タイム平均、記録件数、F・1着記録、上昇・下降傾向を表示します。周回・直線・回り足の過去データは公開APIに含まれないため、この比較には使用しません。数値は同一競艇場内の参考比較です。</p><p class="home-sub" id="raceAnalysisStatus">競艇場とレース番号を選択してください。</p><div id="raceMotorCards"></div></div></section>
+<section id="home"><div class="home-toolbar"><b id="homeDateLabel">開催日</b><input id="homeDate" type="date"><button class="btn primary" id="reloadSchedule">開催情報更新</button></div><p class="home-sub" id="scheduleStatus">開催情報を取得しています…</p><p class="home-sub">データ出典：<a href="https://boatraceopenapi.github.io/" target="_blank" rel="noopener">Boatrace Open API（非公式）</a>。更新遅延や欠損の可能性があるため、重要な情報は公式発表でも確認してください。</p><div class="home-title">全国24場 開催一覧</div><div class="venue-grid" id="venueGrid"></div><div class="panel"><div class="home-title" id="selectedVenueTitle">競艇場を選択</div><div class="race-pills" id="racePills"></div></div><div class="panel"><div class="home-title" id="selectedRaceTitle">6艇のモーター機力比較</div><p class="home-sub">過去30日・180日の展示タイム平均、記録件数、F・1着記録、上昇・下降傾向を表示します。周回・直線・回り足の過去データは公開APIに含まれないため、この比較には使用しません。数値は同一競艇場内の参考比較です。</p><p class="home-sub" id="raceAnalysisStatus">競艇場とレース番号を選択してください。</p><div class="actions"><button class="btn secondary" id="syncRaceResult">🏁 このレースの結果・払戻を取得</button></div><p class="home-sub" id="raceResultStatus">レース終了後に結果を取得できます。</p><div id="raceResultPanel"></div><div id="raceMotorCards"></div></div></section>
 <section id="entry" class="hidden">
   <h1>レースデータ入力</h1><div class="muted small">展示後に一括保存 → レース終了後に同じ12R一括取得で結果を同期</div>
   <div class="panel">
@@ -883,6 +883,24 @@ function renderRaces(){const rs=homePayload?.programs?.stadiums?.[String(venueCo
 function fmt(v){return v===null||v===undefined||v===''?'—':v}
 function mean(rows,k){const a=rows.map(x=>x?.[k]).filter(v=>v!==null&&v!==undefined&&v!=='').map(Number).filter(Number.isFinite);return a.length?a.reduce((p,c)=>p+c,0)/a.length:null}
 function validCount(rows,k){return rows.filter(x=>x?.[k]!==null&&x?.[k]!==undefined&&x?.[k]!==''&&Number.isFinite(Number(x[k]))).length}
+async function syncSelectedRaceResult(){
+ const status=$('raceResultStatus'),panel=$('raceResultPanel'),btn=$('syncRaceResult');
+ if(!cloudClient||!cloudUser){status.textContent='結果データを保存するにはログインしてください。';return}
+ const date=$('homeDate').value,code=venueCodes[homeVenue],race=Number(homeRace);
+ if(!date||!code||!race){status.textContent='開催日・競艇場・レース番号を選択してください。';return}
+ btn.disabled=true;status.textContent='公式公開データをもとに結果・払戻を取得しています…';panel.innerHTML='';
+ try{
+  const {data,error}=await cloudClient.functions.invoke('sync-race-results',{body:{date,venue_code:code,race_no:race}});
+  if(error){const detail=typeof error?.context?.body?.text==='function'?await error.context.body.text().catch(()=> ''):'';throw new Error(detail||error.message||'結果取得に失敗しました')}
+  if(data?.error)throw new Error(data.error);
+  const raw=data?.source_data??{},keys=Object.keys(raw);
+  const safe=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  panel.innerHTML='<div class="panel"><b>結果データをクラウドに保存しました</b><p class="home-sub">保存先：レース結果・払戻データ／取得元：艇愛ボートレースDB</p><p class="home-sub">取得データ項目：'+safe(keys.join('、')||'確認中')+'</p><details><summary>取得した元データを確認</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere;font-size:11px">'+safe(JSON.stringify(raw,null,2))+'</pre></details></div>';
+  status.textContent='保存完了。次の工程で3連単の組番・払戻金・人気順位を自動抽出し、回収率検証につなげます。';
+ }catch(err){status.textContent='取得できませんでした：'+(err?.message||String(err))}
+ finally{btn.disabled=false}
+}
+$('syncRaceResult').onclick=syncSelectedRaceResult;
 async function loadRaceMotors(){
  const requestId=++motorRequestId,date=$('homeDate').value,code=venueCodes[homeVenue],race=homePayload?.programs?.stadiums?.[String(code)]?.races?.[String(homeRace)];
  $('selectedRaceTitle').textContent=homeVenue+' '+homeRace+'R｜'+date;
