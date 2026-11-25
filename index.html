@@ -1015,7 +1015,7 @@ $('racerCsvImport').addEventListener('click',async()=>{
   if(selectedRacerCsv.size>12*1024*1024)throw new Error('CSVは12MB以下にしてください。');
   out.textContent='CSVを読み込んでいます…';
   let csv=await selectedRacerCsv.text();
-  if(csv.includes('\\uFFFD'))csv=new TextDecoder('shift_jis').decode(await selectedRacerCsv.arrayBuffer());
+  if(csv.includes('\uFFFD'))csv=new TextDecoder('shift_jis').decode(await selectedRacerCsv.arrayBuffer());
   const {data,error}=await cloudClient.functions.invoke('import-racer-history-csv',{body:{csv}});
   if(error){
    const detail=typeof error?.context?.body?.text==='function'?await error.context.body.text().catch(()=> ''):'';
