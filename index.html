@@ -363,7 +363,8 @@ function updateBackupStatus(){
 $('save').onclick=()=>{
  let r=collect();
  if(!r.venue){$('saveMsg').textContent='競艇場を選択してください';return}
- if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(r.date)||Number.isNaN(Date.parse(r.date+'T00:00:00'))){$('saveMsg').textContent='正しい開催日を入力してください';return}
+ const parsedDate=new Date(r.date+'T00:00:00');
+ if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(r.date)||Number.isNaN(parsedDate.getTime())||parsedDate.toLocaleDateString('sv-SE')!==r.date){$('saveMsg').textContent='実在する開催日を入力してください';return}
  const raceNo=Number(r.raceNo);
  if(!Number.isInteger(raceNo)||raceNo<1||raceNo>12){$('saveMsg').textContent='レース番号は1〜12の数字で入力してください';return}
  // If a loaded record's venue/date/race number changed, treat it as a new race.
