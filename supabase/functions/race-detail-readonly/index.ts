@@ -72,6 +72,35 @@ Deno.serve(async (req: Request) => {
     if (!race) return json({ error: "指定レースの出走データが見つかりません" }, 404);
 
     const racers = race.racers ?? {};
+    // Aggregate only results explicitly belonging to the selected event day.
+    const eventDay = Number(race.day_number);
+    const eventStart = Number.isInteger(eventDay) && eventDay >= 1 && eventDay <= 7
+      ? new Date(Date.parse(date + "T00:00:00Z") - (eventDay - 1) * 86400000).toISOString().slice(0, 10)
+      : null;
+    const seriesByRegistration = new Map<string, { starts: number; wins: number; top2: number; top3: number }>();
+    if (eventStart) {
+      for (let cursor = Date.parse(eventStart + "T00:00:00Z"); cursor <= Date.parse(date + "T00:00:00Z"); cursor += 86400000) {
+        const eventDate = new Date(cursor).toISOString().slice(0, 10);
+        let eventPayload: any = eventDate === date ? payload : null;
+        if (eventDate !== date) {
+          const eventUrl = `https://boatraceopenapi.github.io/api/v1/${eventDate.slice(0, 4)}/${eventDate.replaceAll("-", "")}.json`;
+          const eventResponse = await fetch(eventUrl, { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(10000) });
+          if (eventResponse.ok) eventPayload = await eventResponse.json();
+        }
+        const eventRaces = eventPayload?.programs?.stadiums?.[String(venueCode)]?.races ?? {};
+        for (const eventRace of Object.values(eventRaces) as any[]) {
+          if (Number(eventRace?.day_number) !== eventDay || !eventRace?.result?.racers) continue;
+          for (const resultEntry of Object.values(eventRace.result.racers) as any[]) {
+            const registration = String(resultEntry?.number ?? "").trim();
+            const place = Number(resultEntry?.place_number);
+            if (!registration || !Number.isInteger(place) || place < 1 || place > 6) continue;
+            const stat = seriesByRegistration.get(registration) ?? { starts: 0, wins: 0, top2: 0, top3: 0 };
+            stat.starts++; if (place === 1) stat.wins++; if (place <= 2) stat.top2++; if (place <= 3) stat.top3++;
+            seriesByRegistration.set(registration, stat);
+          }
+        }
+      }
+    }
     const motorNumbers = [...new Set(Array.from({ length: 6 }, (_, i) => {
       const n = Number(racers[String(i + 1)]?.motor_number);
       return Number.isInteger(n) && n > 0 ? n : null;
@@ -107,6 +136,7 @@ Deno.serve(async (req: Request) => {
         entry: racers[String(lane)] ?? null,
         preview: race.preview?.racers?.[String(lane)] ?? null,
         result: race.result?.racers?.[String(lane)] ?? null,
+        series: seriesByRegistration.get(String(racers[String(lane)]?.number ?? "")) ?? null,
         motor_history: motorHistory.filter((row: any) => Number(row.motor_number) === Number(racers[String(lane)]?.motor_number)),
         racer_history: racerHistory.filter((row: any) =>
           String(row.racer_registration_no) === String(racers[String(lane)]?.number ?? racers[String(lane)]?.registration_number ?? "")),
@@ -116,6 +146,7 @@ Deno.serve(async (req: Request) => {
     return json({
       date, venue_code: venueCode, venue_name: venueNames[String(venueCode)],
       race_no: raceNo, race_status: race.result ? "result_available" : "program_available",
+      event_day_number: race.day_number ?? null, event_start_date: eventStart,
       boats, sources: ["boatraceopenapi-v1", "historical_motor_entries", "historical_racer_entries"],
       history_window: { from: fromDate, to: date, days: 180 },
       read_only: true, generated_at: new Date().toISOString(),
