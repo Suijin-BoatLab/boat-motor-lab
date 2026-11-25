@@ -77,7 +77,7 @@ Deno.serve(async (req: Request) => {
     const eventStart = Number.isInteger(eventDay) && eventDay >= 1 && eventDay <= 7
       ? new Date(Date.parse(date + "T00:00:00Z") - (eventDay - 1) * 86400000).toISOString().slice(0, 10)
       : null;
-    const seriesByRegistration = new Map<string, { starts: number; wins: number; top2: number; top3: number }>();
+    const seriesByRegistration = new Map<string, { starts: number; wins: number; top2: number; top3: number; stTotal: number; stCount: number }>();
     if (eventStart) {
       for (let cursor = Date.parse(eventStart + "T00:00:00Z"); cursor <= Date.parse(date + "T00:00:00Z"); cursor += 86400000) {
         const eventDate = new Date(cursor).toISOString().slice(0, 10);
@@ -94,8 +94,8 @@ Deno.serve(async (req: Request) => {
             const registration = String(resultEntry?.number ?? "").trim();
             const place = Number(resultEntry?.place_number);
             if (!registration || !Number.isInteger(place) || place < 1 || place > 6) continue;
-            const stat = seriesByRegistration.get(registration) ?? { starts: 0, wins: 0, top2: 0, top3: 0 };
-            stat.starts++; if (place === 1) stat.wins++; if (place <= 2) stat.top2++; if (place <= 3) stat.top3++;
+            const stat = seriesByRegistration.get(registration) ?? { starts: 0, wins: 0, top2: 0, top3: 0, stTotal: 0, stCount: 0 };
+            stat.starts++; if (place === 1) stat.wins++; if (place <= 2) stat.top2++; if (place <= 3) stat.top3++;\n            const actualSt = Number(entry?.start_timing); if (Number.isFinite(actualSt) && actualSt >= 0 && actualSt <= 0.99) { stat.stTotal += actualSt; stat.stCount++; }
             seriesByRegistration.set(registration, stat);
           }
         }
@@ -136,7 +136,7 @@ Deno.serve(async (req: Request) => {
         entry: racers[String(lane)] ?? null,
         preview: race.preview?.racers?.[String(lane)] ?? null,
         result: race.result?.racers?.[String(lane)] ?? null,
-        series: seriesByRegistration.get(String(racers[String(lane)]?.number ?? "")) ?? null,
+        series: (() => { const stat = seriesByRegistration.get(String(racers[String(lane)]?.number ?? "")); return stat ? { ...stat, average_st: stat.stCount ? stat.stTotal / stat.stCount : null } : null; })(),
         motor_history: motorHistory.filter((row: any) => Number(row.motor_number) === Number(racers[String(lane)]?.motor_number)),
         racer_history: racerHistory.filter((row: any) =>
           String(row.racer_registration_no) === String(racers[String(lane)]?.number ?? racers[String(lane)]?.registration_number ?? "")),
