@@ -85,10 +85,22 @@ Deno.serve(async(req:Request)=>{
   if(registrationNos.length){
    let racerOffset=0;
    while(true){
-    const {data:racerPage,error:racerError}=await supabase.from("historical_motor_entries").select("id,race_date,venue_code,venue_name,race_no,racer_registration_no,finish_rank,actual_st,actual_st_is_f").eq("user_id",auth.user.id).in("racer_registration_no",registrationNos).lt("race_date",date).gte("race_date",racerMinDate).order("race_date",{ascending:false}).order("race_no",{ascending:false}).order("id",{ascending:false}).range(racerOffset,racerOffset+999);
+    const {data:racerPage,error:racerError}=await supabase.from("historical_motor_entries").select("id,race_date,venue_code,venue_name,race_no,racer_registration_no,finish_rank,actual_course,actual_st,actual_st_is_f").eq("user_id",auth.user.id).in("racer_registration_no",registrationNos).lt("race_date",date).gte("race_date",racerMinDate).order("race_date",{ascending:false}).order("race_no",{ascending:false}).order("id",{ascending:false}).range(racerOffset,racerOffset+999);
     if(racerError)return json({error:"選手履歴取得失敗: "+racerError.message},500);
     for(const row of racerPage??[]){
-     const reg=String(row.racer_registration_no);racerHistorySeen.add([reg,row.race_date,row.venue_code,row.race_no].join(':'));
+     const reg=String(row.racer_registration_no),key=[reg,row.race_date,row.venue_code,row.race_no].join(':');racerHistorySeen.add(key);
+     if(!courseHistorySeen.has(key)){
+      courseHistorySeen.add(key);
+      const actualCourse=Number(row.actual_course),courseRank=Number(row.finish_rank);
+      if(Number.isInteger(actualCourse)&&actualCourse>=1&&actualCourse<=6&&Number.isInteger(courseRank)&&courseRank>=1&&courseRank<=6){
+       const byCourse=courseStatsByNo.get(reg)??new Map<number,any>();
+       const cs=byCourse.get(actualCourse)??{starts:0,wins:0,top2:0,top3:0,finishSum:0,stSum:0,stCount:0};
+       cs.starts++;if(courseRank===1)cs.wins++;if(courseRank<=2)cs.top2++;if(courseRank<=3)cs.top3++;cs.finishSum+=courseRank;
+       const courseSt=num(row.actual_st);
+       if(!row.actual_st_is_f&&courseSt!==null&&courseSt>=0&&courseSt<=0.99){cs.stSum+=courseSt;cs.stCount++;}
+       byCourse.set(actualCourse,cs);courseStatsByNo.set(reg,byCourse);
+      }
+     }
      const s=racerStatsByNo.get(reg)??{starts:0,wins:0,top2:0,top3:0,finishSum:0,starts90:0,wins90:0,top2_90:0,top3_90:0,finishSum90:0,stRows:[],venueStRows:[],recentRaces:[]};
      const rank=Number(row.finish_rank);
      if(Number.isInteger(rank)&&rank>=1&&rank<=6){s.starts++;if(rank===1)s.wins++;if(rank<=2)s.top2++;if(rank<=3)s.top3++;s.finishSum+=rank;if(row.race_date>=racer90MinDate){s.starts90++;if(rank===1)s.wins90++;if(rank<=2)s.top2_90++;if(rank<=3)s.top3_90++;s.finishSum90+=rank;}}
