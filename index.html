@@ -833,7 +833,24 @@ async function loadRaceMotors(){
    return !!x.motor_number&&h?.exhibition_time!==null&&h?.exhibition_time!==undefined&&Number(h.exhibition_time_count)>=3;
   }).sort((x,y)=>x.history.find(h=>h.days===30).exhibition_time-y.history.find(h=>h.days===30).exhibition_time);
   // A relative score is shown only when at least two motors have three or more measured exhibitions.
-  const scores=new Map(ranked.length>=2?ranked.map((x,i)=>[x.lane,Math.round(100*(1-i/(ranked.length-1)))]):[]);
+  // Motors with effectively identical average exhibition times receive the same score.
+  const scores=new Map();
+  if(ranked.length>=2){
+   let start=0;
+   while(start<ranked.length){
+    let end=start;
+    const base=Number(ranked[start].history.find(h=>h.days===30).exhibition_time);
+    while(end+1<ranked.length){
+     const next=Number(ranked[end+1].history.find(h=>h.days===30).exhibition_time);
+     if(Math.abs(next-base)>0.000001)break;
+     end++;
+    }
+    const averagePosition=(start+end)/2;
+    const score=Math.round(100*(1-averagePosition/(ranked.length-1)));
+    for(let i=start;i<=end;i++)scores.set(ranked[i].lane,score);
+    start=end+1;
+   }
+  }
   const safe=v=>String(v??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const fmtTime=v=>v===null||v===undefined?'—':Number(v).toFixed(2)+'秒';
   const windowFor=(boat,days)=>boat.history?.find(h=>h.days===days)||{};
