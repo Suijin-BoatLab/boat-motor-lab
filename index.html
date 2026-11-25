@@ -1001,7 +1001,7 @@ $('racerCsvFile').addEventListener('change',e=>{
  $('racerCsvStatus').textContent='';
 });
 $('racerCsvTemplate').addEventListener('click',()=>{
- const csv='date,venue_code,venue_name,race_no,lane,racer_registration_no,racer_name,actual_course,finish_rank,actual_st,decision_method\\n';
+ const csv='date,venue_code,venue_name,race_no,lane,racer_registration_no,racer_name,actual_course,finish_rank,actual_st,decision_method\n';
  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
  const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='boat_motor_lab_racer_history_template.csv';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
 });
