@@ -42,3 +42,22 @@ Deno.test("ignores unrequested racers, missing methods, and invalid registration
   );
   assertEquals(stats.size, 0);
 });
+
+Deno.test("blank imported method does not block valid payout fallback", () => {
+  const stats = buildDecisionMethodStats(
+    [
+      { race_date: "2026-11-20", venue_code: 11, race_no: 1, racer_registration_no: "1234", decision_method: "   ", actual_course: 1 },
+    { race_date: "2026-11-20", venue_code: 11, race_no: 2, racer_registration_no: "1234", decision_method: null, actual_course: 1 },
+  ],
+    [
+      { race_date: "2026-11-20", venue_code: 11, race_no: 1, winning_racer_registration_no: "1234", decision_method: "差し", winning_course: 2 },
+      { race_date: "2026-11-20", venue_code: 11, race_no: 2, winning_racer_registration_no: "1234", decision_method: "まくり", winning_course: 3 },
+    ],
+    ["1234"],
+  );
+  const value = stats.get("1234");
+  assertEquals(value?.wins, 2);
+  assertEquals(value?.by_method, { "差し": 1, "まくり": 1 });
+  assertEquals(value?.by_course["2"]?.wins, 1);
+  assertEquals(value?.by_course["3"]?.wins, 1);
+});
