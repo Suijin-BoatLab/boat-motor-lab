@@ -807,7 +807,18 @@ async function loadRaceMotors(){
  $('raceAnalysisStatus').textContent='6艇の機力履歴を詳しく分析中…';
  $('raceMotorCards').innerHTML='';
  if(!race){$('raceAnalysisStatus').textContent='出走データがありません。';return}
- if(!cloudClient||!cloudUser){$('raceAnalysisStatus').textContent='過去履歴の分析には「保存・設定」からログインしてください。出走表は取得済みです。';return}
+ if(!cloudClient||!cloudUser){
+  const racers=race.racers||{},preview=race.preview?.racers||{};
+  const safe=v=>String(v??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const fmt=v=>v===null||v===undefined||v===''?'—':Number.isFinite(Number(v))?Number(v).toFixed(2)+'秒':safe(v);
+  const colors=['#fff','#222','#df5252','#4d8df0','#f0d44c','#37bd83'];
+  $('raceMotorCards').innerHTML=Array.from({length:6},(_,i)=>{
+   const b=racers[String(i+1)]||{},p=preview[String(i+1)]||{};
+   return '<div class="motor-boat"><div class="motor-head"><span class="motor-lane" style="background:'+colors[i]+';'+(i===1?'color:white':'')+'">'+(i+1)+'</span><div style="flex:1"><b>'+safe(b.racer_name||b.name||'選手情報なし')+'</b><div class="home-sub">モーター '+safe(b.motor_number)+'号機｜2連対率 '+safe(b.motor_place_rate??'—')+'%</div></div></div><div class="home-sub">当日展示 '+fmt(p.exhibition_time)+'｜周回 '+fmt(p.lap_time)+'｜直線 '+fmt(p.straight_time)+'｜回り足 '+fmt(p.turn_time)+'｜展示ST '+safe(p.start_timing??'—')+'</div></div>';
+  }).join('');
+  $('raceAnalysisStatus').textContent='出走表・当日展示データを表示中。過去の機力履歴と比較スコアを使うには「保存・設定」からログインしてください。';
+  return;
+ }
  try{
   const {data,error}=await cloudClient.functions.invoke('analyze-race-motors',{body:{date,venue_code:code,race_no:homeRace}});
   if(error){
