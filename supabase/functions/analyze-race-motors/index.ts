@@ -126,9 +126,9 @@ Deno.serve(async(req:Request)=>{
     for(const row of importedPage??[]){
      const reg=String(row.racer_registration_no),key=[reg,row.race_date,row.venue_code,row.race_no].join(':');
      if(!courseHistorySeen.has(key)){
-      courseHistorySeen.add(key);
       const actualCourse=Number(row.actual_course),rankForCourse=Number(row.finish_rank);
       if(Number.isInteger(actualCourse)&&actualCourse>=1&&actualCourse<=6&&Number.isInteger(rankForCourse)&&rankForCourse>=1&&rankForCourse<=6){
+       courseHistorySeen.add(key);
        const byCourse=courseStatsByNo.get(reg)??new Map<number,any>();
        const cs=byCourse.get(actualCourse)??{starts:0,wins:0,top2:0,top3:0,finishSum:0,stSum:0,stCount:0};
        cs.starts++;if(rankForCourse===1)cs.wins++;if(rankForCourse<=2)cs.top2++;if(rankForCourse<=3)cs.top3++;cs.finishSum+=rankForCourse;
