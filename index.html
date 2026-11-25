@@ -1015,7 +1015,7 @@ $('racerPublicImport').addEventListener('click',async()=>{
  const days=Math.round((Date.parse(to+'T00:00:00Z')-Date.parse(from+'T00:00:00Z'))/86400000)+1;
  if(days>180){out.textContent='一度に取り込める期間は最大180日です。';return;}
  const code=venueCodes[homeVenue],race=homePayload?.programs?.stadiums?.[String(code)]?.races?.[String(homeRace)];
- const racers=Object.values(race?.racers||{}).map(x=>String(x?.registration||'').replace(/\D/g,'')).filter(x=>/^\d{4}$/.test(x));
+ const racers=Object.values(race?.racers||{}).map(x=>String(x?.number??x?.registration_number??x?.registration??'').replace(/\D/g,'')).filter(x=>/^\d{4}$/.test(x));
  const unique=[...new Set(racers)];
  if(!unique.length){out.textContent='対象レースの選手情報が読み込まれていません。「開催一覧」でレースを選び直してください。';return;}
  if(btn.disabled)return;btn.disabled=true;
