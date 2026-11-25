@@ -86,4 +86,55 @@ raceNav.querySelectorAll('button').forEach(b=>b.onclick=()=>{raceNav.querySelect
 function updateContext(){document.getElementById('venueLabel').textContent=document.getElementById('venue').value;document.getElementById('raceState').textContent='結果未確定';}
 document.getElementById('venue').onchange=updateContext;document.getElementById('race').onchange=()=>{raceNav.querySelectorAll('button').forEach(x=>x.classList.toggle('active',x.dataset.r===document.getElementById('race').value));};updateContext();
 </script>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const RACE_SUPABASE_URL='https://lampwxgrkrxjszmeodls.supabase.co';
+const RACE_SUPABASE_KEY='sb_publishable_pecHHkePLOHtu8jdf1XHFw_9G45JYZ4';
+const raceClient=window.supabase?.createClient(RACE_SUPABASE_URL,RACE_SUPABASE_KEY);
+const raceStatus=document.getElementById('dataStatus');
+const fmt=(v,d=2)=>v===null||v===undefined||v===''||!Number.isFinite(Number(v))?'<span class="missing">未取得</span>':Number(v).toFixed(d);
+const txt=v=>v===null||v===undefined||v===''?'<span class="missing">未取得</span>':String(v);
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function putRows(id, rows){document.getElementById(id).innerHTML=rows.join('');}
+function renderRaceDetail(data){
+ const boats=data.boats||[];
+ putRows('entryRows',boats.map((b,i)=>{const e=b.entry||{};return row(i,[esc(e.name??e.racer_name??'未取得'),txt(e.grade??e.class),txt(e.number??e.registration_number),txt(e.motor_number),fmt(e.motor_quinella_rate??e.motor_2ren_rate),fmt(e.boat_quinella_rate??e.boat_2ren_rate)])}));
+ putRows('originalRows',boats.map((b,i)=>{const p=b.preview||{};return row(i,[txt(b.entry?.motor_number),esc(b.entry?.name??b.entry?.racer_name??'未取得'),fmt(p.exhibition_time,2),fmt(p.lap_time,2),fmt(p.straight_time,2),fmt(p.turn_time,2),fmt(p.exhibition_st,2),txt(p.evaluation)])}));
+ const histories=boats.map(b=>b.motor_history||[]);
+ putRows('growthRows',boats.map((b,i)=>{const h=histories[i]||[];const prev=h[0]||{};return row(i,[txt(b.entry?.motor_number),txt(prev.racer_name),txt(prev.finish_rank),fmt(prev.exhibition_time),'<span class="missing">今節データ未取得</span>','<span class="missing">比較不可</span>','<span class="missing">算出不可</span>'])}));
+ putRows('stRows',boats.map((b,i)=>{const h=b.racer_history||[];const st=h.filter(x=>!x.actual_st_is_f&&Number.isFinite(Number(x.actual_st))).slice(0,10);const avg=st.length?st.reduce((a,x)=>a+Number(x.actual_st),0)/st.length:null;return row(i,['<span class="missing">展示履歴未取得</span>',fmt(avg),'<span class="missing">展示ST履歴未取得</span>',st.length+'件 / 10走',fmt(null),fmt(null),'<span class="missing">算出には展示STが必要</span>',h.filter(x=>x.actual_st_is_f).length])}));
+ putRows('lastRuns',boats.map((b,i)=>{const h=(b.motor_history||[]).slice(0,5);return '<tr><th class="lane '+laneClass[i]+'" rowspan="2">'+(i+1)+'</th><th rowspan="2">'+txt(b.entry?.motor_number)+'</th><th>展示タイム</th>'+Array.from({length:5},(_,j)=>'<td>'+fmt(h[j]?.exhibition_time)+'</td>').join('')+'</tr><tr><th>進入／着順</th>'+Array.from({length:5},(_,j)=>'<td>'+txt(h[j]?.actual_course)+' / '+txt(h[j]?.finish_rank)+'</td>').join('')+'</tr>'}));
+ putRows('incidentRows',boats.map((b,i)=>row(i,[esc(b.entry?.name??b.entry?.racer_name??'未取得'),'<span class="missing">未取得</span>','<span class="missing">未取得</span>','<span class="missing">未取得</span>','<span class="missing">未取得</span>','<span class="missing">未取得</span>','<span class="missing">未確認</span>','<span class="missing">未確認</span>','<span class="missing">未確認</span>'])));
+ putRows('seriesRows',boats.map((b,i)=>row(i,[esc(b.entry?.name??b.entry?.racer_name??'未取得'),'<span class="missing">未取得</span>','<span class="missing">未取得</span>','<span class="missing">未取得</span>','<span class="missing">未取得</span>','<span class="missing">未取得</span>','<span class="missing">未取得</span>','<span class="missing">条件算出不可</span>'])));
+ document.getElementById('raceState').textContent=data.race_status==='result_available'?'結果データあり':'出走データ取得済み';
+ document.getElementById('resultStatus').textContent=data.race_status==='result_available'?'結果データあり':'未確定';
+ putRows('resultRows',boats.map((b,i)=>{const x=b.result||{};return row(i,[txt(x.finish_rank??x.rank),esc(b.entry?.name??b.entry?.racer_name??'未取得'),fmt(x.race_time),txt(x.actual_course),fmt(x.actual_st)])}));
+ raceStatus.textContent='取得成功：出走表と過去180日分の選手・モーター履歴。事故点・F休み・節間得点率・決まり手などは専用データ取得が必要です。取得時刻：'+new Date(data.generated_at).toLocaleString('ja-JP');
+}
+async function loadReadOnlyRace(){
+ if(!raceClient){raceStatus.textContent='Supabaseライブラリを読み込めません。';return}
+ const btn=document.getElementById('loadRaceData');if(btn)btn.disabled=true;
+ raceStatus.textContent='ログイン状態を確認しています…';
+ try{
+  const {data:{session},error:authError}=await raceClient.auth.getSession();
+  if(authError)throw authError;
+  if(!session){raceStatus.textContent='実データの取得には既存アプリと同じSupabaseアカウントでログインしてください。トップ画面に戻り、保存・設定からログイン後に再度取得してください。';return}
+  const date=document.getElementById('date').value;
+  const venue_code=({桐生:1,戸田:2,江戸川:3,平和島:4,多摩川:5,浜名湖:6,蒲郡:7,常滑:8,津:9,三国:10,びわこ:11,住之江:12,尼崎:13,鳴門:14,丸亀:15,児島:16,宮島:17,徳山:18,下関:19,若松:20,芦屋:21,福岡:22,唐津:23,大村:24})[document.getElementById('venue').value];
+  const race_no=Number(document.getElementById('race').value.replace('R',''));
+  raceStatus.textContent='出走表と過去履歴を読み込んでいます…';
+  const {data,error}=await raceClient.functions.invoke('race-detail-readonly',{body:{date,venue_code,race_no}});
+  if(error){const detail=typeof error.context?.body?.text==='function'?await error.context.body.text().catch(()=> ''):'';throw new Error(detail||error.message)}
+  if(data?.error)throw new Error(data.error);
+  renderRaceDetail(data);
+ }catch(e){raceStatus.textContent='取得できませんでした：'+(e?.message||String(e))+'。読み取り専用取得機能の公開状態とログインを確認してください。'}
+ finally{if(btn)btn.disabled=false}
+}
+const loadBtn=document.createElement('button');loadBtn.id='loadRaceData';loadBtn.className='btn primary';loadBtn.textContent='実データを読み込む';loadBtn.onclick=loadReadOnlyRace;
+document.querySelector('.context').appendChild(loadBtn);
+document.getElementById('venue').addEventListener('change',()=>{});
+document.getElementById('race').addEventListener('change',()=>{});
+</script>
+
 </body></html>
