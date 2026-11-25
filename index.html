@@ -861,19 +861,19 @@ cloudInit();
 
 /* v13 race-first dashboard */
 const venueCodes={'桐生':1,'戸田':2,'江戸川':3,'平和島':4,'多摩川':5,'浜名湖':6,'蒲郡':7,'常滑':8,'津':9,'三国':10,'びわこ':11,'住之江':12,'尼崎':13,'鳴門':14,'丸亀':15,'児島':16,'宮島':17,'徳山':18,'下関':19,'若松':20,'芦屋':21,'福岡':22,'唐津':23,'大村':24};
-let homePayload=null,homeVenue='',homeRace=1,favorites=[];try{favorites=JSON.parse(localStorage.getItem('bml_favs')||'[]')}catch(e){}
+let homePayload=null,homeVenue='',homeRace=1,favorites=[],scheduleRequestId=0,motorRequestId=0;try{favorites=JSON.parse(localStorage.getItem('bml_favs')||'[]')}catch(e){}
 const localDate=()=>{const d=new Date();return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10)};
 $('homeDate').value=localDate();$('homeDateLabel').textContent=$('homeDate').value;
 document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>{showTab(b.dataset.tab);document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('active',x===b));}));
 $('reloadSchedule').onclick=loadSchedule;$('homeDate').onchange=()=>{ $('homeDateLabel').textContent=$('homeDate').value;loadSchedule(); };
-async function loadSchedule(){const d=$('homeDate').value,compact=d.replaceAll('-','');$('scheduleStatus').textContent='全国24場の開催情報を取得中…';try{const r=await fetch('https://boatraceopenapi.github.io/api/v1/'+d.slice(0,4)+'/'+compact+'.json');if(!r.ok)throw Error(r.status===404?'開催データがまだ公開されていないか、開催がありません':'開催情報取得エラー '+r.status);homePayload=await r.json();renderVenues();const st=homePayload?.programs?.stadiums||{};const first=venues.find((v,i)=>Object.keys(st[String(i+1)]?.races||{}).length>0);if(first){homeVenue=first;const nums=Object.keys(st[String(venueCodes[first])] ?.races||{}).map(Number).filter(n=>n>=1&&n<=12).sort((a,b)=>a-b);homeRace=nums.includes(1)?1:(nums[0]||1);renderVenues();renderRaces();if(nums.length)loadRaceMotors();}else{homeVenue='';$('selectedVenueTitle').textContent='開催中の競艇場がありません';$('racePills').innerHTML='';$('raceMotorCards').innerHTML='';$('selectedRaceTitle').textContent='6艇のモーター機力比較';$('raceAnalysisStatus').textContent='この日の出走データはありません。';}$('scheduleStatus').textContent=d+' の開催情報';}catch(e){homePayload=null;homeVenue='';renderVenues();$('selectedVenueTitle').textContent='開催情報を表示できません';$('racePills').innerHTML='';$('raceMotorCards').innerHTML='';$('selectedRaceTitle').textContent='6艇のモーター機力比較';$('raceAnalysisStatus').textContent='開催情報を取得できません。';$('scheduleStatus').textContent=e.message+'。日付を変えて再読み込みしてください。';}}
+async function loadSchedule(){const requestId=++scheduleRequestId,d=$('homeDate').value,compact=d.replaceAll('-','');$('scheduleStatus').textContent='全国24場の開催情報を取得中…';try{const r=await fetch('https://boatraceopenapi.github.io/api/v1/'+d.slice(0,4)+'/'+compact+'.json');if(requestId!==scheduleRequestId)return;if(!r.ok)throw Error(r.status===404?'開催データがまだ公開されていないか、開催がありません':'開催情報取得エラー '+r.status);const payload=await r.json();if(requestId!==scheduleRequestId)return;homePayload=payload;renderVenues();const st=homePayload?.programs?.stadiums||{};const first=venues.find((v,i)=>Object.keys(st[String(i+1)]?.races||{}).length>0);if(first){homeVenue=first;const nums=Object.keys(st[String(venueCodes[first])] ?.races||{}).map(Number).filter(n=>n>=1&&n<=12).sort((a,b)=>a-b);homeRace=nums.includes(1)?1:(nums[0]||1);renderVenues();renderRaces();if(nums.length)loadRaceMotors();}else{homeVenue='';$('selectedVenueTitle').textContent='開催中の競艇場がありません';$('racePills').innerHTML='';$('raceMotorCards').innerHTML='';$('selectedRaceTitle').textContent='6艇のモーター機力比較';$('raceAnalysisStatus').textContent='この日の出走データはありません。';}$('scheduleStatus').textContent=d+' の開催情報';}catch(e){if(requestId!==scheduleRequestId)return;homePayload=null;homeVenue='';renderVenues();$('selectedVenueTitle').textContent='開催情報を表示できません';$('racePills').innerHTML='';$('raceMotorCards').innerHTML='';$('selectedRaceTitle').textContent='6艇のモーター機力比較';$('raceAnalysisStatus').textContent='開催情報を取得できません。';$('scheduleStatus').textContent=e.message+'。日付を変えて再読み込みしてください。';}}
 function renderVenues(){const st=homePayload?.programs?.stadiums||{};$('venueGrid').innerHTML=venues.map((v,i)=>{const data=st[String(i+1)],rs=data?.races||{},active=!!data;return '<button class="venue-card '+(active?'active':'')+'" data-v="'+v+'"><strong>'+v+(favorites.includes(v)?' ♥':'')+'</strong><span class="venue-meta '+(active?'grade':'')+'">'+(active?'開催中':'開催なし')+'</span><span class="venue-meta">'+(active?Object.keys(rs).length+'R':'—')+'</span></button>'}).join('');$('venueGrid').querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>{if(homeVenue===b.dataset.v){favorites=favorites.includes(homeVenue)?favorites.filter(x=>x!==homeVenue):[...favorites,homeVenue];localStorage.setItem('bml_favs',JSON.stringify(favorites));}homeVenue=b.dataset.v;renderVenues();const nums=Object.keys(homePayload?.programs?.stadiums?.[String(venueCodes[homeVenue])]?.races||{}).map(Number).filter(n=>n>=1&&n<=12).sort((a,b)=>a-b);homeRace=nums.includes(1)?1:(nums[0]||1);renderRaces();if(nums.length)loadRaceMotors();});}
 function renderRaces(){const rs=homePayload?.programs?.stadiums?.[String(venueCodes[homeVenue])]?.races||{};$('selectedVenueTitle').textContent=homeVenue+'｜レース選択';const nums=Object.keys(rs).map(Number).filter(n=>n>=1&&n<=12).sort((a,b)=>a-b);$('racePills').innerHTML=nums.length?nums.map(n=>'<button class="race-pill '+(n===homeRace?'active':'')+'" data-r="'+n+'">'+n+'R</button>').join(''):'<span class="home-sub">この日の開催情報はありません。</span>';if(!nums.length){$('raceMotorCards').innerHTML='';$('selectedRaceTitle').textContent=homeVenue+'｜モーター比較';$('raceAnalysisStatus').textContent='この競艇場の開催データはありません。';return}$('racePills').querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{homeRace=Number(b.dataset.r);renderRaces();loadRaceMotors();});}
 function fmt(v){return v===null||v===undefined||v===''?'—':v}
 function mean(rows,k){const a=rows.map(x=>x?.[k]).filter(v=>v!==null&&v!==undefined&&v!=='').map(Number).filter(Number.isFinite);return a.length?a.reduce((p,c)=>p+c,0)/a.length:null}
 function validCount(rows,k){return rows.filter(x=>x?.[k]!==null&&x?.[k]!==undefined&&x?.[k]!==''&&Number.isFinite(Number(x[k]))).length}
 async function loadRaceMotors(){
- const date=$('homeDate').value,code=venueCodes[homeVenue],race=homePayload?.programs?.stadiums?.[String(code)]?.races?.[String(homeRace)];
+ const requestId=++motorRequestId,date=$('homeDate').value,code=venueCodes[homeVenue],race=homePayload?.programs?.stadiums?.[String(code)]?.races?.[String(homeRace)];
  $('selectedRaceTitle').textContent=homeVenue+' '+homeRace+'R｜'+date;
  $('raceAnalysisStatus').textContent='6艇の機力履歴を詳しく分析中…';
  $('raceMotorCards').innerHTML='';
@@ -892,6 +892,7 @@ async function loadRaceMotors(){
  }
  try{
   const {data,error}=await cloudClient.functions.invoke('analyze-race-motors',{body:{date,venue_code:code,race_no:homeRace}});
+  if(requestId!==motorRequestId)return;
   if(error){
    const detail=error?.context?.body?await error.context.body.text().catch(()=> ''):'';
    throw new Error(detail||error.message||'分析サーバーとの通信に失敗しました');
@@ -936,6 +937,7 @@ async function loadRaceMotors(){
   const withHistory=boats.filter(x=>Number(x.history_rows)>0).length;
   $('raceAnalysisStatus').textContent='分析完了：'+withHistory+'艇に過去履歴あり。順位目安は30日間の平均展示タイム（小さいほど上位）での相対比較です。各モーター展示3件未満、または比較対象が2艇未満の場合はスコアを表示しません。これは着順や舟券的中率の予測値ではありません。データ件数・F回数・周回/直線/回り足も併記しています。';
  }catch(e){
+  if(requestId!==motorRequestId)return;
   $('raceAnalysisStatus').textContent='機力分析を完了できませんでした：'+(e.message||'不明なエラー')+'。ログイン状態と過去データの取り込み状況を確認してください。';
  }
 }
