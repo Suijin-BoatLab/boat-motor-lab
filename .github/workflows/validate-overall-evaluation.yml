@@ -1,0 +1,37 @@
+name: Validate BOAT MOTOR LAB overall evaluation preview
+
+on:
+  push:
+    branches:
+      - overall-evaluation-preview
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Check Supabase Edge Function types
+        run: deno check supabase/functions/analyze-race-motors/index.ts
+      - name: Check browser JavaScript syntax
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const html = fs.readFileSync('index.html', 'utf8');
+          const scripts = [...html.matchAll(/<script\\b[^>]*>([\\s\\S]*?)<\\/script>/gi)];
+          if (!scripts.length) throw new Error('No script tags found');
+          for (const [index, match] of scripts.entries()) {
+            new Function(match[1]);
+            console.log('Script ' + (index + 1) + ': syntax OK');
+          }
+          NODE
