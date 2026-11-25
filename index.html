@@ -995,13 +995,14 @@ async function loadRaceMotors(){
   if(data?.error)throw new Error(data.error);
   const colors=['#fff','#222','#df5252','#4d8df0','#f0d44c','#37bd83'];
   const boats=Array.isArray(data.boats)?data.boats:[];
-  // Composite trend score: 30-day exhibition 50%, 180-day exhibition 30%, 30-day ST 20%.
+  // Backtested motor score: 30-day exhibition 40%, 180-day exhibition 30%, 30-day exhibition ST 30%.
+  // Racer actual ST and decision-method tendencies remain separate from motor condition.
   // Only metrics with enough samples are used; remaining weights are normalized.
   const scores=new Map(),scoreParts=new Map();
   const metricSpecs=[
-   {key:'exhibition_time',days:30,min:3,weight:0.5},
+   {key:'exhibition_time',days:30,min:3,weight:0.4},
    {key:'exhibition_time',days:180,min:10,weight:0.3},
-   {key:'exhibition_st',days:30,min:5,weight:0.2}
+   {key:'exhibition_st',days:30,min:5,weight:0.3}
   ];
   for(const spec of metricSpecs){
    const eligible=boats.filter(x=>{
@@ -1015,19 +1016,20 @@ async function loadRaceMotors(){
     while(end+1<eligible.length&&Math.abs(Number(eligible[end+1].history.find(h=>h.days===spec.days)[spec.key])-base)<=0.000001)end++;
     const rankScore=100*(1-((start+end)/2)/(eligible.length-1));
     for(let i=start;i<=end;i++){
-     const lane=eligible[i].lane,part=scoreParts.get(lane)||{weighted:0,weight:0};
-     part.weighted+=rankScore*spec.weight;part.weight+=spec.weight;scoreParts.set(lane,part);
+     const lane=eligible[i].lane,part=scoreParts.get(lane)||{weighted:0,weight:0,metricCount:0};
+     part.weighted+=rankScore*spec.weight;part.weight+=spec.weight;part.metricCount++;scoreParts.set(lane,part);
     }
     start=end+1;
    }
   }
-  for(const [lane,part] of scoreParts)if(part.weight>0)scores.set(lane,Math.round(part.weighted/part.weight));
+  // Require at least two independent motor indicators; one-metric scores are too fragile.
+  for(const [lane,part] of scoreParts)if(part.weight>0&&part.metricCount>=2)scores.set(lane,Math.round(part.weighted/part.weight));
   const safe=v=>String(v??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const fmtTime=v=>v===null||v===undefined?'—':Number(v).toFixed(2)+'秒';
   const fmtHistoryTime=(v,n)=>Number(n)>0?fmtTime(v):'未取得（公開データなし）';
   const windowFor=(boat,days)=>boat.history?.find(h=>h.days===days)||{};
   $('raceMotorCards').innerHTML=boats.map(c=>{
-   const h7=windowFor(c,7),h30=windowFor(c,30),h90=windowFor(c,90),h180=windowFor(c,180),score=scores.has(c.lane)?scores.get(c.lane):null;
+   const h7=windowFor(c,7),h30=windowFor(c,30),h90=windowFor(c,90),h180=windowFor(c,180),score=scores.has(c.lane)?scores.get(c.lane):null,coverage=scoreParts.get(c.lane)?.metricCount||0;
    const label=score===null?'比較データ不足':score>=80?'上位傾向':score>=40?'中位傾向':'下位傾向';
    const cls=score===null?'trend-flat':score>=60?'trend-up':score<40?'trend-down':'trend-flat';
    const current=c.current||{},r=c.racer||{},rates=c.motor_rates||{},racer90=r.history_90d||{},startTime=r.start_time||{};
@@ -1035,12 +1037,12 @@ async function loadRaceMotors(){
    const stLabel=(v,n)=>v===null||v===undefined?'—（'+(Number(n)||0)+'件）':Number(v).toFixed(3)+'秒（'+(Number(n)||0)+'件）';
    const decisionText=Object.entries(decision.method_rate||{}).sort((a,b)=>Number(b[1])-Number(a[1])).map(([k,v])=>safe(k)+' '+(Number(v)*100).toFixed(1)+'%').join('／')||'未蓄積';
    const sample=Number(h30.count)||0;
-   return '<div class="motor-boat"><div class="motor-head"><span class="motor-lane" style="background:'+colors[(c.lane||1)-1]+';'+(c.lane===2?'color:white':'')+'">'+safe(c.lane)+'</span><div style="flex:1"><b>'+safe(r.name||'選手情報なし')+'</b><div class="home-sub">モーター '+safe(c.motor_number)+'号機｜2連対率 '+safe(rates.place===null?'—':rates.place)+'%｜選手90日 '+(Number(racer90.starts)>=10?Number(racer90.starts)+'走・勝率 '+(Number(racer90.win_rate)*100).toFixed(1)+'%・2連対率 '+(Number(racer90.top2_rate)*100).toFixed(1)+'%・平均着順 '+Number(racer90.average_finish).toFixed(2):'データ不足（'+Number(racer90.starts||0)+'走）')+'</div></div><div style="text-align:right"><div class="motor-score">'+(score===null?'—':score)+'</div><div class="'+cls+'">'+label+'</div></div></div><div class="scorebar"><i style="width:'+(score??0)+'%"></i></div><div class="home-sub">決まり手（勝利 '+Number(decision.wins||0)+'件）：'+decisionText+'<br>選手の本番ST（F除外）：直近10走 '+stLabel(st10.average,st10.count)+'｜直近90日 '+stLabel(st90.average,st90.count)+'｜'+safe(stVenue.venue_name||homeVenue)+' '+stLabel(stVenue.average,stVenue.count)+'<br>展示平均：7日 '+fmtTime(h7.exhibition_time)+'｜30日 '+fmtTime(h30.exhibition_time)+'｜90日 '+fmtTime(h90.exhibition_time)+'｜180日 '+fmtTime(h180.exhibition_time)+'<br>30日：出走 '+sample+'件／展示 '+(Number(h30.exhibition_time_count)||0)+'件／F '+(Number(h30.exhibition_f_count)||0)+'回／1着 '+(Number(h30.first_places)||0)+'回／2連対 '+(Number(h30.top2_places)||0)+'回／3連対 '+(Number(h30.top3_places)||0)+'回／平均着順 '+(h30.average_finish==null?'—':Number(h30.average_finish).toFixed(2))+'<br>180日：出走 '+(Number(h180.count)||0)+'件／展示 '+(Number(h180.exhibition_time_count)||0)+'件｜周回 '+fmtHistoryTime(h180.lap_time,h180.lap_time_count)+'（'+(Number(h180.lap_time_count)||0)+'件）｜直線 '+fmtHistoryTime(h180.straight_time,h180.straight_time_count)+'（'+(Number(h180.straight_time_count)||0)+'件）｜回り足 '+fmtHistoryTime(h180.turn_time,h180.turn_time_count)+'（'+(Number(h180.turn_time_count)||0)+'件）<br>30日ST平均 '+(h30.exhibition_st==null?'—':Number(h30.exhibition_st).toFixed(3))+'（'+(Number(h30.exhibition_st_count)||0)+'件）｜当日展示 '+fmtTime(current.exhibition_time)+'｜展示ST '+safe(current.exhibition_st?.raw??'—')+'<br>当日オリジナル展示（'+safe(current.original_exhibition_source||'未取得')+'）：一周 '+fmtTime(current.lap_time)+'／半周 '+fmtTime(current.half_lap_time)+'／まわり足 '+fmtTime(current.turn_time)+'／直線 '+fmtTime(current.straight_time)+'｜履歴 '+safe(c.history_source||'未蓄積')+'</div></div>';
+   return '<div class="motor-boat"><div class="motor-head"><span class="motor-lane" style="background:'+colors[(c.lane||1)-1]+';'+(c.lane===2?'color:white':'')+'">'+safe(c.lane)+'</span><div style="flex:1"><b>'+safe(r.name||'選手情報なし')+'</b><div class="home-sub">モーター '+safe(c.motor_number)+'号機｜2連対率 '+safe(rates.place===null?'—':rates.place)+'%｜選手90日 '+(Number(racer90.starts)>=10?Number(racer90.starts)+'走・勝率 '+(Number(racer90.win_rate)*100).toFixed(1)+'%・2連対率 '+(Number(racer90.top2_rate)*100).toFixed(1)+'%・平均着順 '+Number(racer90.average_finish).toFixed(2):'データ不足（'+Number(racer90.starts||0)+'走）')+'</div></div><div style="text-align:right"><div class="motor-score">'+(score===null?'—':score)+'</div><div class="'+cls+'">'+label+(score===null?'':'｜比較項目 '+coverage+'/3')+'</div></div></div><div class="scorebar"><i style="width:'+(score??0)+'%"></i></div><div class="home-sub">決まり手（勝利 '+Number(decision.wins||0)+'件）：'+decisionText+'<br>選手の本番ST（F除外）：直近10走 '+stLabel(st10.average,st10.count)+'｜直近90日 '+stLabel(st90.average,st90.count)+'｜'+safe(stVenue.venue_name||homeVenue)+' '+stLabel(stVenue.average,stVenue.count)+'<br>展示平均：7日 '+fmtTime(h7.exhibition_time)+'｜30日 '+fmtTime(h30.exhibition_time)+'｜90日 '+fmtTime(h90.exhibition_time)+'｜180日 '+fmtTime(h180.exhibition_time)+'<br>30日：出走 '+sample+'件／展示 '+(Number(h30.exhibition_time_count)||0)+'件／F '+(Number(h30.exhibition_f_count)||0)+'回／1着 '+(Number(h30.first_places)||0)+'回／2連対 '+(Number(h30.top2_places)||0)+'回／3連対 '+(Number(h30.top3_places)||0)+'回／平均着順 '+(h30.average_finish==null?'—':Number(h30.average_finish).toFixed(2))+'<br>180日：出走 '+(Number(h180.count)||0)+'件／展示 '+(Number(h180.exhibition_time_count)||0)+'件｜周回 '+fmtHistoryTime(h180.lap_time,h180.lap_time_count)+'（'+(Number(h180.lap_time_count)||0)+'件）｜直線 '+fmtHistoryTime(h180.straight_time,h180.straight_time_count)+'（'+(Number(h180.straight_time_count)||0)+'件）｜回り足 '+fmtHistoryTime(h180.turn_time,h180.turn_time_count)+'（'+(Number(h180.turn_time_count)||0)+'件）<br>30日ST平均 '+(h30.exhibition_st==null?'—':Number(h30.exhibition_st).toFixed(3))+'（'+(Number(h30.exhibition_st_count)||0)+'件）｜当日展示 '+fmtTime(current.exhibition_time)+'｜展示ST '+safe(current.exhibition_st?.raw??'—')+'<br>当日オリジナル展示（'+safe(current.original_exhibition_source||'未取得')+'）：一周 '+fmtTime(current.lap_time)+'／半周 '+fmtTime(current.half_lap_time)+'／まわり足 '+fmtTime(current.turn_time)+'／直線 '+fmtTime(current.straight_time)+'｜履歴 '+safe(c.history_source||'未蓄積')+'</div></div>';
   }).join('');
   const withHistory=boats.filter(x=>Number(x.history_rows)>0).length;
   const capture=data.original_capture||{};const captureMsg=capture.status==='saved'?'当日オリジナル展示をクラウド保存：'+capture.saved+'艇。':capture.status==='save_failed'?'当日オリジナル展示は取得しましたが、履歴保存に失敗：'+safe(capture.message||'保存エラー')+'。':'当日オリジナル展示は未取得（公開前・非対応・取得元停止の可能性）。';
   const t=data.timings||{};const timingMsg=Object.keys(t).length?' 処理時間：出走データ '+(t.open_api_fetch_ms??'-')+'ms／BOATCAST '+(t.boatcast_fetch_parse_ms??'-')+'ms／履歴取得 '+(t.racer_history_fetch_ms??'-')+'ms（選手90日）／分析・保存 '+(t.calculate_and_save_ms??'-')+'ms／合計 '+(t.total_ms??'-')+'ms。':'';
-  $('raceAnalysisStatus').textContent='分析完了：'+withHistory+'艇に過去履歴あり。'+captureMsg+timingMsg+'順位目安は30日展示平均50％・180日展示平均30％・30日ST平均20％を基本にした相対比較です。各項目は必要件数を満たす場合のみ使用し、使えない項目の重みは残りに配分します。比較できる項目が不足する場合はスコアを表示しません。これは着順や舟券的中率の予測値ではありません。データ件数・F回数を併記しています。周回/直線/回り足は公開元から取得できた場合のみ表示します。';
+  $('raceAnalysisStatus').textContent='分析完了：'+withHistory+'艇に過去履歴あり。'+captureMsg+timingMsg+'順位目安は過去データとの照合で調整した相対比較です。30日展示平均40％・180日展示平均30％・30日展示ST平均30％を基本にします。各項目は必要件数を満たす場合のみ使用し、2項目以上を比較できる場合だけスコアを表示します。選手の本番ST（直近10走・90日・場別）と決まり手率は、モーター機力とは別の選手特性として表示し、機力スコアには混ぜません。これは着順や舟券的中率の予測値ではありません。データ件数・F回数を併記しています。周回/直線/回り足は公開元から取得できた場合のみ表示します。';
  }catch(e){
   if(requestId!==motorRequestId)return;
   $('raceAnalysisStatus').textContent='機力分析を完了できませんでした：'+(e.message||'不明なエラー')+'。ログイン状態と過去データの取り込み状況を確認してください。';
