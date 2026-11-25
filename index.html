@@ -200,7 +200,7 @@ footer{color:var(--muted);font-size:11px;text-align:center;padding:24px}
   <div class="panel"><h2>データ件数</h2><div id="backupCount" class="muted">0レース</div><p class="small muted" id="autoBackupStatus">自動バックアップ状態を確認中</p><div class="actions"><button class="btn secondary" id="restoreLocal">自動バックアップから復元</button></div></div>
 </section>
 </main>
-<footer>BOAT MOTOR LAB v15 · レース別機力分析 / データは入力者の確認を前提とした分析用記録です</footer>
+<footer>BOAT MOTOR LAB v16 · レース別機力分析 / データは入力者の確認を前提とした分析用記録です</footer>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const venues=['桐生','戸田','江戸川','平和島','多摩川','浜名湖','蒲郡','常滑','津','三国','びわこ','住之江','尼崎','鳴門','丸亀','児島','宮島','徳山','下関','若松','芦屋','福岡','唐津','大村'];
@@ -1030,7 +1030,7 @@ $('racerPublicImport').addEventListener('click',async()=>{
    const extra=data.headers?'\n取得元CSVの列名：'+data.headers.join(' / '):'';
    throw new Error(data.error+extra);
   }
-  const diag=(data?.diagnostics||[]).map(d=>'登録 '+d.registration_no+'：日付不正 '+d.invalid_date_rows+'／期間外 '+d.outside_date_rows+'／場・R・艇番不正 '+d.invalid_race_key_rows+'／対象 '+d.matched_rows+'件。列名：'+(d.headers||[]).join(', ')+'。サンプル：'+JSON.stringify(d.sample_rows||[])).join('\\n');
+  const diag=(data?.diagnostics||[]).map(d=>'登録 '+d.registration_no+'：日付不正 '+d.invalid_date_rows+'／期間外 '+d.outside_date_rows+'／場・R・艇番不正 '+d.invalid_race_key_rows+'／対象 '+d.matched_rows+'件。列名：'+(d.headers||[]).join(', ')+'。サンプル：'+JSON.stringify(d.sample_rows||[])).join('\n');
   out.textContent='取得完了：'+(Number(data?.saved)||0)+'行を保存。選手 '+unique.length+'名／取得元の全履歴 '+(Number(data?.source_rows)||0)+'行。\\n'+diag+'\\n分析画面を再読み込みすると反映されます。';
  }catch(err){out.textContent='取得を中断しました：'+(err.message||'不明なエラー');}
  finally{btn.disabled=false;}
