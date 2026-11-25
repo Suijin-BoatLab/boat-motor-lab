@@ -1045,7 +1045,7 @@ async function loadRaceMotors(){
   const withHistory=boats.filter(x=>Number(x.history_rows)>0).length;
   const capture=data.original_capture||{};const captureMsg=capture.status==='saved'?'当日オリジナル展示をクラウド保存：'+capture.saved+'艇。':capture.status==='save_failed'?'当日オリジナル展示は取得しましたが、履歴保存に失敗：'+safe(capture.message||'保存エラー')+'。':'当日オリジナル展示は未取得（公開前・非対応・取得元停止の可能性）。';
   const t=data.timings||{};const timingMsg=Object.keys(t).length?' 処理時間：出走データ '+(t.open_api_fetch_ms??'-')+'ms／BOATCAST '+(t.boatcast_fetch_parse_ms??'-')+'ms／履歴取得 '+(t.racer_history_fetch_ms??'-')+'ms（選手90日）／分析・保存 '+(t.calculate_and_save_ms??'-')+'ms／合計 '+(t.total_ms??'-')+'ms。':'';
-  $('raceAnalysisStatus').textContent='分析完了：'+withHistory+'艇に過去履歴あり。'+captureMsg+timingMsg+'順位目安は過去データとの照合で調整した相対比較です。30日展示平均40％・180日展示平均30％・30日展示ST平均30％を基本にします。各項目は必要件数を満たす場合のみ使用し、2項目以上を比較できる場合だけスコアを表示します。選手の本番ST（直近10走・90日・場別）と決まり手率は、モーター機力とは別の選手特性として表示し、機力スコアには混ぜません。これは着順や舟券的中率の予測値ではありません。データ件数・F回数を併記しています。周回/直線/回り足は公開元から取得できた場合のみ表示します。';
+  $('raceAnalysisStatus').textContent='分析完了：'+withHistory+'艇に過去履歴あり。'+captureMsg+timingMsg+'順位目安は過去データとの照合で調整した相対比較です。30日展示平均40％・180日展示平均30％・30日展示ST平均30％を基本にします。各項目は必要件数を満たす場合のみ使用し、2項目以上を比較できる場合だけスコアを表示します。選手の本番ST（直近10走・90日・場別）、決まり手率、過去の実進入コース別成績は選手特性として別表示し、機力スコアには混ぜません。総合評価の重みは過去レース検証後に決定します。これは着順や舟券的中率の予測値ではありません。データ件数・F回数を併記しています。周回/直線/回り足は公開元から取得できた場合のみ表示します。';
  }catch(e){
   if(requestId!==motorRequestId)return;
   $('raceAnalysisStatus').textContent='機力分析を完了できませんでした：'+(e.message||'不明なエラー')+'。ログイン状態と過去データの取り込み状況を確認してください。';
