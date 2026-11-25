@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { buildDecisionMethodStats } from "./decision-methods.ts";
 const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type","Access-Control-Allow-Methods":"POST, OPTIONS"};
 const names:Record<string,string>={"1":"桐生","2":"戸田","3":"江戸川","4":"平和島","5":"多摩川","6":"浜名湖","7":"蒲郡","8":"常滑","9":"津","10":"三国","11":"びわこ","12":"住之江","13":"尼崎","14":"鳴門","15":"丸亀","16":"児島","17":"宮島","18":"徳山","19":"下関","20":"若松","21":"芦屋","22":"福岡","23":"唐津","24":"大村"};
 const num=(v:any)=>{if(v===null||v===undefined||v==="")return null;const n=Number(v);return Number.isFinite(n)?n:null};
@@ -75,27 +76,51 @@ Deno.serve(async(req:Request)=>{
     historyOffset+=historyPage.length;
    }
   }
+  const courseStatsByNo=new Map<string,Map<number,any>>();
   const racerStatsByNo=new Map<string,any>();
   const racerHistorySeen=new Set<string>();
+  const racerRankSeen=new Set<string>();
+  const racerStSeen=new Set<string>();
+  const racerStFSeen=new Set<string>();
+  const courseStFSeen=new Set<string>();
+  const courseHistorySeen=new Set<string>();
+  const courseStSeen=new Set<string>();
   const registrationNos=[...new Set(Array.from({length:6},(_,i)=>String(racers[String(i+1)]?.number??racers[String(i+1)]?.registration_number??"").trim()).filter(x=>/^\d+$/.test(x)))];
   const racerMinDate=new Date(Date.parse(date+"T00:00:00Z")-180*86400000).toISOString().slice(0,10);
   const racer90MinDate=new Date(Date.parse(date+"T00:00:00Z")-90*86400000).toISOString().slice(0,10);
   if(registrationNos.length){
    let racerOffset=0;
    while(true){
-    const {data:racerPage,error:racerError}=await supabase.from("historical_motor_entries").select("id,race_date,venue_code,venue_name,race_no,racer_registration_no,finish_rank,actual_st,actual_st_is_f").eq("user_id",auth.user.id).in("racer_registration_no",registrationNos).lt("race_date",date).gte("race_date",racerMinDate).order("race_date",{ascending:false}).order("race_no",{ascending:false}).order("id",{ascending:false}).range(racerOffset,racerOffset+999);
+    const {data:racerPage,error:racerError}=await supabase.from("historical_motor_entries").select("id,race_date,venue_code,venue_name,race_no,racer_registration_no,finish_rank,actual_course,actual_st,actual_st_is_f").eq("user_id",auth.user.id).in("racer_registration_no",registrationNos).lt("race_date",date).order("race_date",{ascending:false}).order("race_no",{ascending:false}).order("id",{ascending:false}).range(racerOffset,racerOffset+999);
     if(racerError)return json({error:"選手履歴取得失敗: "+racerError.message},500);
     for(const row of racerPage??[]){
-     const reg=String(row.racer_registration_no);racerHistorySeen.add([reg,row.race_date,row.venue_code,row.race_no].join(':'));
+     const reg=String(row.racer_registration_no),key=[reg,row.race_date,row.venue_code,row.race_no].join(':');racerHistorySeen.add(key);
+     const actualCourse=Number(row.actual_course),courseRank=Number(row.finish_rank);
+     if(Number.isInteger(actualCourse)&&actualCourse>=1&&actualCourse<=6){
+      const byCourse=courseStatsByNo.get(reg)??new Map<number,any>();
+      const cs=byCourse.get(actualCourse)??{starts:0,wins:0,top2:0,top3:0,finishSum:0,stSum:0,stCount:0};
+      if(!courseHistorySeen.has(key)&&Number.isInteger(courseRank)&&courseRank>=1&&courseRank<=6){
+       courseHistorySeen.add(key);
+       cs.starts++;if(courseRank===1)cs.wins++;if(courseRank<=2)cs.top2++;if(courseRank<=3)cs.top3++;cs.finishSum+=courseRank;
+      }
+      const courseSt=num(row.actual_st);
+      if(row.actual_st_is_f)courseStFSeen.add(key);
+      if(!courseStSeen.has(key)&&!courseStFSeen.has(key)&&!row.actual_st_is_f&&courseSt!==null&&courseSt>=0&&courseSt<=0.99){
+       courseStSeen.add(key);cs.stSum+=courseSt;cs.stCount++;
+      }
+      byCourse.set(actualCourse,cs);courseStatsByNo.set(reg,byCourse);
+     }
      const s=racerStatsByNo.get(reg)??{starts:0,wins:0,top2:0,top3:0,finishSum:0,starts90:0,wins90:0,top2_90:0,top3_90:0,finishSum90:0,stRows:[],venueStRows:[],recentRaces:[]};
      const rank=Number(row.finish_rank);
-     if(Number.isInteger(rank)&&rank>=1&&rank<=6){s.starts++;if(rank===1)s.wins++;if(rank<=2)s.top2++;if(rank<=3)s.top3++;s.finishSum+=rank;if(row.race_date>=racer90MinDate){s.starts90++;if(rank===1)s.wins90++;if(rank<=2)s.top2_90++;if(rank<=3)s.top3_90++;s.finishSum90+=rank;}}
+     if(Number.isInteger(rank)&&rank>=1&&rank<=6){racerRankSeen.add(key);s.starts++;if(rank===1)s.wins++;if(rank<=2)s.top2++;if(rank<=3)s.top3++;s.finishSum+=rank;if(row.race_date>=racer90MinDate){s.starts90++;if(rank===1)s.wins90++;if(rank<=2)s.top2_90++;if(rank<=3)s.top3_90++;s.finishSum90+=rank;}}
      const actualSt=num(row.actual_st);
      s.recentRaces.push({date:row.race_date,race_no:Number(row.race_no)||0,venue_code:Number(row.venue_code)||0,venue_name:row.venue_name??names[String(row.venue_code)]??"場不明",st:!row.actual_st_is_f&&actualSt!==null&&actualSt>=0&&actualSt<=0.99?actualSt:null,is_f:!!row.actual_st_is_f});
+     if(row.actual_st_is_f)racerStFSeen.add(key);
      if(!row.actual_st_is_f&&actualSt!==null&&actualSt>=0&&actualSt<=0.99){
+      racerStSeen.add(key);
       const stRow={date:row.race_date,race_no:Number(row.race_no)||0,venue_code:Number(row.venue_code)||0,venue_name:row.venue_name??names[String(row.venue_code)]??"場不明",st:actualSt};
       s.stRows.push(stRow);
-      if(Number(row.venue_code)===venueCode)s.venueStRows.push(stRow);
+      if(Number(row.venue_code)===venueCode&&row.race_date>=racerMinDate)s.venueStRows.push(stRow);
      }
      racerStatsByNo.set(reg,s);
     }
@@ -104,20 +129,43 @@ Deno.serve(async(req:Request)=>{
    }
    let importedOffset=0;
    while(true){
-    const {data:importedPage,error:importedError}=await supabase.from("historical_racer_entries").select("id,race_date,venue_code,venue_name,race_no,lane,racer_registration_no,finish_rank,actual_st,actual_st_is_f").eq("user_id",auth.user.id).in("racer_registration_no",registrationNos).lt("race_date",date).gte("race_date",racerMinDate).order("race_date",{ascending:false}).order("race_no",{ascending:false}).range(importedOffset,importedOffset+999);
+    const {data:importedPage,error:importedError}=await supabase.from("historical_racer_entries").select("id,race_date,venue_code,venue_name,race_no,lane,racer_registration_no,actual_course,finish_rank,actual_st,actual_st_is_f").eq("user_id",auth.user.id).in("racer_registration_no",registrationNos).lt("race_date",date).order("race_date",{ascending:false}).order("race_no",{ascending:false}).order("id",{ascending:false}).range(importedOffset,importedOffset+999);
     if(importedError)return json({error:"CSV選手履歴取得失敗: "+importedError.message},500);
     for(const row of importedPage??[]){
      const reg=String(row.racer_registration_no),key=[reg,row.race_date,row.venue_code,row.race_no].join(':');
-     if(racerHistorySeen.has(key))continue;
+     const actualCourse=Number(row.actual_course),rankForCourse=Number(row.finish_rank);
+     // A primary F marker applies to this start even if its course field is missing.
+     // Carry it into the course-ST guard before considering fallback course data.
+     if(racerStFSeen.has(key))courseStFSeen.add(key);
+     if(Number.isInteger(actualCourse)&&actualCourse>=1&&actualCourse<=6){
+      const byCourse=courseStatsByNo.get(reg)??new Map<number,any>();
+      const cs=byCourse.get(actualCourse)??{starts:0,wins:0,top2:0,top3:0,finishSum:0,stSum:0,stCount:0};
+      if(!courseHistorySeen.has(key)&&Number.isInteger(rankForCourse)&&rankForCourse>=1&&rankForCourse<=6){
+       courseHistorySeen.add(key);
+       cs.starts++;if(rankForCourse===1)cs.wins++;if(rankForCourse<=2)cs.top2++;if(rankForCourse<=3)cs.top3++;cs.finishSum+=rankForCourse;
+      }
+      const courseSt=num(row.actual_st);
+      if(row.actual_st_is_f)courseStFSeen.add(key);
+      if(!courseStSeen.has(key)&&!courseStFSeen.has(key)&&!row.actual_st_is_f&&courseSt!==null&&courseSt>=0&&courseSt<=0.99){
+       courseStSeen.add(key);cs.stSum+=courseSt;cs.stCount++;
+      }
+      byCourse.set(actualCourse,cs);courseStatsByNo.set(reg,byCourse);
+     }
+     const alreadySeen=racerHistorySeen.has(key);
+     if(alreadySeen&&racerRankSeen.has(key)&&racerStSeen.has(key))continue;
      racerHistorySeen.add(key);
      const s=racerStatsByNo.get(reg)??{starts:0,wins:0,top2:0,top3:0,finishSum:0,starts90:0,wins90:0,top2_90:0,top3_90:0,finishSum90:0,stRows:[],venueStRows:[],recentRaces:[]};
      const rank=Number(row.finish_rank);
-     if(Number.isInteger(rank)&&rank>=1&&rank<=6){s.starts++;if(rank===1)s.wins++;if(rank<=2)s.top2++;if(rank<=3)s.top3++;s.finishSum+=rank;if(row.race_date>=racer90MinDate){s.starts90++;if(rank===1)s.wins90++;if(rank<=2)s.top2_90++;if(rank<=3)s.top3_90++;s.finishSum90+=rank;}}
+     if(!racerRankSeen.has(key)&&Number.isInteger(rank)&&rank>=1&&rank<=6){racerRankSeen.add(key);s.starts++;if(rank===1)s.wins++;if(rank<=2)s.top2++;if(rank<=3)s.top3++;s.finishSum+=rank;if(row.race_date>=racer90MinDate){s.starts90++;if(rank===1)s.wins90++;if(rank<=2)s.top2_90++;if(rank<=3)s.top3_90++;s.finishSum90+=rank;}}
      const actualSt=num(row.actual_st);
-     s.recentRaces.push({date:row.race_date,race_no:Number(row.race_no)||0,venue_code:Number(row.venue_code)||0,venue_name:row.venue_name??names[String(row.venue_code)]??"場不明",st:!row.actual_st_is_f&&actualSt!==null&&actualSt>=0&&actualSt<=0.99?actualSt:null,is_f:!!row.actual_st_is_f});
-     if(!row.actual_st_is_f&&actualSt!==null&&actualSt>=0&&actualSt<=0.99){
+     const validSt=!row.actual_st_is_f&&actualSt!==null&&actualSt>=0&&actualSt<=0.99;
+     if(row.actual_st_is_f)racerStFSeen.add(key);
+     let recent=s.recentRaces.find((x:any)=>x.date===row.race_date&&x.race_no===(Number(row.race_no)||0)&&x.venue_code===(Number(row.venue_code)||0));
+     if(!recent){recent={date:row.race_date,race_no:Number(row.race_no)||0,venue_code:Number(row.venue_code)||0,venue_name:row.venue_name??names[String(row.venue_code)]??"場不明",st:null,is_f:!!row.actual_st_is_f};s.recentRaces.push(recent);}
+     if(!racerStSeen.has(key)&&!racerStFSeen.has(key)&&validSt){
+      racerStSeen.add(key);recent.st=actualSt;recent.is_f=false;
       const stRow={date:row.race_date,race_no:Number(row.race_no)||0,venue_code:Number(row.venue_code)||0,venue_name:row.venue_name??names[String(row.venue_code)]??"場不明",st:actualSt};
-      s.stRows.push(stRow);if(Number(row.venue_code)===venueCode)s.venueStRows.push(stRow);
+      s.stRows.push(stRow);if(Number(row.venue_code)===venueCode&&row.race_date>=racerMinDate)s.venueStRows.push(stRow);
      }
      racerStatsByNo.set(reg,s);
     }
@@ -136,23 +184,13 @@ Deno.serve(async(req:Request)=>{
    const avgSt=(rows:any[])=>rows.length?rows.reduce((sum:number,x:any)=>sum+x.st,0)/rows.length:null;
    s.start_time={last10:{average:avgSt(last10),count:last10.length,races:last10Races.length},last90d:{average:avgSt(last90),count:last90.length},venue:{average:avgSt(s.venueStRows),count:s.venueStRows.length,venue_code:venueCode,venue_name:names[String(venueCode)]},last10_rows:last10,last10_races:last10Races};
   }
-  const decisionByNo=new Map<string,any>(),decisionRaceKeys=new Set<string>();
-  const addDecision=(regValue:any,method:string,courseValue:any)=>{
-   const reg=String(regValue??"").trim();if(!reg||!method)return;
-   const v=decisionByNo.get(reg)??{wins:0,by_method:{},by_course:{}};
-   v.wins++;v.by_method[method]=(v.by_method[method]??0)+1;
-   const course=Number(courseValue);if(course>=1&&course<=6){const key=String(course);v.by_course[key]??={wins:0,by_method:{}};v.by_course[key].wins++;v.by_course[key].by_method[method]=(v.by_course[key].by_method[method]??0)+1;}
-   decisionByNo.set(reg,v);
-  };
+  const importedDecisionRows:any[]=[],payoutDecisionRows:any[]=[];
   if(registrationNos.length){
    let importedDecisionOffset=0;
    while(true){
     const {data:importedDecisionPage,error:importedDecisionError}=await supabase.from("historical_racer_entries").select("race_date,venue_code,race_no,racer_registration_no,finish_rank,decision_method,actual_course").eq("user_id",auth.user.id).in("racer_registration_no",registrationNos).lt("race_date",date).gte("race_date",racer90MinDate).eq("finish_rank",1).not("decision_method","is",null).order("race_date",{ascending:false}).range(importedDecisionOffset,importedDecisionOffset+999);
     if(importedDecisionError)return json({error:"CSV決まり手履歴取得失敗: "+importedDecisionError.message},500);
-    for(const row of importedDecisionPage??[]){
-     decisionRaceKeys.add([row.race_date,row.venue_code,row.race_no].join(':'));
-     addDecision(row.racer_registration_no,String(row.decision_method),row.actual_course);
-    }
+    importedDecisionRows.push(...(importedDecisionPage??[]));
     if(!importedDecisionPage||importedDecisionPage.length<1000)break;
     importedDecisionOffset+=importedDecisionPage.length;
    }
@@ -160,19 +198,12 @@ Deno.serve(async(req:Request)=>{
    while(true){
     const {data:decisionPage,error:decisionError}=await supabase.from("race_payout_results").select("race_date,venue_code,race_no,winning_racer_registration_no,decision_method,winning_course").eq("user_id",auth.user.id).in("winning_racer_registration_no",registrationNos).lt("race_date",date).gte("race_date",racer90MinDate).not("decision_method","is",null).order("race_date",{ascending:false}).range(decisionOffset,decisionOffset+999);
     if(decisionError)return json({error:"決まり手履歴取得失敗: "+decisionError.message},500);
-    for(const row of decisionPage??[]){
-     const raceKey=[row.race_date,row.venue_code,row.race_no].join(':');
-     if(decisionRaceKeys.has(raceKey))continue;
-     addDecision(row.winning_racer_registration_no,String(row.decision_method),row.winning_course);
-    }
+    payoutDecisionRows.push(...(decisionPage??[]));
     if(!decisionPage||decisionPage.length<1000)break;
     decisionOffset+=decisionPage.length;
    }
   }
-  for(const v of decisionByNo.values()){
-   v.method_rate=Object.fromEntries(Object.entries(v.by_method).map(([k,n])=>[k,v.wins?Number(n)/v.wins:null]));
-   for(const c of Object.values(v.by_course) as any[])c.method_rate=Object.fromEntries(Object.entries(c.by_method).map(([k,n])=>[k,c.wins?Number(n)/c.wins:null]));
-  }
+  const decisionByNo=buildDecisionMethodStats(importedDecisionRows,payoutDecisionRows,registrationNos);
   timings.racer_history_fetch_ms=Date.now()-stageAt;stageAt=Date.now();
   const historyByMotor=new Map<number,any[]>();
   for(const row of allHistory){const list=historyByMotor.get(Number(row.motor_number))??[];list.push(row);historyByMotor.set(Number(row.motor_number),list);}
@@ -218,7 +249,7 @@ Deno.serve(async(req:Request)=>{
     out.average_finish=finished.length?finished.reduce((sum,x)=>sum+Number(x.finish_rank),0)/finished.length:null;
     return out;
    });
-   const registrationNo=String(b.number??b.registration_number??"").trim()||null;const racerHistory=registrationNo?racerStatsByNo.get(registrationNo)??{starts:0,wins:0,top2:0,top3:0,average_finish:null,starts90:0,wins90:0,top2_90:0,top3_90:0,finishSum90:0,start_time:null}:null;const racer={name:b.racer_name??b.name??null,registration_no:registrationNo,class:b.rank_number??null,branch:b.branch_number??null,national_win_rate:num(b.national_win_rate),national_place_rate:num(b.national_place_rate),local_win_rate:num(b.local_win_rate),local_place_rate:num(b.local_place_rate),decision_methods:registrationNo?decisionByNo.get(registrationNo)??{wins:0,by_method:{},method_rate:{},by_course:{}}:null,start_time:racerHistory?.start_time??null,history_90d:racerHistory?{starts:racerHistory.starts90,wins:racerHistory.wins90,win_rate:racerHistory.starts90?racerHistory.wins90/racerHistory.starts90:null,top2:racerHistory.top2_90,top2_rate:racerHistory.starts90?racerHistory.top2_90/racerHistory.starts90:null,top3:racerHistory.top3_90,top3_rate:racerHistory.starts90?racerHistory.top3_90/racerHistory.starts90:null,average_finish:racerHistory.starts90?racerHistory.finishSum90/racerHistory.starts90:null}:null};
+   const registrationNo=String(b.number??b.registration_number??"").trim()||null;const racerHistory=registrationNo?racerStatsByNo.get(registrationNo)??{starts:0,wins:0,top2:0,top3:0,average_finish:null,starts90:0,wins90:0,top2_90:0,top3_90:0,finishSum90:0,start_time:null}:null;const racer={name:b.racer_name??b.name??null,registration_no:registrationNo,class:b.rank_number??null,branch:b.branch_number??null,national_win_rate:num(b.national_win_rate),national_place_rate:num(b.national_place_rate),local_win_rate:num(b.local_win_rate),local_place_rate:num(b.local_place_rate),decision_methods:registrationNo?decisionByNo.get(registrationNo)??{wins:0,by_method:{},method_rate:{},by_course:{}}:null,course_stats:registrationNo?Object.fromEntries([...(courseStatsByNo.get(registrationNo)??new Map()).entries()].map(([course,cs]:any)=>[String(course),{starts:cs.starts,wins:cs.wins,win_rate:cs.starts?cs.wins/cs.starts:null,top2:cs.top2,top2_rate:cs.starts?cs.top2/cs.starts:null,top3:cs.top3,top3_rate:cs.starts?cs.top3/cs.starts:null,average_finish:cs.starts?cs.finishSum/cs.starts:null,average_st:cs.stCount?cs.stSum/cs.stCount:null,st_count:cs.stCount}])):{},start_time:racerHistory?.start_time??null,history_90d:racerHistory?{starts:racerHistory.starts90,wins:racerHistory.wins90,win_rate:racerHistory.starts90?racerHistory.wins90/racerHistory.starts90:null,top2:racerHistory.top2_90,top2_rate:racerHistory.starts90?racerHistory.top2_90/racerHistory.starts90:null,top3:racerHistory.top3_90,top3_rate:racerHistory.starts90?racerHistory.top3_90/racerHistory.starts90:null,average_finish:racerHistory.starts90?racerHistory.finishSum90/racerHistory.starts90:null}:null};
    const original=originalByLane[lane]??{};
    const current={exhibition_time:num(p.exhibition_time),lap_time:num(original.lap_time??p.lap_time),half_lap_time:num(original.half_lap_time),straight_time:num(original.straight_time??p.straight_time),turn_time:num(original.turn_time??p.turn_time),original_exhibition_source:originalSource,exhibition_st:st(p.start_timing),actual_st:st(r.start_timing)};
    boats.push({lane,motor_number:motor,boat_number:num(b.boat_number),racer,motor_rates:{win:num(b.motor_win_rate),place:num(b.motor_place_rate)},current,history:windows,history_rows:rows.length,history_days:new Set(rows.map(x=>x.race_date)).size,history_source:detailRows.length&&legacyRows.length?"詳細履歴＋日別集計":detailRows.length?"詳細履歴":legacyRows.length?"日別集計":"未蓄積"});

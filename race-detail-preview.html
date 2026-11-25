@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f4f5f7">
+<title>BOAT MOTOR LAB｜レース詳細プレビュー</title>
+<style>
+:root{--ink:#25272c;--muted:#9299a3;--line:#dfe3e8;--bg:#f4f5f7;--blue:#1761e8;--head:#5f80d2;--red:#ef6c70;--gold:#ffe84c}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif}
+header{background:#fff;border-bottom:1px solid var(--line);padding:15px max(16px,calc((100vw - 1120px)/2));position:sticky;top:0;z-index:5}
+.brand{font-size:22px;font-weight:950;letter-spacing:.02em}.brand span{font-style:italic}.sub{font-size:10px;letter-spacing:.18em;color:#8792a2}
+main{max-width:1120px;margin:auto;padding:14px 12px 50px}
+.context{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:#e9edf2;padding:12px;border-radius:9px;margin-bottom:12px}
+select,input{font:inherit;border:1px solid var(--line);border-radius:8px;padding:9px;background:white;color:var(--ink)}
+.context strong{font-size:17px}.race-nav{display:flex;gap:7px;overflow:auto;padding:10px 0}.race-nav button,.tabs button{border:1px solid var(--line);background:#fff;padding:10px 16px;border-radius:6px;font-weight:800;white-space:nowrap;color:#596273}.race-nav button.active{background:#25272c;color:#fff}
+.meeting{font-weight:800;font-size:16px;padding:8px 0 13px}.subnav{display:flex;gap:22px;overflow:auto;border-bottom:1px solid var(--line);white-space:nowrap}.subnav button{background:none;border:0;padding:13px 3px;color:#a0a5ad;font-size:15px;font-weight:800}.subnav button.active{color:#25272c;border-bottom:3px solid #25272c}
+h1{font-size:22px;margin:20px 0 12px}h2{font-size:18px;margin:0 0 13px}.panel{background:white;border:1px solid #e4e7ec;border-radius:10px;padding:15px;margin:14px 0}.muted{color:var(--muted)}.small{font-size:12px}.notice{padding:11px;background:#f2f5fb;border-left:4px solid #7b9ae4;border-radius:5px;color:#56647b;font-size:12px;margin:12px 0}
+.tabs{display:flex;gap:7px;overflow:auto;margin:14px 0}.tabs button.active{background:#25272c;color:white}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);background:#fff}table{border-collapse:collapse;width:100%;min-width:760px;font-size:13px;text-align:center}th,td{border:1px solid var(--line);padding:10px 8px;white-space:nowrap}thead th{color:#646b75;background:#fff;font-weight:800}.section-row th{background:#2459df;color:#fff;text-align:center;font-size:14px}.rowhead{background:var(--head);color:white;font-weight:800;min-width:100px}.lane{font-weight:900;width:48px}.lane1{background:#f0f0f0}.lane2{background:#161616;color:white}.lane3{background:#d92e35;color:white}.lane4{background:#1673c9;color:white}.lane5{background:#ffe83c}.lane6{background:#079d82;color:white}
+.value{font-weight:800;font-size:16px}.missing{color:#aeb4bd;font-weight:600}.hot{background:#ffe3df}.warm{background:#fff3a8}.up{color:#13865c;font-weight:900}.down{color:#c44e4e;font-weight:900}
+.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.metric{background:#f6f8fb;border:1px solid var(--line);border-radius:8px;padding:12px}.metric b{display:block;font-size:22px}.metric span{font-size:11px;color:#7c8797}
+.result-state{display:inline-block;border-radius:5px;padding:5px 9px;background:#edf1f7;color:#6d7787;font-size:12px;font-weight:800}
+.tab-panel[hidden]{display:none!important}.tab-panel{animation:fade .12s ease}@keyframes fade{from{opacity:.65}to{opacity:1}}
+@media(max-width:600px){header{padding:12px}.brand{font-size:19px}main{padding:10px 8px 35px}.panel{padding:11px;margin:10px 0}.cards{grid-template-columns:repeat(2,minmax(0,1fr))}.context{gap:7px}.context select{max-width:48%}h1{font-size:20px}}
+</style>
+</head>
+<body>
+<header><div class="brand">BOAT <span>MOTOR</span> LAB</div><div class="sub">RACE DETAIL / DEVELOPMENT PREVIEW</div></header>
+<main>
+<div class="context"><strong id="venueLabel">レース詳細</strong><select id="venue"><option>常滑</option><option>鳴門</option><option>住之江</option><option>蒲郡</option></select><select id="race"><option>1R</option><option>2R</option><option>3R</option><option>4R</option><option>5R</option><option>6R</option><option>7R</option><option>8R</option><option>9R</option><option>10R</option><option>11R</option><option>12R</option></select><input id="date" type="date" value="2026-11-26"><span class="result-state" id="raceState">結果未確定</span></div>
+<div class="meeting">出走表・選手・モーター分析</div>
+<div class="race-nav" id="raceNav"></div>
+<div class="subnav" id="tabs">
+<button class="active" data-tab="entry">出走表</button><button data-tab="pair">連対率・枠別勝率</button><button data-tab="original">オリジナル展示</button><button data-tab="growth">モーター成長率</button><button data-tab="st">ST考察</button><button data-tab="incident">事故・F休み</button><button data-tab="series">今節データ</button><button data-tab="result">レース結果</button>
+</div>
+<div id="entry" class="tab-panel">
+<h1>出走表・基本情報</h1><div class="notice">この画面は統合レイアウトの開発プレビューです。出走選手・モーター番号などの実データ連携は次工程で接続します。</div>
+<div class="tablewrap"><table><thead><tr><th>枠</th><th>選手</th><th>級別</th><th>登録番号</th><th>モーター</th><th>モーター2連対率</th><th>ボート2連対率</th></tr></thead><tbody id="entryRows"></tbody></table></div>
+</div>
+<div id="pair" class="tab-panel" hidden>
+<h1>連対率・枠別勝率</h1><div class="notice">直近10走・直近6か月・当地・今期・SG/G1〜3・一般戦を切り替える構成。集計値は実績データ接続後に表示します。</div>
+<div class="tabs"><button class="active">直近10走</button><button>直近6か月</button><button>当地</button><button>今期</button><button>SG/G1〜3</button><button>一般戦</button></div>
+<div class="tablewrap"><table><thead><tr><th>枠</th><th>レーサー</th><th>AI3連対率</th><th>3連対率</th><th>1着率</th><th>2着率</th><th>3着率</th></tr></thead><tbody id="pairRows"></tbody></table></div>
+</div>
+<div id="original" class="tab-panel" hidden>
+<h1>オリジナル展示</h1><div class="notice">展示タイム・周回・直線・回り足・展示STなど、取得できる項目を艇ごとに一覧化。未取得データを推定値で補いません。</div>
+<div class="tablewrap"><table><thead><tr><th>枠</th><th>モーターNo.</th><th>選手</th><th>展示タイム</th><th>周回</th><th>直線</th><th>回り足</th><th>展示ST</th><th>展示評価</th></tr></thead><tbody id="originalRows"></tbody></table></div>
+</div>
+<div id="growth" class="tab-panel" hidden>
+<h1>モーター成長率・前節から今節への変化</h1><div class="notice">開催日情報から前節の範囲を確認し、蓄積済みの履歴がある場合に展示タイム・2連対率を比較します。履歴がない場合は未確認と表示します。展示タイム差は小さいほど改善です。</div>
+<div class="tablewrap"><table><thead><tr><th>枠</th><th>モーター</th><th>前節主な使用選手</th><th>前節成績</th><th>前節平均展示</th><th>今節主な使用選手</th><th>今節成績</th><th>今節平均展示</th><th>変化</th><th>成長評価</th></tr></thead><tbody id="growthRows"></tbody></table></div>
+<h2 style="margin-top:18px">モーター直近10走</h2>
+<div class="tablewrap"><table><thead><tr><th>枠</th><th>モーター</th><th>項目</th><th>前走</th><th>2走前</th><th>3走前</th><th>4走前</th><th>5走前</th></tr></thead><tbody id="lastRuns"></tbody></table></div>
+</div>
+<div id="st" class="tab-panel" hidden>
+<h1>ST考察</h1><div class="notice">展示STと本番STの差、直近10走・直近3か月・場別の平均ST、スタートの安定度を分けて表示します。Fは数値ST平均から除外し、F回数は別表示します。</div>
+<div class="tablewrap"><table><thead><tr><th>枠</th><th>展示平均ST</th><th>本番平均ST</th><th>平均誤差</th><th>直近10走</th><th>直近3か月</th><th>当地平均</th><th>ST安定率</th><th>F回数</th></tr></thead><tbody id="stRows"></tbody></table></div>
+</div>
+<div id="incident" class="tab-panel" hidden>
+<h1>事故率・フライング情報</h1><div class="notice">出走表のF/L回数と、蓄積履歴から数えた直近180日分のF/L回数を分けて表示します。事故点・事故率・F休みは公式の審査期間・事故情報が確認できるまで未取得とします。</div>
+<div class="tablewrap"><table><thead><tr><th>枠</th><th>選手</th><th>出走表F</th><th>出走表L</th><th>直近180日F</th><th>直近180日L</th><th>事故点</th><th>事故率</th><th>F休み状態</th><th>開始日</th><th>復帰予定</th></tr></thead><tbody id="incidentRows"></tbody></table></div>
+</div>
+<div id="series" class="tab-panel" hidden>
+<h1>今節データ・勝負がけ</h1><div class="notice">得点率・順位は通常配点（1着10、2着8、3着6、4着4、5着2、6着1、F/L 0）による暫定計算です。特別加点・減点・賞典除外は未反映のため、公式得点率・勝負がけ条件とは区別して表示します。</div>
+<div class="tablewrap"><table><thead><tr><th>枠</th><th>選手</th><th>今節順位</th><th>得点率</th><th>得点合計</th><th>出走数</th><th>平均ST</th><th>平均展示</th><th>残り</th><th>勝負がけ条件</th></tr></thead><tbody id="seriesRows"></tbody></table></div>
+</div>
+<div id="result" class="tab-panel" hidden>
+<h1>レース結果</h1><div class="notice">公式または信頼できる結果データの取得・確定を確認してから結果表示へ切り替える設計です。時刻経過だけでは確定扱いにしません。</div>
+<div class="cards"><div class="metric"><span>レース状態</span><b id="resultStatus">未確定</b></div><div class="metric"><span>確定時刻</span><b class="missing">未取得</b></div><div class="metric"><span>決まり手</span><b class="missing">未取得</b></div></div>
+<h2 style="margin-top:18px">レース結果</h2><div class="tablewrap"><table><thead><tr><th>着</th><th>枠</th><th>選手</th><th>タイム</th><th>進入</th><th>本番ST</th></tr></thead><tbody id="resultRows"></tbody></table></div>
+</div>
+<div class="panel"><b>データ連携状況</b><p class="small muted" id="dataStatus">画面レイアウト確認用。実データは未接続の項目があります。</p><p class="small muted">表示の「未取得」は0を意味しません。取得元・更新時刻・集計対象期間を実装時に併記します。</p></div>
+</main>
+<script>
+const laneClass=['lane1','lane2','lane3','lane4','lane5','lane6'];
+const no='<span class="missing">未取得</span>';
+const row=(i,cells)=>'<tr><th class="lane '+laneClass[i]+'">'+(i+1)+'</th>'+cells.map(v=>'<td>'+v+'</td>').join('')+'</tr>';
+const empty=(id,cols)=>{document.getElementById(id).innerHTML=Array.from({length:6},(_,i)=>row(i,Array(cols).fill(no))).join('')};
+empty('entryRows',6);empty('pairRows',6);empty('originalRows',8);empty('growthRows',7);empty('stRows',8);empty('incidentRows',10);empty('seriesRows',9);empty('resultRows',5);
+document.getElementById('lastRuns').innerHTML=Array.from({length:6},(_,i)=>'<tr><th class="lane '+laneClass[i]+'" rowspan="2">'+(i+1)+'</th><th rowspan="2">'+no+'</th><th>展示タイム</th>'+Array.from({length:5},()=>'<td>'+no+'</td>').join('')+'</tr><tr><th>進入／着順</th>'+Array.from({length:5},()=>'<td>'+no+'</td>').join('')+'</tr>').join('');
+const tabs=[...document.querySelectorAll('[data-tab]')];
+tabs.forEach(b=>b.addEventListener('click',()=>{tabs.forEach(x=>x.classList.toggle('active',x===b));document.querySelectorAll('.tab-panel').forEach(p=>p.hidden=p.id!==b.dataset.tab)}));
+const raceNav=document.getElementById('raceNav');raceNav.innerHTML=Array.from({length:12},(_,i)=>'<button class="'+(i===0?'active':'')+'" data-r="'+(i+1)+'">'+(i+1)+'R</button>').join('');
+raceNav.querySelectorAll('button').forEach(b=>b.onclick=()=>{raceNav.querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));document.getElementById('race').value=b.dataset.r;});
+function updateContext(){document.getElementById('venueLabel').textContent=document.getElementById('venue').value;document.getElementById('raceState').textContent='結果未確定';}
+document.getElementById('venue').onchange=updateContext;document.getElementById('race').onchange=()=>{raceNav.querySelectorAll('button').forEach(x=>x.classList.toggle('active',x.dataset.r===document.getElementById('race').value));};updateContext();
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const RACE_SUPABASE_URL='https://lampwxgrkrxjszmeodls.supabase.co';
+const RACE_SUPABASE_KEY='sb_publishable_pecHHkePLOHtu8jdf1XHFw_9G45JYZ4';
+const raceClient=window.supabase?.createClient(RACE_SUPABASE_URL,RACE_SUPABASE_KEY);
+const raceStatus=document.getElementById('dataStatus');
+const fmt=(v,d=2)=>v===null||v===undefined||v===''||!Number.isFinite(Number(v))?'<span class="missing">未取得</span>':Number(v).toFixed(d);
+const txt=v=>v===null||v===undefined||v===''?'<span class="missing">未取得</span>':String(v);
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function putRows(id, rows){document.getElementById(id).innerHTML=rows.join('');}
+const rankLabel=v=>({1:'A1',2:'A2',3:'B1',4:'B2'}[Number(v)]??'未取得');
+const percent=v=>v===null||v===undefined||v===''?'未取得':fmt(v,1)+'%';
+const placeLabel=v=>{const n=Number(v);return n>=1&&n<=6?n+'着':({7:'妨害失格',8:'エンスト失格',9:'転覆失格',10:'落水失格',11:'沈没失格',12:'不完走失格',13:'失格',14:'F欠場',15:'L欠場',16:'欠場',99:'その他'}[n]??'未取得')};
+function renderRaceDetail(data){
+ const boats=data.boats||[];
+ const name=b=>b.entry?.racer_name??b.entry?.name??'未取得';
+ const reg=b=>b.entry?.number??b.entry?.registration_number;
+ const avg=xs=>xs.length?xs.reduce((a,x)=>a+Number(x),0)/xs.length:null;
+ const history=b=>(b.racer_history||[]).slice().sort((x,y)=>(y.race_date||'').localeCompare(x.race_date||'')||(Number(y.race_no)||0)-(Number(x.race_no)||0));
+ putRows('entryRows',boats.map((b,i)=>{const e=b.entry||{};return row(i,[esc(name(b)),rankLabel(e.rank_number),txt(reg(b)),txt(e.motor_number),percent(e.motor_top_2_percent),percent(e.boat_top_2_percent)])}));
+ putRows('originalRows',boats.map((b,i)=>{const p=b.preview||{};return row(i,[txt(b.entry?.motor_number),esc(name(b)),fmt(p.exhibition_time),fmt(p.lap_time),fmt(p.straight_time),fmt(p.turn_time),fmt(p.start_timing??p.exhibition_st),txt(p.evaluation)])}));
+ putRows('pairRows',boats.map((b,i)=>{const h=history(b).filter(x=>Number.isInteger(Number(x.finish_rank))&&Number(x.finish_rank)>=1&&Number(x.finish_rank)<=6).slice(0,10);const w=h.filter(x=>Number(x.finish_rank)===1).length;const t2=h.filter(x=>Number(x.finish_rank)<=2).length;const t3=h.filter(x=>Number(x.finish_rank)<=3).length;return row(i,[esc(name(b)),'<span class="missing">未算出</span>',fmt(h.length?t3/h.length*100:null,1)+'%',fmt(h.length?w/h.length*100:null,1)+'%',fmt(h.length?(t2-w)/h.length*100:null,1)+'%',fmt(h.length?(t3-t2)/h.length*100:null,1)+'%'])}));
+ const histories=boats.map(b=>b.motor_history||[]);
+ putRows('growthRows',boats.map((b,i)=>{const x=b.motor_sections||{};const p=x.previous||{};const c=x.current||{};const pu=(x.previous_users||[])[0];const cu=(x.current_users||[])[0];const userLabel=u=>u?esc(u.racer_name)+' ('+u.races+'走)':'<span class="missing">履歴なし</span>';const resultLabel=u=>u&&u.result_count?u.wins+'勝 / 平均'+Number(u.average_finish).toFixed(2)+'着':'<span class="missing">着順未蓄積</span>';const delta=p.exhibition_time!==null&&p.exhibition_time!==undefined&&c.exhibition_time!==null&&c.exhibition_time!==undefined?Number(c.exhibition_time)-Number(p.exhibition_time):null;const change=delta===null?'<span class="missing">比較不可</span>':(delta>0?'+':'')+delta.toFixed(3);const evaluation=delta===null?'<span class="missing">データ不足</span>':delta<0?'<span class="good">展示タイム改善</span>':delta>0?'<span class="missing">展示タイム低下</span>':'横ばい';return row(i,[txt(b.entry?.motor_number),userLabel(pu),resultLabel(pu),fmt(p.exhibition_time,3),userLabel(cu),resultLabel(cu),fmt(c.exhibition_time,3),change,evaluation])}));
+ putRows('incidentRows',boats.map((b,i)=>{const e=b.entry||{};const h=history(b);const isF=x=>Boolean(x.actual_st_is_f)||Number(x.actual_st)<0||String(x.finish_rank??'').toUpperCase()==='F';const isL=x=>String(x.finish_rank??'').toUpperCase()==='L';return row(i,[esc(name(b)),txt(e.flying_count),txt(e.late_count),h.filter(isF).length+'回',h.filter(isL).length+'回','<span class="missing">未取得</span>','<span class="missing">未取得</span>','<span class="missing">公式確認待ち</span>','<span class="missing">未取得</span>','<span class="missing">未取得</span>'])}));
+ putRows('stRows',boats.map((b,i)=>{const h=history(b);const valid=h.filter(x=>!x.actual_st_is_f&&x.actual_st!==null&&x.actual_st!==undefined&&Number.isFinite(Number(x.actual_st))&&Number(x.actual_st)>=0&&Number(x.actual_st)<=0.99);const last10Starts=h.slice(0,10);const recent10=last10Starts.filter(x=>!x.actual_st_is_f&&x.actual_st!==null&&x.actual_st!==undefined&&Number.isFinite(Number(x.actual_st))&&Number(x.actual_st)>=0&&Number(x.actual_st)<=0.99);const min90=new Date(Date.parse(data.date+'T00:00:00Z')-90*86400000).toISOString().slice(0,10);const recent90=valid.filter(x=>(x.race_date||'')>=min90);const venue=valid.filter(x=>Number(x.venue_code)===Number(data.venue_code));return row(i,['<span class="missing">展示履歴未取得</span>',fmt(avg(valid.map(x=>x.actual_st))),'<span class="missing">展示ST履歴未取得</span>',fmt(avg(recent10.map(x=>x.actual_st))),fmt(avg(recent90.map(x=>x.actual_st))),fmt(avg(venue.map(x=>x.actual_st))),'<span class="missing">展示STとの比較データ不足</span>',h.filter(x=>x.actual_st_is_f).length])}));
+ putRows('lastRuns',boats.map((b,i)=>{const h=(b.motor_history||[]).slice(0,5);return '<tr><th class="lane '+laneClass[i]+'" rowspan="2">'+(i+1)+'</th><th rowspan="2">'+txt(b.entry?.motor_number)+'</th><th>展示タイム</th>'+Array.from({length:5},(_,j)=>'<td>'+fmt(h[j]?.exhibition_time)+'</td>').join('')+'</tr><tr><th>進入／着順</th>'+Array.from({length:5},(_,j)=>'<td>'+txt(h[j]?.actual_course)+' / '+txt(h[j]?.finish_rank)+'</td>').join('')+'</tr>'}));
+ putRows('incidentRows',boats.map((b,i)=>row(i,[esc(name(b)),'<span class="missing">未取得</span>','<span class="missing">未取得</span>','<span class="missing">未取得</span>','<span class="missing">未取得</span>','<span class="missing">未取得</span>','<span class="missing">未取得</span>','<span class="missing">未確認</span>','<span class="missing">未確認</span>','<span class="missing">未確認</span>'])));
+ const seriesRank=[...boats].filter(b=>b.series?.starts>0).sort((a,b)=>(b.series.point_rate??-1)-(a.series.point_rate??-1)||(b.series.wins??0)-(a.series.wins??0)||(b.series.top2??0)-(a.series.top2??0));
+ const seriesRankByLane=new Map(seriesRank.map((b,i)=>[b.lane,i+1]));
+ putRows('seriesRows',boats.map((b,i)=>{const x=b.series;return row(i,[esc(name(b)),x?.starts?txt(seriesRankByLane.get(b.lane)+'位'):'<span class="missing">未算出</span>',x?.starts?fmt(x.point_rate):'<span class="missing">未算出</span>',x?.starts?txt(x.points+'点'):'<span class="missing">未算出</span>',txt(x?.starts??0),fmt(x?.average_st),'<span class="missing">未取得</span>','<span class="missing">未取得</span>','<span class="missing">公式条件未確認</span>'])}));
+ document.getElementById('raceState').textContent=data.race_status==='result_available'?'結果データあり':'出走データ取得済み';
+ document.getElementById('resultStatus').textContent=data.race_status==='result_available'?'結果データあり':'未確定';
+ const resultRows=boats.filter(b=>b.result).map(b=>({lane:b.lane,entry:b.entry||{},result:b.result})).sort((a,b)=>{const pa=Number(a.result.place_number),pb=Number(b.result.place_number);const ra=pa>=1&&pa<=6?pa:99,rb=pb>=1&&pb<=6?pb:99;return ra-rb||a.lane-b.lane;});
+ putRows('resultRows',resultRows.map(({lane,entry:x,result:r})=>'<tr><td>'+esc(placeLabel(r.place_number))+'</td><th class="lane '+laneClass[lane-1]+'">'+lane+'</th><td>'+esc(x.racer_name??x.name??'未取得')+'</td><td>'+fmt(r.race_time)+'</td><td>'+txt(r.course_number)+'</td><td>'+fmt(r.start_timing)+'</td></tr>'));
+ raceStatus.textContent='取得成功：出走表と過去180日分の選手・モーター履歴。連対率は取得できた過去履歴からの暫定集計です。事故点・F休み・節間得点率・決まり手などは専用データ取得が必要です。取得時刻：'+new Date(data.generated_at).toLocaleString('ja-JP');
+}
+async function loadReadOnlyRace(){
+ if(!raceClient){raceStatus.textContent='Supabaseライブラリを読み込めません。';return}
+ const btn=document.getElementById('loadRaceData');if(btn)btn.disabled=true;
+ raceStatus.textContent='ログイン状態を確認しています…';
+ try{
+  const {data:{session},error:authError}=await raceClient.auth.getSession();
+  if(authError)throw authError;
+  if(!session){raceStatus.textContent='実データの取得には既存アプリと同じSupabaseアカウントでログインしてください。トップ画面に戻り、保存・設定からログイン後に再度取得してください。';return}
+  const date=document.getElementById('date').value;
+  const venue_code=({桐生:1,戸田:2,江戸川:3,平和島:4,多摩川:5,浜名湖:6,蒲郡:7,常滑:8,津:9,三国:10,びわこ:11,住之江:12,尼崎:13,鳴門:14,丸亀:15,児島:16,宮島:17,徳山:18,下関:19,若松:20,芦屋:21,福岡:22,唐津:23,大村:24})[document.getElementById('venue').value];
+  const race_no=Number(document.getElementById('race').value.replace('R',''));
+  raceStatus.textContent='出走表と過去履歴を読み込んでいます…';
+  const {data,error}=await raceClient.functions.invoke('race-detail-readonly',{body:{date,venue_code,race_no}});
+  if(error){const detail=typeof error.context?.body?.text==='function'?await error.context.body.text().catch(()=> ''):'';throw new Error(detail||error.message)}
+  if(data?.error)throw new Error(data.error);
+  renderRaceDetail(data);
+ }catch(e){raceStatus.textContent='取得できませんでした：'+(e?.message||String(e))+'。読み取り専用取得機能の公開状態とログインを確認してください。'}
+ finally{if(btn)btn.disabled=false}
+}
+const loadBtn=document.createElement('button');loadBtn.id='loadRaceData';loadBtn.className='btn primary';loadBtn.textContent='実データを読み込む';loadBtn.onclick=loadReadOnlyRace;
+document.querySelector('.context').appendChild(loadBtn);
+document.getElementById('venue').addEventListener('change',()=>{});
+document.getElementById('race').addEventListener('change',()=>{});
+</script>
+
+</body></html>
