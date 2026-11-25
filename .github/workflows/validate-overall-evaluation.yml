@@ -22,7 +22,7 @@ jobs:
         with:
           deno-version: v2.x
       - name: Check Supabase Edge Function types
-        run: deno check supabase/functions/analyze-race-motors/index.ts supabase/functions/analyze-race-motors/course-profile.ts supabase/functions/analyze-race-motors/decision-methods.ts supabase/functions/analyze-race-motors/merge-racer-history.ts supabase/functions/sync-race-results/index.ts supabase/functions/sync-race-results/decision-parser.ts
+        run: deno check supabase/functions/analyze-race-motors/index.ts supabase/functions/analyze-race-motors/course-profile.ts supabase/functions/analyze-race-motors/decision-methods.ts supabase/functions/analyze-race-motors/merge-racer-history.ts supabase/functions/sync-race-results/index.ts supabase/functions/sync-race-results/decision-parser.ts supabase/functions/race-detail-readonly/index.ts
       - name: Run course profile unit tests
         run: deno test supabase/functions/analyze-race-motors/course-profile_test.ts supabase/functions/analyze-race-motors/decision-methods_test.ts supabase/functions/analyze-race-motors/merge-racer-history_test.ts supabase/functions/sync-race-results/decision-parser_test.ts
       - name: Check browser JavaScript syntax
