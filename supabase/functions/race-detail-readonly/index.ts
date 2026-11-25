@@ -95,7 +95,8 @@ Deno.serve(async (req: Request) => {
             const place = Number(resultEntry?.place_number);
             if (!registration || !Number.isInteger(place) || place < 1 || place > 6) continue;
             const stat = seriesByRegistration.get(registration) ?? { starts: 0, wins: 0, top2: 0, top3: 0, stTotal: 0, stCount: 0 };
-            stat.starts++; if (place === 1) stat.wins++; if (place <= 2) stat.top2++; if (place <= 3) stat.top3++;\n            const actualSt = Number(entry?.start_timing); if (Number.isFinite(actualSt) && actualSt >= 0 && actualSt <= 0.99) { stat.stTotal += actualSt; stat.stCount++; }
+            stat.starts++; if (place === 1) stat.wins++; if (place <= 2) stat.top2++; if (place <= 3) stat.top3++;
+            const actualSt = Number(entry?.start_timing); if (Number.isFinite(actualSt) && actualSt >= 0 && actualSt <= 0.99) { stat.stTotal += actualSt; stat.stCount++; }
             seriesByRegistration.set(registration, stat);
           }
         }
