@@ -1030,7 +1030,8 @@ $('racerPublicImport').addEventListener('click',async()=>{
    const extra=data.headers?'\n取得元CSVの列名：'+data.headers.join(' / '):'';
    throw new Error(data.error+extra);
   }
-  out.textContent='取得完了：'+(Number(data?.saved)||0)+'行を保存。選手 '+unique.length+'名／取得元の全履歴 '+(Number(data?.source_rows)||0)+'行。分析画面を再読み込みすると反映されます。';
+  const diag=(data?.diagnostics||[]).map(d=>'登録 '+d.registration_no+'：日付不正 '+d.invalid_date_rows+'／期間外 '+d.outside_date_rows+'／場・R・艇番不正 '+d.invalid_race_key_rows+'／対象 '+d.matched_rows+'件。列名：'+(d.headers||[]).join(', ')+'。サンプル：'+JSON.stringify(d.sample_rows||[])).join('\\n');
+  out.textContent='取得完了：'+(Number(data?.saved)||0)+'行を保存。選手 '+unique.length+'名／取得元の全履歴 '+(Number(data?.source_rows)||0)+'行。\\n'+diag+'\\n分析画面を再読み込みすると反映されます。';
  }catch(err){out.textContent='取得を中断しました：'+(err.message||'不明なエラー');}
  finally{btn.disabled=false;}
 });
