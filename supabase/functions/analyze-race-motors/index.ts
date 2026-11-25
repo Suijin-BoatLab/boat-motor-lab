@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { buildDecisionMethodStats } from "./decision-methods.ts";
 const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type","Access-Control-Allow-Methods":"POST, OPTIONS"};
 const names:Record<string,string>={"1":"桐生","2":"戸田","3":"江戸川","4":"平和島","5":"多摩川","6":"浜名湖","7":"蒲郡","8":"常滑","9":"津","10":"三国","11":"びわこ","12":"住之江","13":"尼崎","14":"鳴門","15":"丸亀","16":"児島","17":"宮島","18":"徳山","19":"下関","20":"若松","21":"芦屋","22":"福岡","23":"唐津","24":"大村"};
 const num=(v:any)=>{if(v===null||v===undefined||v==="")return null;const n=Number(v);return Number.isFinite(n)?n:null};
@@ -174,23 +175,13 @@ Deno.serve(async(req:Request)=>{
    const avgSt=(rows:any[])=>rows.length?rows.reduce((sum:number,x:any)=>sum+x.st,0)/rows.length:null;
    s.start_time={last10:{average:avgSt(last10),count:last10.length,races:last10Races.length},last90d:{average:avgSt(last90),count:last90.length},venue:{average:avgSt(s.venueStRows),count:s.venueStRows.length,venue_code:venueCode,venue_name:names[String(venueCode)]},last10_rows:last10,last10_races:last10Races};
   }
-  const decisionByNo=new Map<string,any>(),decisionRaceKeys=new Set<string>();
-  const addDecision=(regValue:any,method:string,courseValue:any)=>{
-   const reg=String(regValue??"").trim();if(!reg||!method)return;
-   const v=decisionByNo.get(reg)??{wins:0,by_method:{},by_course:{}};
-   v.wins++;v.by_method[method]=(v.by_method[method]??0)+1;
-   const course=Number(courseValue);if(course>=1&&course<=6){const key=String(course);v.by_course[key]??={wins:0,by_method:{}};v.by_course[key].wins++;v.by_course[key].by_method[method]=(v.by_course[key].by_method[method]??0)+1;}
-   decisionByNo.set(reg,v);
-  };
+  const importedDecisionRows:any[]=[],payoutDecisionRows:any[]=[];
   if(registrationNos.length){
    let importedDecisionOffset=0;
    while(true){
     const {data:importedDecisionPage,error:importedDecisionError}=await supabase.from("historical_racer_entries").select("race_date,venue_code,race_no,racer_registration_no,finish_rank,decision_method,actual_course").eq("user_id",auth.user.id).in("racer_registration_no",registrationNos).lt("race_date",date).gte("race_date",racer90MinDate).eq("finish_rank",1).not("decision_method","is",null).order("race_date",{ascending:false}).range(importedDecisionOffset,importedDecisionOffset+999);
     if(importedDecisionError)return json({error:"CSV決まり手履歴取得失敗: "+importedDecisionError.message},500);
-    for(const row of importedDecisionPage??[]){
-     decisionRaceKeys.add([row.race_date,row.venue_code,row.race_no].join(':'));
-     addDecision(row.racer_registration_no,String(row.decision_method),row.actual_course);
-    }
+    importedDecisionRows.push(...(importedDecisionPage??[]));
     if(!importedDecisionPage||importedDecisionPage.length<1000)break;
     importedDecisionOffset+=importedDecisionPage.length;
    }
@@ -198,19 +189,12 @@ Deno.serve(async(req:Request)=>{
    while(true){
     const {data:decisionPage,error:decisionError}=await supabase.from("race_payout_results").select("race_date,venue_code,race_no,winning_racer_registration_no,decision_method,winning_course").eq("user_id",auth.user.id).in("winning_racer_registration_no",registrationNos).lt("race_date",date).gte("race_date",racer90MinDate).not("decision_method","is",null).order("race_date",{ascending:false}).range(decisionOffset,decisionOffset+999);
     if(decisionError)return json({error:"決まり手履歴取得失敗: "+decisionError.message},500);
-    for(const row of decisionPage??[]){
-     const raceKey=[row.race_date,row.venue_code,row.race_no].join(':');
-     if(decisionRaceKeys.has(raceKey))continue;
-     addDecision(row.winning_racer_registration_no,String(row.decision_method),row.winning_course);
-    }
+    payoutDecisionRows.push(...(decisionPage??[]));
     if(!decisionPage||decisionPage.length<1000)break;
     decisionOffset+=decisionPage.length;
    }
   }
-  for(const v of decisionByNo.values()){
-   v.method_rate=Object.fromEntries(Object.entries(v.by_method).map(([k,n])=>[k,v.wins?Number(n)/v.wins:null]));
-   for(const c of Object.values(v.by_course) as any[])c.method_rate=Object.fromEntries(Object.entries(c.by_method).map(([k,n])=>[k,c.wins?Number(n)/c.wins:null]));
-  }
+  const decisionByNo=buildDecisionMethodStats(importedDecisionRows,payoutDecisionRows,registrationNos);
   timings.racer_history_fetch_ms=Date.now()-stageAt;stageAt=Date.now();
   const historyByMotor=new Map<number,any[]>();
   for(const row of allHistory){const list=historyByMotor.get(Number(row.motor_number))??[];list.push(row);historyByMotor.set(Number(row.motor_number),list);}
