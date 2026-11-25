@@ -154,3 +154,48 @@
 2. ただし、全体の大半を占めるモーター履歴と、選手履歴ではソースと役割が異なる。単純な全行コピーではなく、艇単位の事実データをキーで統合し、項目ごとに出典と優先順位を管理する設計が必要。
 3. 共通化する場合も、既存の分析ロジックが読むフィールドの意味・欠損時の扱い・F付きSTの除外・日付境界を変えないこと。
 4. 現段階では既存テーブルを変更せず、統合ビューまたは読み取り専用の比較クエリを先に作り、旧方式と新方式の分析入力が一致することを確認してから移行を判断する。
+
+## 制約・インデックス・列定義の確認（2026-11-26）
+
+本番DBのカタログを読み取り専用で確認した。
+
+### 現行の一意キーと検索インデックス
+
+- `historical_motor_entries`: UNIQUE `(user_id,race_date,venue_code,race_no,lane)`。
+  - 検索用: `(user_id,venue_code,motor_number,race_date DESC)`
+  - 選手履歴用: `(user_id,racer_registration_no,race_date DESC)`（登録番号がNULLでない行）
+  - レース検索用: `(user_id,race_date,venue_code,race_no)`
+- `historical_racer_entries`: UNIQUE `(user_id,race_date,venue_code,race_no,lane)`。
+  - 選手履歴用: `(user_id,racer_registration_no,race_date DESC)`
+  - 場・実進入用: `(user_id,venue_code,actual_course,race_date DESC)`
+- `race_payout_results`: UNIQUE `(user_id,race_date,venue_code,race_no)`。
+  - 決まり手参照用: `(user_id,race_date,winning_racer_registration_no)`（決まり手がNULLでない行）
+  - 日付・レース参照用: `(user_id,race_date DESC,venue_code,race_no)`
+
+現状のユーザー別検索には対応するインデックスが存在する。共有化後は `user_id` が検索キーから外れる可能性があるため、共有テーブル向けの別インデックス設計が必要になる。既存インデックスをそのまま流用できるとは限らない。
+
+### 列の意味に関する注意
+
+- 両履歴テーブルに `actual_course`, `finish_rank`, `actual_st`, `actual_st_raw`, `actual_st_is_f`, `source_name`, `source_data`, `imported_at` がある。
+- `historical_motor_entries` は `racer_registration_no` がNULL許容、`historical_racer_entries` は必須。
+- `historical_motor_entries` には `motor_number` が必須で、展示計測項目（展示タイム、一周、直線、まわり足、展示ST）がある。
+- `historical_racer_entries` には `decision_method` があるが、モーター履歴テーブルにはない。
+- したがって統合先を単純な「選手履歴」または「モーター履歴」と名付けると、片方の意味を取り落とす。共有候補は「レース出走艇の事実データ」と「モーター展示計測データ」を論理的に分ける設計が自然。ただし現行テーブルは引き続き両方の情報を保持するため、移行時は旧列から新しい論理領域への対応表が必要。
+
+### 暫定的な共有データのキー案
+
+公開事実データ（艇単位）の候補キーは `(race_date, venue_code, race_no, lane)`。同じ艇番レーンの一走を一意に表すキーとして現行テーブルの一意キーから `user_id` を除いた形。ただし、これは設計候補であり、DB制約の追加や移行は行っていない。
+
+モーター展示データも同じ一走に紐づくが、取得元・再取得時の更新規則が異なるため、同じ行に無条件で混ぜず、出典と取得時刻を項目単位で保持する。選手登録番号やモーター番号はレースごとに変わり得るため、キーの一部にはしない。
+
+### 次の検証方針
+
+旧テーブルから作る読み取り専用の統合候補を対象に、次の項目を同一キーで比較する。
+
+1. レース出走艇の件数とキーの一意性。
+2. 登録番号・実進入・着順・本番ST・F判定・決まり手の値とNULL件数。
+3. モーター番号・展示タイム・一周・直線・まわり足・展示STの値とNULL件数。
+4. 元データの取得元・取得時刻が追跡できる割合。
+5. 既存分析で使用する対象日・対象場・選手登録番号・モーター番号の検索結果が一致すること。
+
+差分が0であることを確認するまで、読み取り元切替や本番移行は行わない。
