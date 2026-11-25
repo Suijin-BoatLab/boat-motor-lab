@@ -81,6 +81,7 @@ Deno.serve(async(req:Request)=>{
   const racerRankSeen=new Set<string>();
   const racerStSeen=new Set<string>();
   const courseHistorySeen=new Set<string>();
+  const courseStSeen=new Set<string>();
   const registrationNos=[...new Set(Array.from({length:6},(_,i)=>String(racers[String(i+1)]?.number??racers[String(i+1)]?.registration_number??"").trim()).filter(x=>/^\d+$/.test(x)))];
   const racerMinDate=new Date(Date.parse(date+"T00:00:00Z")-180*86400000).toISOString().slice(0,10);
   const racer90MinDate=new Date(Date.parse(date+"T00:00:00Z")-90*86400000).toISOString().slice(0,10);
@@ -91,17 +92,19 @@ Deno.serve(async(req:Request)=>{
     if(racerError)return json({error:"選手履歴取得失敗: "+racerError.message},500);
     for(const row of racerPage??[]){
      const reg=String(row.racer_registration_no),key=[reg,row.race_date,row.venue_code,row.race_no].join(':');racerHistorySeen.add(key);
-     if(!courseHistorySeen.has(key)){
-      const actualCourse=Number(row.actual_course),courseRank=Number(row.finish_rank);
-      if(Number.isInteger(actualCourse)&&actualCourse>=1&&actualCourse<=6&&Number.isInteger(courseRank)&&courseRank>=1&&courseRank<=6){
+     const actualCourse=Number(row.actual_course),courseRank=Number(row.finish_rank);
+     if(Number.isInteger(actualCourse)&&actualCourse>=1&&actualCourse<=6){
+      const byCourse=courseStatsByNo.get(reg)??new Map<number,any>();
+      const cs=byCourse.get(actualCourse)??{starts:0,wins:0,top2:0,top3:0,finishSum:0,stSum:0,stCount:0};
+      if(!courseHistorySeen.has(key)&&Number.isInteger(courseRank)&&courseRank>=1&&courseRank<=6){
        courseHistorySeen.add(key);
-       const byCourse=courseStatsByNo.get(reg)??new Map<number,any>();
-       const cs=byCourse.get(actualCourse)??{starts:0,wins:0,top2:0,top3:0,finishSum:0,stSum:0,stCount:0};
        cs.starts++;if(courseRank===1)cs.wins++;if(courseRank<=2)cs.top2++;if(courseRank<=3)cs.top3++;cs.finishSum+=courseRank;
-       const courseSt=num(row.actual_st);
-       if(!row.actual_st_is_f&&courseSt!==null&&courseSt>=0&&courseSt<=0.99){cs.stSum+=courseSt;cs.stCount++;}
-       byCourse.set(actualCourse,cs);courseStatsByNo.set(reg,byCourse);
       }
+      const courseSt=num(row.actual_st);
+      if(!courseStSeen.has(key)&&!row.actual_st_is_f&&courseSt!==null&&courseSt>=0&&courseSt<=0.99){
+       courseStSeen.add(key);cs.stSum+=courseSt;cs.stCount++;
+      }
+      byCourse.set(actualCourse,cs);courseStatsByNo.set(reg,byCourse);
      }
      const s=racerStatsByNo.get(reg)??{starts:0,wins:0,top2:0,top3:0,finishSum:0,starts90:0,wins90:0,top2_90:0,top3_90:0,finishSum90:0,stRows:[],venueStRows:[],recentRaces:[]};
      const rank=Number(row.finish_rank);
@@ -125,17 +128,19 @@ Deno.serve(async(req:Request)=>{
     if(importedError)return json({error:"CSV選手履歴取得失敗: "+importedError.message},500);
     for(const row of importedPage??[]){
      const reg=String(row.racer_registration_no),key=[reg,row.race_date,row.venue_code,row.race_no].join(':');
-     if(!courseHistorySeen.has(key)){
-      const actualCourse=Number(row.actual_course),rankForCourse=Number(row.finish_rank);
-      if(Number.isInteger(actualCourse)&&actualCourse>=1&&actualCourse<=6&&Number.isInteger(rankForCourse)&&rankForCourse>=1&&rankForCourse<=6){
+     const actualCourse=Number(row.actual_course),rankForCourse=Number(row.finish_rank);
+     if(Number.isInteger(actualCourse)&&actualCourse>=1&&actualCourse<=6){
+      const byCourse=courseStatsByNo.get(reg)??new Map<number,any>();
+      const cs=byCourse.get(actualCourse)??{starts:0,wins:0,top2:0,top3:0,finishSum:0,stSum:0,stCount:0};
+      if(!courseHistorySeen.has(key)&&Number.isInteger(rankForCourse)&&rankForCourse>=1&&rankForCourse<=6){
        courseHistorySeen.add(key);
-       const byCourse=courseStatsByNo.get(reg)??new Map<number,any>();
-       const cs=byCourse.get(actualCourse)??{starts:0,wins:0,top2:0,top3:0,finishSum:0,stSum:0,stCount:0};
        cs.starts++;if(rankForCourse===1)cs.wins++;if(rankForCourse<=2)cs.top2++;if(rankForCourse<=3)cs.top3++;cs.finishSum+=rankForCourse;
-       const courseSt=num(row.actual_st);
-       if(!row.actual_st_is_f&&courseSt!==null&&courseSt>=0&&courseSt<=0.99){cs.stSum+=courseSt;cs.stCount++;}
-       byCourse.set(actualCourse,cs);courseStatsByNo.set(reg,byCourse);
       }
+      const courseSt=num(row.actual_st);
+      if(!courseStSeen.has(key)&&!row.actual_st_is_f&&courseSt!==null&&courseSt>=0&&courseSt<=0.99){
+       courseStSeen.add(key);cs.stSum+=courseSt;cs.stCount++;
+      }
+      byCourse.set(actualCourse,cs);courseStatsByNo.set(reg,byCourse);
      }
      const alreadySeen=racerHistorySeen.has(key);
      if(alreadySeen&&racerRankSeen.has(key)&&racerStSeen.has(key))continue;
