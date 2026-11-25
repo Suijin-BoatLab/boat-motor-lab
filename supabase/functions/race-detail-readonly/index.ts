@@ -37,7 +37,7 @@ Deno.serve(async (req: Request) => {
 
   try {
     const authorization = req.headers.get("Authorization") ?? "";
-    const token = authorization.replace(/^Bearer\\s+/i, "");
+    const token = authorization.replace(/^Bearer\s+/i, "");
     if (!token || token === authorization) return json({ error: "ログインが必要です" }, 401);
 
     const supabase = createClient(
@@ -52,7 +52,7 @@ Deno.serve(async (req: Request) => {
     const date = String(body?.date ?? "");
     const venueCode = Number(body?.venue_code);
     const raceNo = Number(body?.race_no);
-    if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(date) ||
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) ||
       !Number.isInteger(venueCode) || venueCode < 1 || venueCode > 24 ||
       !Number.isInteger(raceNo) || raceNo < 1 || raceNo > 12) {
       return json({ error: "日付・競艇場・レース番号を確認してください" }, 400);
