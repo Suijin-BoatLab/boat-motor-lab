@@ -97,13 +97,16 @@ const fmt=(v,d=2)=>v===null||v===undefined||v===''||!Number.isFinite(Number(v))?
 const txt=v=>v===null||v===undefined||v===''?'<span class="missing">未取得</span>':String(v);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function putRows(id, rows){document.getElementById(id).innerHTML=rows.join('');}
+const rankLabel=v=>({1:'A1',2:'A2',3:'B1',4:'B2'}[Number(v)]??'未取得');
+const percent=v=>v===null||v===undefined||v===''?'未取得':fmt(v,1)+'%';
+const placeLabel=v=>{const n=Number(v);return n>=1&&n<=6?n+'着':({7:'妨害失格',8:'エンスト失格',9:'転覆失格',10:'落水失格',11:'沈没失格',12:'不完走失格',13:'失格',14:'F欠場',15:'L欠場',16:'欠場',99:'その他'}[n]??'未取得')};
 function renderRaceDetail(data){
  const boats=data.boats||[];
  const name=b=>b.entry?.racer_name??b.entry?.name??'未取得';
  const reg=b=>b.entry?.number??b.entry?.registration_number;
  const avg=xs=>xs.length?xs.reduce((a,x)=>a+Number(x),0)/xs.length:null;
  const history=b=>(b.racer_history||[]).slice().sort((x,y)=>(y.race_date||'').localeCompare(x.race_date||'')||(Number(y.race_no)||0)-(Number(x.race_no)||0));
- putRows('entryRows',boats.map((b,i)=>{const e=b.entry||{};return row(i,[esc(name(b)),txt(e.rank_number??e.grade),txt(reg(b)),txt(e.motor_number),fmt(e.motor_place_rate??e.motor_quinella_rate),fmt(e.boat_place_rate??e.boat_quinella_rate)])}));
+ putRows('entryRows',boats.map((b,i)=>{const e=b.entry||{};return row(i,[esc(name(b)),rankLabel(e.rank_number),txt(reg(b)),txt(e.motor_number),percent(e.motor_top_2_percent),percent(e.boat_top_2_percent)])}));
  putRows('originalRows',boats.map((b,i)=>{const p=b.preview||{};return row(i,[txt(b.entry?.motor_number),esc(name(b)),fmt(p.exhibition_time),fmt(p.lap_time),fmt(p.straight_time),fmt(p.turn_time),fmt(p.start_timing??p.exhibition_st),txt(p.evaluation)])}));
  putRows('pairRows',boats.map((b,i)=>{const h=history(b).filter(x=>Number.isInteger(Number(x.finish_rank))&&Number(x.finish_rank)>=1&&Number(x.finish_rank)<=6).slice(0,10);const w=h.filter(x=>Number(x.finish_rank)===1).length;const t2=h.filter(x=>Number(x.finish_rank)<=2).length;const t3=h.filter(x=>Number(x.finish_rank)<=3).length;return row(i,[esc(name(b)),'<span class="missing">未算出</span>',fmt(h.length?t3/h.length*100:null,1)+'%',fmt(h.length?w/h.length*100:null,1)+'%',fmt(h.length?(t2-w)/h.length*100:null,1)+'%',fmt(h.length?(t3-t2)/h.length*100:null,1)+'%'])}));
  const histories=boats.map(b=>b.motor_history||[]);
@@ -115,7 +118,8 @@ function renderRaceDetail(data){
  putRows('seriesRows',boats.map((b,i)=>{const x=b.series;return row(i,[esc(name(b)),'<span class="missing">未算出</span>','<span class="missing">未算出</span>','<span class="missing">未算出</span>',txt(x?.starts??0),fmt(x?.average_st),'<span class="missing">未取得</span>','<span class="missing">未算出</span>','<span class="missing">条件未判定</span>'])}));
  document.getElementById('raceState').textContent=data.race_status==='result_available'?'結果データあり':'出走データ取得済み';
  document.getElementById('resultStatus').textContent=data.race_status==='result_available'?'結果データあり':'未確定';
- putRows('resultRows',boats.map((b,i)=>{const x=b.result||{};return row(i,[txt(x.finish_rank??x.rank),esc(name(b)),fmt(x.race_time),txt(x.actual_course),fmt(x.start_timing??x.actual_st)])}));
+ const resultRows=boats.filter(b=>b.result).map(b=>({lane:b.lane,entry:b.entry||{},result:b.result})).sort((a,b)=>{const pa=Number(a.result.place_number),pb=Number(b.result.place_number);const ra=pa>=1&&pa<=6?pa:99,rb=pb>=1&&pb<=6?pb:99;return ra-rb||a.lane-b.lane;});
+ putRows('resultRows',resultRows.map(({lane,entry:x,result:r})=>'<tr><th class="lane '+laneClass[lane-1]+'">'+lane+'</th><td>'+esc(placeLabel(r.place_number))+'</td><td>'+esc(x.racer_name??x.name??'未取得')+'</td><td>'+fmt(r.race_time)+'</td><td>'+txt(r.course_number)+'</td><td>'+fmt(r.start_timing)+'</td></tr>'));
  raceStatus.textContent='取得成功：出走表と過去180日分の選手・モーター履歴。連対率は取得できた過去履歴からの暫定集計です。事故点・F休み・節間得点率・決まり手などは専用データ取得が必要です。取得時刻：'+new Date(data.generated_at).toLocaleString('ja-JP');
 }
 async function loadReadOnlyRace(){
