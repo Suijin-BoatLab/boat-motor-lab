@@ -130,6 +130,19 @@ footer{color:var(--muted);font-size:11px;text-align:center;padding:24px}
 
 <section id="analysis" class="hidden">
   <h1>モーター分析</h1><div class="muted small">モーター指標と選手成績を分けて集計。モーター番号は競艇場ごとに区別し、展示Fは通常ST平均に含めません。</div>
+  <div class="panel">
+    <h2>対象レースを選んで機力分析</h2>
+    <p class="small muted">開催日・競艇場・レース番号を選択して「このレースを分析」を押すと、選んだレースの6艇について当日展示と過去履歴を比較します。</p>
+    <div class="grid">
+      <div class="field"><label for="analysisRaceDate">開催日</label><input id="analysisRaceDate" type="date"></div>
+      <div class="field"><label for="analysisRaceVenue">競艇場</label><select id="analysisRaceVenue"><option>桐生</option><option>戸田</option><option>江戸川</option><option>平和島</option><option>多摩川</option><option>浜名湖</option><option>蒲郡</option><option>常滑</option><option>津</option><option>三国</option><option>びわこ</option><option>住之江</option><option>尼崎</option><option>鳴門</option><option>丸亀</option><option>児島</option><option>宮島</option><option>徳山</option><option>下関</option><option>若松</option><option>芦屋</option><option>福岡</option><option>唐津</option><option>大村</option></select></div>
+      <div class="field"><label for="analysisRaceNo">レース番号</label><select id="analysisRaceNo"><option value="1">1R</option><option value="2">2R</option><option value="3">3R</option><option value="4">4R</option><option value="5">5R</option><option value="6">6R</option><option value="7">7R</option><option value="8">8R</option><option value="9">9R</option><option value="10">10R</option><option value="11">11R</option><option value="12">12R</option></select></div>
+    </div>
+    <div class="actions"><button class="btn primary" id="runAnalysisRace">このレースを分析</button></div>
+    <p class="small muted" id="analysisRaceStatus" aria-live="polite">分析するレースを選択してください。</p>
+    <div id="analysisRaceTitle" class="home-title"></div>
+    <div id="analysisRaceResult"></div>
+  </div>
   <div class="panel"><h2>分析対象</h2><div class="field"><label for="analysisVenue">競艇場</label><select id="analysisVenue"><option value="">全24場</option><option>桐生</option><option>戸田</option><option>江戸川</option><option>平和島</option><option>多摩川</option><option>浜名湖</option><option>蒲郡</option><option>常滑</option><option>津</option><option>三国</option><option>びわこ</option><option>住之江</option><option>尼崎</option><option>鳴門</option><option>丸亀</option><option>児島</option><option>宮島</option><option>徳山</option><option>下関</option><option>若松</option><option>芦屋</option><option>福岡</option><option>唐津</option><option>大村</option></select></div></div>
   <div class="panel"><h2>登録状況</h2><div class="statgrid" id="stats"></div></div>
   <div class="panel"><h2>モーター別 展示データ</h2><div id="motorTable"></div></div>
@@ -200,7 +213,7 @@ footer{color:var(--muted);font-size:11px;text-align:center;padding:24px}
   <div class="panel"><h2>データ件数</h2><div id="backupCount" class="muted">0レース</div><p class="small muted" id="autoBackupStatus">自動バックアップ状態を確認中</p><div class="actions"><button class="btn secondary" id="restoreLocal">自動バックアップから復元</button></div></div>
 </section>
 </main>
-<footer>BOAT MOTOR LAB v16 · レース別機力分析 / データは入力者の確認を前提とした分析用記録です</footer>
+<footer>BOAT MOTOR LAB v17 · レース別機力分析 / データは入力者の確認を前提とした分析用記録です</footer>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const venues=['桐生','戸田','江戸川','平和島','多摩川','浜名湖','蒲郡','常滑','津','三国','びわこ','住之江','尼崎','鳴門','丸亀','児島','宮島','徳山','下関','若松','芦屋','福岡','唐津','大村'];
@@ -578,6 +591,38 @@ $('historySixMonths').onclick=()=>{
 $('historyPrev').onclick=()=>{if(historicalMotorPage>0){historicalMotorPage--;renderHistoricalMotorPage()}};
 $('historyNext').onclick=()=>{if((historicalMotorPage+1)*HISTORY_PAGE_SIZE<historicalMotorRows.length){historicalMotorPage++;renderHistoricalMotorPage()}};
 
+async function runAnalysisForSelectedRace(){
+ const btn=$('runAnalysisRace'),status=$('analysisRaceStatus'),result=$('analysisRaceResult'),title=$('analysisRaceTitle');
+ const date=$('analysisRaceDate').value,venue=$('analysisRaceVenue').value,raceNo=Number($('analysisRaceNo').value),code=venueCodes[venue];
+ if(!date){status.textContent='開催日を選択してください。';return}
+ if(!venue||!code||!Number.isInteger(raceNo)||raceNo<1||raceNo>12){status.textContent='競艇場とレース番号を確認してください。';return}
+ if(btn.disabled)return;
+ btn.disabled=true;btn.textContent='分析中…';status.textContent='選択したレースの出走表を取得しています…';title.textContent='';result.innerHTML='';
+ try{
+  const compact=date.replaceAll('-',''),year=date.slice(0,4),url='https://boatraceopenapi.github.io/api/v1/'+year+'/'+compact+'.json';
+  const response=await fetch(url,{cache:'no-store'});
+  if(!response.ok)throw new Error(response.status===404?'この日付の開催データはまだ公開されていないか、開催がありません。':'開催データ取得エラー（'+response.status+'）');
+  const payload=await response.json();
+  const race=payload?.programs?.stadiums?.[String(code)]?.races?.[String(raceNo)];
+  if(!race)throw new Error(venue+' '+raceNo+'Rの出走データが見つかりません。日付・競艇場・レース番号を確認してください。');
+  homePayload=payload;homeVenue=venue;homeRace=raceNo;
+  $('homeDate').value=date;$('homeDateLabel').textContent=date;
+  renderVenues();renderRaces();
+  title.textContent=venue+' '+raceNo+'R｜'+date;
+  status.textContent='出走表を確認しました。6艇の機力履歴を分析しています…';
+  await loadRaceMotors();
+  result.innerHTML=$('raceMotorCards').innerHTML||'<div class="empty">分析結果を表示できませんでした。</div>';
+  status.textContent=$('raceAnalysisStatus').textContent||'分析が完了しました。';
+  if(!cloudClient||!cloudUser)status.textContent+=' 過去履歴との比較には「保存・設定」からログインしてください。';
+ }catch(err){
+  status.textContent='分析できませんでした：'+(err.message||'不明なエラー');
+  result.innerHTML='<div class="empty">対象レースの分析結果はありません。</div>';
+ }finally{btn.disabled=false;btn.textContent='このレースを分析'}
+}
+$('runAnalysisRace').onclick=runAnalysisForSelectedRace;
+$('analysisRaceDate').value=localDate();
+$('analysisRaceVenue').value=venues.includes(homeVenue)?homeVenue:'桐生';
+$('analysisRaceNo').value=String(homeRace||1);
 $('analysisVenue').onchange=renderAnalysis;
 $('refreshHistory').onclick=renderHistory;
 updateBackupStatus();
