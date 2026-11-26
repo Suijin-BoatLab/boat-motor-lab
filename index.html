@@ -1676,7 +1676,7 @@ async function syncRacerProfiles(){
  try{
   out.textContent='プロフィール取得テスト中：1名分の公開データを確認しています…';
   const {data,error}=await cloudClient.functions.invoke('sync-racer-profiles',{body:{offset:0,batch_size:1}});
-  if(error){let detail='';try{if(typeof error?.context?.body?.text==='function')detail=await error.context.body.text();}catch(_){}throw new Error(detail||error.message||'プロフィール取得に失敗しました');}
+  if(error){let detail='';try{if(error?.context&&typeof error.context.json==='function'){const body=await error.context.json();detail=body?.error||body?.message||JSON.stringify(body);}}catch(_){}throw new Error(detail||error.message||'プロフィール取得に失敗しました');}
   if(data?.error)throw new Error(data.error);
   const item=(data.results||[])[0];
   if(!item){out.textContent='テスト対象の選手が見つかりませんでした。';return;}
