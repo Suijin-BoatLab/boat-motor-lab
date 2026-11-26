@@ -1565,7 +1565,7 @@ async function loadRaceShobugake({date,venue,raceNo,racers,panel,button}){
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const venueNo=venues.indexOf(venue)+1;
  if(!cloudClient||!cloudUser){panel.innerHTML='<div class="panel"><b>🔥 勝負がけ情報</b><p class="home-sub">情報を取得するには「保存・設定」からログインしてください。</p></div>';return}
- panel.innerHTML='<div class="panel"><b>🔥 勝負がけ情報｜'+esc(venue)+' '+raceNo+'R</b><p class="home-sub">ボートレース日和から取得しています…</p></div>';
+ panel.innerHTML='<div class="panel"><b>🔥 勝負がけ情報｜'+esc(venue)+' '+raceNo+'R</b></div>';
  if(button)button.disabled=true;
  try{
   const {data,error}=await cloudClient.functions.invoke('sync-kyoteibiyori-shobugake-data',{body:{date,place_no:venueNo,race_no:raceNo}});
