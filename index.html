@@ -1323,7 +1323,7 @@ async function syncSelectedRaceResult(options={}){
   const safe=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const decisionLabel=data?.decision_method?safe(data.decision_method):'未解析（元データ保存済み）';
   const winnerLabel=data?.winning_racer_registration_no?'登録番号 '+safe(data.winning_racer_registration_no)+'／進入 '+safe(data.winning_course??'—')+'コース':'勝者情報は未解析';
-  panel.innerHTML='<div class="panel"><b>結果データをクラウドに保存しました</b><p class="home-sub">保存先：レース結果・払戻データ</p><p class="home-sub">決まり手：<b>'+decisionLabel+'</b>｜'+winnerLabel+'</p><p class="home-sub">解析状態：'+safe(data?.decision_parse_status||'確認中')+'／取得元：'+safe(raw.source||'公式公開データ')</p><p class="home-sub">取得データ項目：'+safe(keys.join('、')||'確認中')+'</p><details><summary>取得した元データを確認</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere;font-size:11px">'+safe(JSON.stringify(raw,null,2))+'</pre></details></div>';
+  panel.innerHTML='<div class="panel"><b>結果データをクラウドに保存しました</b><p class="home-sub">保存先：レース結果・払戻データ</p><p class="home-sub">決まり手：<b>'+decisionLabel+'</b>｜'+winnerLabel+'</p><p class="home-sub">解析状態：'+safe(data?.decision_parse_status||'確認中')+'／取得元：'+safe(raw.source||'公式公開データ')+'</p><p class="home-sub">取得データ項目：'+safe(keys.join('、')||'確認中')+'</p><details><summary>取得した元データを確認</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere;font-size:11px">'+safe(JSON.stringify(raw,null,2))+'</pre></details></div>';
   status.textContent=(data?.decision_parse_status==='parsed'?'保存完了。決まり手と勝者情報を取得しました。':'保存完了。決まり手データの項目構造を確認するため、元データを保持しました。')+
    (autoFCount?' 本番F '+autoFCount+'件をF管理へ自動登録しました。':'')+
    (autoFSkipped?' 重複・登録番号不明 '+autoFSkipped+'件は追加していません。':'')+
