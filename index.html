@@ -1439,7 +1439,7 @@ async function collectOriginalExhibitionForRace(){
   const statusNames={saved:'保存完了',not_published:'BOATCAST未掲載',no_data:'データなし',unsupported_metrics:'計測項目なし',race_not_found:'出走データなし',error:'取得エラー'};
   status.textContent=(statusNames[item.status]||item.status||'処理完了')+'：'+date+' '+venue+' '+raceNo+'R';
   if(item.status==='saved'){
-   result.innerHTML='<div class="statgrid"><div class="stat"><b>'+(item.saved||0)+'</b><span>保存艇数</span></div><div class="stat"><b>'+(metrics.lap||0)+'</b><span>一周あり</span></div><div class="stat"><b>'+(metrics.turn||0)+'</b><span>回り足あり</span></div><div class="stat"><b>'+(metrics.straight||0)+'</b><span>直線あり</span></div></div>';
+   result.innerHTML='<div class="statgrid"><div class="stat"><b>'+(item.saved||0)+'</b><span>保存艇数</span></div><div class="stat"><b>'+(metrics.lap||0)+'</b><span>一周あり</span></div><div class="stat"><b>'+(metrics.half_lap||0)+'</b><span>半周ラップあり</span></div><div class="stat"><b>'+(metrics.turn||0)+'</b><span>回り足あり</span></div><div class="stat"><b>'+(metrics.straight||0)+'</b><span>直線あり</span></div></div>';
   }else if(item.message){result.textContent=item.message}
   else{result.textContent='このレースではオリジナル展示データを取得できませんでした。未掲載・未対応の可能性があります。'}
  }catch(err){status.textContent='取得に失敗しました：'+(err.message||'不明なエラー');}
