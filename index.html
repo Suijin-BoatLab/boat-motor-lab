@@ -453,6 +453,18 @@ table{min-width:520px}
     <div id="racerMasterDetail" class="hidden"></div>
   </div>
   <div class="panel"><h2>過去データ取り込み</h2><p class="small muted">直近6か月分のレース別・艇別データを7日ずつ取得し、詳細履歴と日別集計を保存します。日別集計がすでにあっても、詳細履歴が不足している日は再取得します。取得元の更新遅延・欠損・開催なしの日は保存されない場合があります。</p><div class="actions"><button class="btn primary" id="historyImportStart">過去6か月分の詳細履歴を取り込む</button></div><p class="small muted" id="historyImportStatus" aria-live="polite">ログイン後に実行できます。</p></div>
+  <div class="panel" id="originalExhibitionCollector">
+   <h2>オリジナル展示タイム収集</h2>
+   <p class="small muted">BOATCASTの一周・回り足・直線データを取得し、過去の艇別履歴へ追加保存します。まずは1レースずつテストしてください。未掲載・未対応の場はそのまま記録し、既存データは消しません。</p>
+   <div class="boatgrid">
+    <div class="field"><label for="originalCollectDate">開催日</label><input id="originalCollectDate" type="date"></div>
+    <div class="field"><label for="originalCollectVenue">競艇場</label><select id="originalCollectVenue"><option>桐生</option><option>戸田</option><option>江戸川</option><option>平和島</option><option>多摩川</option><option>浜名湖</option><option>蒲郡</option><option>常滑</option><option>津</option><option>三国</option><option>びわこ</option><option>住之江</option><option>尼崎</option><option>鳴門</option><option>丸亀</option><option>児島</option><option>宮島</option><option>徳山</option><option>下関</option><option>若松</option><option>芦屋</option><option>福岡</option><option>唐津</option><option>大村</option></select></div>
+    <div class="field"><label for="originalCollectRace">レース番号</label><select id="originalCollectRace"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option></select></div>
+   </div>
+   <div class="actions"><button class="btn primary" id="originalCollectStart">このレースの展示タイムを取得</button></div>
+   <p class="small muted" id="originalCollectStatus" aria-live="polite">ログイン後に実行できます。</p>
+   <div id="originalCollectResult"></div>
+  </div>
 
 
   <div class="panel" id="racerCsvPanel">
@@ -1413,6 +1425,32 @@ async function importMotorHistorySixMonths(){
  finally{btn.disabled=false}
 }
 $('historyImportStart').onclick=importMotorHistorySixMonths;
+
+async function collectOriginalExhibitionForRace(){
+ const btn=$('originalCollectStart'),status=$('originalCollectStatus'),result=$('originalCollectResult');
+ if(!cloudClient||!cloudUser){status.textContent='先に「保存・移行」でログインしてください。';return}
+ if(btn.disabled)return;
+ const date=$('originalCollectDate').value,venue=$('originalCollectVenue').value,raceNo=Number($('originalCollectRace').value),venueCode=venueCodes[venue];
+ if(!date||!venueCode||!Number.isInteger(raceNo)){status.textContent='開催日・競艇場・レース番号を確認してください。';return}
+ btn.disabled=true;status.textContent='BOATCASTから展示データを取得しています…';result.innerHTML='';
+ try{
+  const {data,error}=await cloudClient.functions.invoke('collect-original-exhibition',{body:{date,targets:[{venue_code:venueCode,race_no:raceNo}]}});
+  if(error){const detail=typeof error?.context?.body?.text==='function'?await error.context.body.text().catch(()=> ''):'';throw new Error(detail||error.message||'取得処理との通信に失敗しました')}
+  if(data?.error)throw new Error(data.error);
+  const item=data.summary?.[0]||{},metrics=item.metrics||{};
+  const statusNames={saved:'保存完了',not_published:'BOATCAST未掲載',no_data:'データなし',unsupported_metrics:'計測項目なし',race_not_found:'出走データなし',error:'取得エラー'};
+  status.textContent=(statusNames[item.status]||item.status||'処理完了')+'：'+date+' '+venue+' '+raceNo+'R';
+  if(item.status==='saved'){
+   result.innerHTML='<div class="statgrid"><div class="stat"><b>'+(item.saved||0)+'</b><span>保存艇数</span></div><div class="stat"><b>'+(metrics.lap||0)+'</b><span>一周あり</span></div><div class="stat"><b>'+(metrics.turn||0)+'</b><span>回り足あり</span></div><div class="stat"><b>'+(metrics.straight||0)+'</b><span>直線あり</span></div></div>';
+  }else if(item.message){result.textContent=item.message}
+  else{result.textContent='このレースではオリジナル展示データを取得できませんでした。未掲載・未対応の可能性があります。'}
+ }catch(err){status.textContent='取得に失敗しました：'+(err.message||'不明なエラー');}
+ finally{btn.disabled=false}
+}
+$('originalCollectStart').onclick=collectOriginalExhibitionForRace;
+$('originalCollectDate').value=new Date().toISOString().slice(0,10);
+$('originalCollectVenue').value='びわこ';
+
 $('cloudBackfill').onclick=cloudBackfillExisting;
 
 $('cloudLogin').onclick=async()=>{
