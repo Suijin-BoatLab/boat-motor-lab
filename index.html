@@ -1323,8 +1323,28 @@ async function syncSelectedRaceResult(options={}){
   const safe=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const decisionLabel=data?.decision_method?safe(data.decision_method):'未解析（元データ保存済み）';
   const winnerLabel=data?.winning_racer_registration_no?'登録番号 '+safe(data.winning_racer_registration_no)+'／進入 '+safe(data.winning_course??'—')+'コース':'勝者情報は未解析';
-  panel.innerHTML='<div class="panel"><b>結果データをクラウドに保存しました</b><p class="home-sub">保存先：レース結果・払戻データ</p><p class="home-sub">決まり手：<b>'+decisionLabel+'</b>｜'+winnerLabel+'</p><p class="home-sub">解析状態：'+safe(data?.decision_parse_status||'確認中')+'／取得元：'+safe(raw.source||'公式公開データ')+'</p><p class="home-sub">取得データ項目：'+safe(keys.join('、')||'確認中')+'</p><details><summary>取得した元データを確認</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere;font-size:11px">'+safe(JSON.stringify(raw,null,2))+'</pre></details></div>';
-  status.textContent=(data?.decision_parse_status==='parsed'?'保存完了。決まり手と勝者情報を取得しました。':'保存完了。決まり手データの項目構造を確認するため、元データを保持しました。')+
+  const resultEntries=Array.isArray(raw.entries)?raw.entries:[];
+  const payouts=Array.isArray(raw.payouts)?raw.payouts:[];
+  const orderedEntries=[...resultEntries].sort((a,b)=>{
+   const ar=Number(a?.rank??a?.finish_rank??a?.['着順']),br=Number(b?.rank??b?.finish_rank??b?.['着順']);
+   return (Number.isInteger(ar)&&ar>0?ar:99)-(Number.isInteger(br)&&br>0?br:99)||Number(a?.boat||0)-Number(b?.boat||0);
+  });
+  const entryRows=orderedEntries.map(entry=>{
+   const rank=Number(entry?.rank??entry?.finish_rank??entry?.['着順']);
+   const flag=String(entry?.st_flag??entry?.result_code??'').trim();
+   const rankLabel=Number.isInteger(rank)&&rank>=1&&rank<=6?rank+'着':(flag||'—');
+   const st=entry?.st_flag||((entry?.st!==null&&entry?.st!==undefined)?Number(entry.st).toFixed(2):'—');
+   return '<tr><td>'+safe(rankLabel)+'</td><td>'+safe(entry?.boat??'—')+'</td><td>'+safe(entry?.name??'—')+'</td><td>'+safe(entry?.course??'—')+'</td><td>'+safe(st)+'</td><td>'+safe(entry?.race_time??'—')+'</td></tr>';
+  }).join('');
+  const betLabels={win:'単勝',place:'複勝',exacta:'2連単',quinella:'2連複',wide:'拡連複',trio:'3連複',trifecta:'3連単'};
+  const payoutRows=payouts.map(item=>{
+   const amount=Number(item?.amount);
+   const amountLabel=Number.isFinite(amount)?Math.round(amount).toLocaleString('ja-JP')+'円':'—';
+   const popularity=item?.popularity===null||item?.popularity===undefined?'—':' '+safe(item.popularity)+'番人気';
+   return '<tr><td>'+safe(betLabels[String(item?.bet_type||'').toLowerCase()]||item?.bet_type||'—')+'</td><td><b>'+safe(item?.combo??'—')+'</b></td><td>'+amountLabel+'</td><td>'+popularity+'</td></tr>';
+  }).join('');
+  panel.innerHTML='<div class="panel"><b>公式結果を保存しました</b><p class="home-sub">決まり手：<b>'+decisionLabel+'</b>｜'+winnerLabel+'</p><p class="home-sub">取得元：'+safe(raw.source||'公式公開データ')+'</p><h3>着順・レース結果</h3><div class="tablewrap"><table class="racecard-table"><thead><tr><th>着順</th><th>艇</th><th>選手</th><th>進入</th><th>本番ST</th><th>レースタイム</th></tr></thead><tbody>'+(entryRows||'<tr><td colspan="6">着順データなし</td></tr>')+'</tbody></table></div><h3>払戻一覧</h3><div class="tablewrap"><table class="racecard-table"><thead><tr><th>式別</th><th>組み合わせ</th><th>払戻</th><th>人気</th></tr></thead><tbody>'+(payoutRows||'<tr><td colspan="4">払戻データは取得元に含まれていません</td></tr>')+'</tbody></table></div><p class="home-sub">着順 '+resultEntries.length+'艇／払戻 '+payouts.length+'件</p><details><summary>取得した元データを確認</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere;font-size:11px">'+safe(JSON.stringify(raw,null,2))+'</pre></details></div>';
+  status.textContent='保存完了。着順 '+resultEntries.length+'艇・払戻 '+payouts.length+'件を反映しました。決まり手：'+decisionLabel+
    (autoFCount?' 本番F '+autoFCount+'件をF管理へ自動登録しました。':'')+
    (autoFSkipped?' 重複・登録番号不明 '+autoFSkipped+'件は追加していません。':'')+
    (autoFWarning?' F自動連携は保留：'+autoFWarning:'');
