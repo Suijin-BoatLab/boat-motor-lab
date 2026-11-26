@@ -1526,20 +1526,27 @@ function renderVenues(){
   return '<button class="venue-card '+(active?'active':'')+'" data-v="'+v+'" data-race="'+(next?next.number:'')+'"><strong>'+v+(favorites.includes(v)?' ♥':'')+'</strong><span class="venue-meta '+(next?'grade':'')+'">'+status+'</span><span class="venue-meta '+(urgent?'cutoff-urgent':'venue-cutoff')+'">'+(next?raceLabel+'　'+timeLabel:raceLabel)+'</span></button>';
  }).join('');
  $('venueGrid').querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>{
-  if(homeVenue===b.dataset.v){favorites=favorites.includes(homeVenue)?favorites.filter(x=>x!==homeVenue):[...favorites,homeVenue];localStorage.setItem('bml_favs',JSON.stringify(favorites));}
-  homeVenue=b.dataset.v;renderVenues();
-  const selectedRaces=homePayload?.programs?.stadiums?.[String(venueCodes[homeVenue])]?.races||{};
+  // DOM再描画前に、タップしたカードに表示されている開催場と次レース番号を確保する。
+  const chosenVenue=b.dataset.v;
+  const chosenRace=parseInt(b.dataset.race,10);
+  if(homeVenue===chosenVenue){favorites=favorites.includes(homeVenue)?favorites.filter(x=>x!==homeVenue):[...favorites,homeVenue];localStorage.setItem('bml_favs',JSON.stringify(favorites));}
+  homeVenue=chosenVenue;
+  const selectedRaces=homePayload?.programs?.stadiums?.[String(venueCodes[chosenVenue])]?.races||{};
   const nums=Object.keys(selectedRaces).map(Number).filter(n=>n>=1&&n<=12).sort((a,b)=>a-b);
-  // カードに表示した次レース番号をそのまま引き継ぎ、別計算によるズレを防ぐ。
-  const displayedRace=Number(b.dataset.race);
   const live=getVenueLiveRace(selectedRaces,date,new Date());
-  homeRace=(displayedRace>=1&&displayedRace<=12)?displayedRace:(live?.number||(nums.includes(1)?1:(nums[0]||1)));
-  renderRaces();renderVenueRaceCards();showTab('racecards');
-  // 開催一覧カードに表示した次レースへ直接移動する（出走表一覧の先頭1Rには留まらない）。
-  requestAnimationFrame(()=>requestAnimationFrame(()=>{
-   const target=$('racecard-'+homeRace);
-   if(target)target.scrollIntoView({behavior:'smooth',block:'start'});
-  }));
+  const targetRace=(Number.isInteger(chosenRace)&&chosenRace>=1&&chosenRace<=12)?chosenRace:(live?.number||(nums.includes(1)?1:(nums[0]||1)));
+  homeRace=targetRace;
+  renderVenues();renderRaces();renderVenueRaceCards();showTab('racecards');
+  $('racecardVenueTitle').textContent=chosenVenue+'｜出走表一覧｜選択 '+targetRace+'R';
+  // showTabの先頭スクロールが完了した後、選択レースのカード位置へ移動する。
+  setTimeout(()=>{
+   const target=document.getElementById('racecard-'+targetRace);
+   if(!target)return;
+   const header=document.querySelector('header');
+   const offset=(header?.getBoundingClientRect().height||0)+12;
+   const top=window.scrollY+target.getBoundingClientRect().top-offset;
+   window.scrollTo({top,behavior:'smooth'});
+  },350);
  });
 }
 function escapeRaceText(v){return String(v??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
