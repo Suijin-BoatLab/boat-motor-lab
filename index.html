@@ -128,6 +128,25 @@ table{min-width:520px}
  .stat{padding:9px}
 }
 
+/* Mobile layout fix: keep analysis race selectors stacked on narrow screens */
+@media (max-width: 600px) {
+  #analysis > .panel:first-of-type > .grid {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 12px !important;
+    width: 100% !important;
+  }
+  #analysis > .panel:first-of-type > .grid > .field {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  #analysis > .panel:first-of-type > .grid input,
+  #analysis > .panel:first-of-type > .grid select {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
 </style>
 </head>
 <body>
