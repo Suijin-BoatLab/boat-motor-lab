@@ -1220,25 +1220,44 @@ async function syncSelectedRaceResult(){
   const {data,error}=await cloudClient.functions.invoke('sync-race-results',{body:{date,venue_code:code,race_no:race}});
   if(error){const detail=typeof error?.context?.body?.text==='function'?await error.context.body.text().catch(()=> ''):'';throw new Error(detail||error.message||'結果取得に失敗しました')}
   if(data?.error)throw new Error(data.error);
-  // 本番Fをレース記録から検出し、F管理へ自動登録する。展示Fは対象外。
+  // 取得した公式レース結果の元データから本番Fを検出してF管理へ登録する。
   let autoFCount=0,autoFSkipped=0,autoFWarning='';
   try{
-   const {data:raceRow,error:raceLookupError}=await cloudClient.from('race_records')
-    .select('id').eq('user_id',cloudUser.id).eq('race_date',date).eq('venue_code',code).eq('race_no',race).maybeSingle();
-   if(raceLookupError)throw raceLookupError;
-   if(!raceRow?.id)throw new Error('結果同期後のレース記録が見つかりません。本番Fの自動登録は保留しました。');
-   const {data:fBoats,error:fBoatError}=await cloudClient.from('race_entries')
-    .select('lane,racer_name,racer_registration_no,actual_st_raw,actual_st_is_f')
-    .eq('user_id',cloudUser.id).eq('race_id',raceRow.id).eq('actual_st_is_f',true);
-   if(fBoatError)throw fBoatError;
-   for(const boat of (fBoats||[])){
-    const reg=String(boat.racer_registration_no||'').trim();
-    if(!/^\\d{4}$/.test(reg)){autoFSkipped++;continue;}
+   const source=data?.source_data??{};
+   const normalizeKey=v=>String(v??'').toLowerCase().replace(/[\\s_・-]/g,'');
+   const getField=(obj,aliases)=>{
+    const wanted=aliases.map(normalizeKey);
+    for(const [key,value] of Object.entries(obj||{}))if(wanted.includes(normalizeKey(key)))return value;
+    return undefined;
+   };
+   const candidates=[];
+   const walk=(value)=>{
+    if(Array.isArray(value)){value.forEach(walk);return;}
+    if(!value||typeof value!=='object')return;
+    const obj=value;
+    const st=getField(obj,['actual_st_raw','actual_st','start_timing','start_time','st','スタートタイミング','スタート']);
+    if(st!==undefined&&st!==null&&String(st).trim()!=='')candidates.push({obj,st});
+    Object.values(obj).forEach(walk);
+   };
+   walk(source);
+   const found=new Map();
+   for(const item of candidates){
+    const rawSt=String(item.st).trim().toUpperCase();
+    const isF=/^F(?:[.．+＋-]?\\d*)?$/.test(rawSt)||/^F[.．]/.test(rawSt)||(/^[-−]0?\\.\\d+$/.test(rawSt));
+    if(!isF)continue;
+    const obj=item.obj;
+    const reg=String(getField(obj,['racer_registration_no','registration_no','regno','touban','登録番号','選手登録番号'])??'').replace(/\\D/g,'');
+    const lane=Number(getField(obj,['lane','boat_no','艇番','枠番']));
+    const name=getField(obj,['racer_name','name','選手名']);
+    if(!/^\\d{4}$/.test(reg)||!Number.isInteger(lane)||lane<1||lane>6){autoFSkipped++;continue;}
+    found.set(reg+':'+lane,{reg,lane,name:name?String(name):null,rawSt});
+   }
+   for(const f of found.values()){
     const {error:insertError}=await cloudClient.from('racer_f_incidents').insert({
-     user_id:cloudUser.id,racer_registration_no:reg,racer_name:boat.racer_name||null,
-     incident_date:date,venue_code:code,venue_name:homeVenue,race_no:race,lane:boat.lane,
+     user_id:cloudUser.id,racer_registration_no:f.reg,racer_name:f.name,
+     incident_date:date,venue_code:code,venue_name:homeVenue,race_no:race,lane:f.lane,
      f_type:'本番F',source_name:'race_result_auto',
-     source_data:{entry_method:'レース結果から自動連携',actual_st_raw:boat.actual_st_raw||'F'}
+     source_data:{entry_method:'レース結果から自動連携',actual_st_raw:f.rawSt}
     });
     if(insertError){if(insertError.code==='23505')autoFSkipped++;else throw insertError;}
     else autoFCount++;
