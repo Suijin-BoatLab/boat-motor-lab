@@ -425,7 +425,7 @@ table{min-width:520px}
   <div class="panel"><h2>データ件数</h2><div id="backupCount" class="muted">0レース</div><p class="small muted" id="autoBackupStatus">自動バックアップ状態を確認中</p><div class="actions"><button class="btn secondary" id="restoreLocal">自動バックアップから復元</button></div></div>
 </section>
 </main>
-<footer>BOAT MOTOR LAB v17 · レース別機力分析 / データは入力者の確認を前提とした分析用記録です</footer>
+<footer>BOAT MOTOR LAB v18 · レース別機力分析 / データは入力者の確認を前提とした分析用記録です</footer>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const venues=['桐生','戸田','江戸川','平和島','多摩川','浜名湖','蒲郡','常滑','津','三国','びわこ','住之江','尼崎','鳴門','丸亀','児島','宮島','徳山','下関','若松','芦屋','福岡','唐津','大村'];
@@ -1257,9 +1257,40 @@ function renderVenueRaceCards(){
  }).join('');
  $('racecardList').querySelectorAll('[data-analyze-race]').forEach(b=>b.onclick=()=>{homeRace=Number(b.dataset.analyzeRace);$('analysisRaceDate').value=date;$('analysisRaceVenue').value=homeVenue;$('analysisRaceNo').value=String(homeRace);$('analysisBackLabel').textContent=homeVenue+'｜'+date;showTab('analysis');runAnalysisForSelectedRace();});
  $('racecardList').querySelectorAll('[data-result-race]').forEach(b=>b.onclick=()=>{const n=Number(b.dataset.resultRace);syncSelectedRaceResult({date,venue:homeVenue,race:n,statusId:'raceResultStatus-'+n,panelId:'raceResultPanel-'+n,button:b});});
+ loadSavedRaceResultsForVenue(date,venue);
  $('racecardList').querySelectorAll('[data-entry-race]').forEach(b=>b.onclick=()=>{const n=Number(b.dataset.entryRace);showTab('entry');$('venue').value=homeVenue;$('raceDate').value=date;$('raceNo').value=String(n);$('fetchMsg').textContent='開催一覧で選択したレースです。「選択レースのデータを取得」から出走表を読み込めます。';});
 }
 
+async function loadSavedRaceResultsForVenue(date,venue){
+ if(!cloudClient||!cloudUser)return;
+ const code=venueCodes[venue];
+ const {data,error}=await cloudClient.from('race_payout_results')
+  .select('race_no,source_data,decision_method,winning_racer_registration_no,winning_course')
+  .eq('user_id',cloudUser.id).eq('race_date',date).eq('venue_code',code);
+ if(error){console.warn('保存済み結果の自動表示に失敗',error);return;}
+ const safe=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const labels={win:'単勝',place:'複勝',exacta:'2連単',quinella:'2連複',quinella_place:'拡連複',wide:'拡連複',trifecta:'3連単',trio:'3連複'};
+ for(const row of data||[]){
+  const n=Number(row.race_no),panel=$('raceResultPanel-'+n),status=$('raceResultStatus-'+n);
+  if(!panel||!status)continue;
+  const raw=row.source_data||{},entries=Array.isArray(raw.entries)?raw.entries:[],payouts=Array.isArray(raw.payouts)?raw.payouts:[];
+  const ordered=[...entries].sort((a,b)=>Number(a.rank??a.finish_rank??99)-Number(b.rank??b.finish_rank??99)||Number(a.boat||0)-Number(b.boat||0));
+  const entryRows=ordered.map(e=>{
+   const rank=Number(e.rank??e.finish_rank),rankLabel=Number.isInteger(rank)&&rank>=1&&rank<=6?rank+'着':(e.result_code??'—');
+   const st=e.st_flag||((e.st!==null&&e.st!==undefined)?Number(e.st).toFixed(2):'—');
+   return '<tr><td>'+safe(rankLabel)+'</td><td>'+safe(e.boat??'—')+'</td><td>'+safe(e.name??'—')+'</td><td>'+safe(e.course??'—')+'</td><td>'+safe(st)+'</td><td>'+safe(e.race_time??'—')+'</td></tr>';
+  }).join('');
+  const payoutRows=payouts.map(p=>{
+   const amount=p.amount===null||p.amount===undefined?(p.label??'—'):Number(p.amount).toLocaleString('ja-JP')+'円';
+   const popularity=p.popularity==null?'—':safe(p.popularity)+'番人気';
+   return '<tr><td>'+safe(labels[p.bet_type]??p.bet_label??p.bet_type??'—')+'</td><td><b>'+safe(p.combo??'—')+'</b></td><td>'+safe(amount)+'</td><td>'+popularity+'</td></tr>';
+  }).join('');
+  const decision=row.decision_method?safe(row.decision_method):'未解析';
+  const winner=row.winning_racer_registration_no?'登録番号 '+safe(row.winning_racer_registration_no)+'／進入 '+safe(row.winning_course??'—')+'コース':'勝者情報未解析';
+  panel.innerHTML='<div class="panel"><b>自動取得済みの公式結果</b><p class="home-sub">決まり手：<b>'+decision+'</b>｜'+winner+'</p><h3>着順・レース結果</h3><div class="tablewrap"><table class="racecard-table"><thead><tr><th>着順</th><th>艇</th><th>選手</th><th>進入</th><th>本番ST</th><th>レースタイム</th></tr></thead><tbody>'+(entryRows||'<tr><td colspan="6">着順データなし</td></tr>')+'</tbody></table></div><h3>払戻一覧</h3><div class="tablewrap"><table class="racecard-table"><thead><tr><th>式別</th><th>組み合わせ</th><th>払戻</th><th>人気</th></tr></thead><tbody>'+(payoutRows||'<tr><td colspan="4">払戻データなし</td></tr>')+'</tbody></table></div><p class="home-sub">着順 '+entries.length+'艇／払戻 '+payouts.length+'件</p><details><summary>取得した元データを確認</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere;font-size:11px">'+safe(JSON.stringify(raw,null,2))+'</pre></details></div>';
+  status.textContent='自動取得済み：着順 '+entries.length+'艇・払戻 '+payouts.length+'件';
+ }
+}
 function renderRaces(){const rs=homePayload?.programs?.stadiums?.[String(venueCodes[homeVenue])]?.races||{};$('selectedVenueTitle').textContent=homeVenue+'｜レース選択';const nums=Object.keys(rs).map(Number).filter(n=>n>=1&&n<=12).sort((a,b)=>a-b);$('racePills').innerHTML=nums.length?nums.map(n=>'<button class="race-pill '+(n===homeRace?'active':'')+'" data-r="'+n+'">'+n+'R</button>').join(''):'<span class="home-sub">この日の開催情報はありません。</span>';if(!nums.length){$('raceMotorCards').innerHTML='';$('selectedRaceTitle').textContent=homeVenue+'｜モーター比較';$('raceAnalysisStatus').textContent='この競艇場の開催データはありません。';return}$('racePills').querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{homeRace=Number(b.dataset.r);renderRaces();loadRaceMotors();});}
 function fmt(v){return v===null||v===undefined||v===''?'—':v}
 function mean(rows,k){const a=rows.map(x=>x?.[k]).filter(v=>v!==null&&v!==undefined&&v!=='').map(Number).filter(Number.isFinite);return a.length?a.reduce((p,c)=>p+c,0)/a.length:null}
@@ -1336,7 +1367,7 @@ async function syncSelectedRaceResult(options={}){
    const st=entry?.st_flag||((entry?.st!==null&&entry?.st!==undefined)?Number(entry.st).toFixed(2):'—');
    return '<tr><td>'+safe(rankLabel)+'</td><td>'+safe(entry?.boat??'—')+'</td><td>'+safe(entry?.name??'—')+'</td><td>'+safe(entry?.course??'—')+'</td><td>'+safe(st)+'</td><td>'+safe(entry?.race_time??'—')+'</td></tr>';
   }).join('');
-  const betLabels={win:'単勝',place:'複勝',exacta:'2連単',quinella:'2連複',wide:'拡連複',trio:'3連複',trifecta:'3連単'};
+  const betLabels={win:'単勝',place:'複勝',exacta:'2連単',quinella:'2連複',quinella_place:'拡連複',wide:'拡連複',trio:'3連複',trifecta:'3連単'};
   const payoutRows=payouts.map(item=>{
    const amount=Number(item?.amount);
    const amountLabel=Number.isFinite(amount)?Math.round(amount).toLocaleString('ja-JP')+'円':'—';
