@@ -314,14 +314,14 @@ table{min-width:520px}
  <div class="panel">
   <div class="actions"><button class="btn secondary" id="refreshFHistory">F履歴を更新</button></div>
   <h2>全選手のF履歴を補完</h2>
-  <p class="small muted">保存済みの選手履歴に登録されている選手を対象に、艇愛ボートレースDBから直近180日以内の全出走結果を6名ずつ取得し、本番Fを自動登録します。対象は既存履歴に登場した選手です。</p>
+  <p class="small muted">保存済みの選手履歴に登録されている選手を対象に、艇愛ボートレースDBから直近180日以内の全出走結果を自動取得し、本番Fを登録します。内部では通信負荷を抑えるため6名ずつ処理します。対象は既存履歴に登場した選手です。</p>
   <div class="grid">
    <div class="field"><label for="fBackfillFrom">取得開始日（最大180日）</label><input id="fBackfillFrom" type="date"></div>
    <div class="field"><label for="fBackfillTo">取得終了日</label><input id="fBackfillTo" type="date"></div>
-   <div class="field"><label for="fBackfillOffset">次に取得する選手番号</label><input id="fBackfillOffset" type="number" min="0" step="6" value="0"></div>
+   
   </div>
-  <div class="actions"><button class="btn primary" id="runFBackfill">次の6名を取得</button></div>
-  <p class="small muted" id="fBackfillStatus" aria-live="polite">一度に取得するのは6名です。完了表示まで「次の6名を取得」を繰り返してください。</p>
+  <div class="actions"><button class="btn primary" id="runFBackfill">全選手のF履歴を一括取得</button></div>
+  <p class="small muted" id="fBackfillStatus" aria-live="polite">ボタンを1回押すと、対象選手を6名ずつ自動で最後まで取得します。</p>
   <p class="small muted">データ提供：<a href="https://boatrace-db.jp/" target="_blank" rel="noopener">艇愛ボートレースDB</a>。更新は原則1日1回です。過去180日より前のF履歴や、未登録選手の情報はこの処理だけでは補完されません。</p>
   <h2>F履歴を追加</h2>
   <div class="grid">
@@ -564,23 +564,40 @@ $('refreshFHistory').addEventListener('click',renderFHistory);
  $('runFBackfill')?.addEventListener('click',async()=>{
   const status=$('fBackfillStatus'),btn=$('runFBackfill');
   if(!cloudClient||!cloudUser){status.textContent='先に「保存・設定」からログインしてください。';return;}
-  const from=fromEl.value,to=toEl.value,offset=Number($('fBackfillOffset').value||0);
-  if(!from||!to||from>to||!Number.isInteger(offset)||offset<0){status.textContent='期間または選手番号を確認してください。';return;}
+  const from=fromEl.value,to=toEl.value;
+  if(!from||!to||from>to){status.textContent='取得期間を確認してください。';return;}
   const days=Math.round((Date.parse(to+'T00:00:00Z')-Date.parse(from+'T00:00:00Z'))/86400000)+1;
   if(days>180){status.textContent='取得期間は最大180日です。';return;}
   if(btn.disabled)return;
-  btn.disabled=true;status.textContent='選手6名分の出走履歴を取得しています。少し時間がかかります…';
+  btn.disabled=true;btn.textContent='一括取得中…';
+  let offset=0,total=0,processed=0,saved=0,failures=0,round=0;
   try{
-   const {data,error}=await cloudClient.functions.invoke('backfill-racer-f-history',{body:{from_date:from,to_date:to,offset,batch_size:6}});
-   if(error)throw new Error(error.message||'取得処理に失敗しました');
-   if(data?.error)throw new Error(data.error);
-   if(data?.next_offset!==null&&data?.next_offset!==undefined)$('fBackfillOffset').value=String(data.next_offset);
-   else $('fBackfillOffset').value=String(Number(data?.total_racers||0));
-   const diagnostics=(data?.diagnostics||[]).map(x=>'登録 '+x.registration_no+'：'+(x.status==='ok'?'対象 '+Number(x.matched_rows||0)+'件／F '+Number(x.f_rows||0)+'件':x.status==='schema_mismatch'?'CSV項目不一致':'取得失敗 '+(x.http_status||''))).join('、');
-   status.textContent=(data?.done?'全対象選手の確認が完了しました。':'今回の取得が完了しました。次は選手番号 '+$('fBackfillOffset').value+' から続けてください。')+' 対象 '+Number(data?.processed||0)+'名／候補 '+Number(data?.total_racers||0)+'名／保存 '+Number(data?.saved||0)+'行。'+(diagnostics?' 詳細：'+diagnostics:'');
-   await renderFHistory();
-  }catch(e){status.textContent='取得できませんでした：'+(e?.message||String(e));}
-  finally{btn.disabled=false;}
+   while(true){
+    round++;
+    status.textContent='全選手の履歴を取得中… '+processed+'名処理済み。通信単位 '+round+'回目（内部で6名ずつ処理）';
+    const {data,error}=await cloudClient.functions.invoke('backfill-racer-f-history',{body:{from_date:from,to_date:to,offset,batch_size:6}});
+    if(error)throw new Error(error.message||'取得処理に失敗しました');
+    if(data?.error)throw new Error(data.error);
+    total=Number(data?.total_racers||total);
+    const n=Number(data?.processed||0);
+    processed+=n;saved+=Number(data?.saved||0);
+    const diagnostics=data?.diagnostics||[];
+    const bad=diagnostics.filter(x=>!['ok','empty'].includes(x.status));
+    failures+=bad.length;
+    if(bad.length){
+      const detail=bad.map(x=>'登録 '+x.registration_no+'：'+(x.status==='schema_mismatch'?'CSV項目不一致':x.message||('取得失敗 '+(x.http_status||'')))).join('、');
+      status.textContent='一括取得を一時停止しました。処理 '+processed+'/'+total+'名、保存 '+saved+'行。未取得 '+bad.length+'名：'+detail+'。再実行で先頭から安全に再取得できます。';
+      await renderFHistory();return;
+    }
+    if(data?.done||data?.next_offset===null||n===0){
+      $('fBackfillOffset').value='0';
+      status.textContent='一括取得が完了しました。対象 '+total+'名／処理 '+processed+'名／保存 '+saved+'行／取得エラー '+failures+'件。';
+      await renderFHistory();return;
+    }
+    offset=Number(data.next_offset);
+   }
+  }catch(e){status.textContent='一括取得を停止しました：'+(e?.message||String(e))+'。処理 '+processed+'/'+total+'名、保存 '+saved+'行。再実行できます。';}
+  finally{btn.disabled=false;btn.textContent='全選手のF履歴を一括取得';}
  });
 })();
 
