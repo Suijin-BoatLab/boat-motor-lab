@@ -266,13 +266,13 @@ table{min-width:520px}
   <h1>レースデータ入力</h1><div class="muted small">展示後に一括保存 → レース終了後に同じ12R一括取得で結果を同期</div>
 <div class="panel" id="originalExhibitionCollector">
    <h2>オリジナル展示タイム収集</h2>
-   <p class="small muted">BOATCASTの一周・回り足・直線データを取得し、過去の艇別履歴へ追加保存します。まずは1レースずつテストしてください。未掲載・未対応の場はそのまま記録し、既存データは消しません。</p>
+   <p class="small muted">BOATCASTの一周・回り足・直線データを取得し、過去の艇別履歴へ追加保存します。選択日の24場・全12Rを一括確認できます。未掲載・未対応の場も記録し、既存データは消しません。</p>
    <div class="boatgrid">
     <div class="field"><label for="originalCollectDate">開催日</label><input id="originalCollectDate" type="date"></div>
     <div class="field"><label for="originalCollectVenue">競艇場</label><select id="originalCollectVenue"><option>桐生</option><option>戸田</option><option>江戸川</option><option>平和島</option><option>多摩川</option><option>浜名湖</option><option>蒲郡</option><option>常滑</option><option>津</option><option>三国</option><option>びわこ</option><option>住之江</option><option>尼崎</option><option>鳴門</option><option>丸亀</option><option>児島</option><option>宮島</option><option>徳山</option><option>下関</option><option>若松</option><option>芦屋</option><option>福岡</option><option>唐津</option><option>大村</option></select></div>
     <div class="field"><label for="originalCollectRace">レース番号</label><select id="originalCollectRace"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option></select></div>
    </div>
-   <div class="actions"><button class="btn primary" id="originalCollectStart">このレースの展示タイムを取得</button></div>
+   <div class="actions"><button class="btn primary" id="originalCollectStart">このレースの展示タイムを取得</button><button class="btn secondary" id="originalCollectAllStart" type="button">選択日の24場・全12Rを一括収集</button></div>
    <p class="small muted" id="originalCollectStatus" aria-live="polite">ログイン後に実行できます。</p>
    <div id="originalCollectResult"></div>
   </div>
@@ -1452,6 +1452,30 @@ async function collectOriginalExhibitionForRace(){
  }catch(err){status.textContent='取得に失敗しました：'+(err.message||'不明なエラー');}
  finally{btn.disabled=false}
 }
+async function collectOriginalExhibitionAll(){
+ const btn=$('originalCollectAllStart'),status=$('originalCollectStatus'),result=$('originalCollectResult');
+ if(!cloudClient||!cloudUser){status.textContent='先にログインしてください。';return}
+ if(btn.disabled)return;
+ const date=$('originalCollectDate').value;
+ if(!date){status.textContent='開催日を選択してください。';return}
+ const targets=[];
+ for(let venue_code=1;venue_code<=24;venue_code++)for(let race_no=1;race_no<=12;race_no++)targets.push({venue_code,race_no});
+ btn.disabled=true;$('originalCollectStart').disabled=true;
+ status.textContent='24場・最大288レースを一括確認しています…';result.innerHTML='';
+ try{
+  const {data,error}=await cloudClient.functions.invoke('collect-original-exhibition',{body:{date,targets}});
+  if(error){const detail=typeof error?.context?.body?.text==='function'?await error.context.body.text().catch(()=> ''):'';throw new Error(detail||error.message||'一括取得との通信に失敗しました')}
+  if(data?.error)throw new Error(data.error);
+  const counts={saved:0,not_published:0,no_data:0,unsupported_metrics:0,race_not_found:0,error:0};
+  const metricCounts={lap:0,half_lap:0,turn:0,straight:0};
+  (data.summary||[]).forEach(x=>{counts[x.status]=(counts[x.status]||0)+1;if(x.metrics)for(const key of Object.keys(metricCounts))if(Number(x.metrics[key])>0)metricCounts[key]++});
+  status.textContent='一括確認完了：'+date+'／確認 '+(data.checked_races||0)+'レース／保存 '+(data.saved_entries||0)+'艇';
+  result.innerHTML='<div class="statgrid"><div class="stat"><b>'+counts.saved+'</b><span>取得成功レース</span></div><div class="stat"><b>'+counts.not_published+'</b><span>未掲載</span></div><div class="stat"><b>'+counts.no_data+'</b><span>データなし</span></div><div class="stat"><b>'+counts.unsupported_metrics+'</b><span>計測項目なし</span></div><div class="stat"><b>'+counts.race_not_found+'</b><span>開催・出走なし</span></div><div class="stat"><b>'+counts.error+'</b><span>取得エラー</span></div></div><p class="small muted">値が取得できたレース数：一周 '+metricCounts.lap／半周 '+metricCounts.half_lap／回り足 '+metricCounts.turn／直線 '+metricCounts.straight+'。結果は下の24場管理表に反映されます。</p>';
+  await loadOriginalExhibitionVenueStatus();
+ }catch(err){status.textContent='一括取得に失敗しました：'+(err.message||'不明なエラー')}
+ finally{btn.disabled=false;$('originalCollectStart').disabled=false}
+}
+$('originalCollectAllStart').onclick=collectOriginalExhibitionAll;
 async function loadOriginalExhibitionVenueStatus(){
  const msg=$('originalVenueStatusMessage'),box=$('originalVenueStatusTable');
  if(!cloudClient||!cloudUser){msg.textContent='先にログインしてください。';box.innerHTML='';return}
