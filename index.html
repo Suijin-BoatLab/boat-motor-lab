@@ -1233,11 +1233,11 @@ async function syncSelectedRaceResult(){
    const isOfficialF=(entry)=>{
     const flag=String(entry.st_flag??'').trim().toUpperCase();
     const st=entry.st;
-    const flagIsF=/^F(?:[.．+＋-]?\\d*)?$/.test(flag);
-    const stText=String(st??'').trim().toUpperCase().replace(/[\\s　]/g,'');
-    const stIsF=/^F(?:[.．+＋-]?\\d*)?$/.test(stText);
+    const flagIsF=/^F(?:[.．+＋-]?\d*)?$/.test(flag);
+    const stText=String(st??'').trim().toUpperCase().replace(/[\s　]/g,'');
+    const stIsF=/^F(?:[.．+＋-]?\d*)?$/.test(stText);
     const stIsNegative=(typeof st==='number'&&Number.isFinite(st)&&st<0)||
-      (typeof st==='string'&&/^-0?\\.\\d+$/.test(st.trim()));
+      (typeof st==='string'&&/^-0?\.\d+$/.test(st.trim()));
     return flagIsF||stIsF||stIsNegative;
    };
    for(const entry of entries){
