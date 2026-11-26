@@ -117,6 +117,12 @@ Deno.serve(async (req: Request) => {
           summary.push({ ...target, status: "race_not_found", saved: 0 });
           continue;
         }
+        // Edogawa does not publish BOATCAST original exhibition measurements.
+        // Record it as venue-level unsupported and avoid repeated HTTP 403 requests.
+        if (target.venue_code === 3) {
+          summary.push({ ...target, status: "unsupported_metrics", saved: 0, message: "江戸川はオリジナル展示タイム非公表のため取得対象外" });
+          continue;
+        }
         const result = await fetchOriginal(date, target);
         if (result.status !== "ok") {
           summary.push({ ...target, status: result.status, saved: 0 });
