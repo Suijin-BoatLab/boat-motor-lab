@@ -276,6 +276,13 @@ table{min-width:520px}
    <p class="small muted" id="originalCollectStatus" aria-live="polite">ログイン後に実行できます。</p>
    <div id="originalCollectResult"></div>
   </div>
+  <div class="panel" id="originalExhibitionVenueStatus">
+   <h2>24場のオリジナル展示対応状況</h2>
+   <p class="small muted">実際に取得できた項目と、まだ確認できていない項目を分けて表示します。「未確認」は非対応を意味しません。</p>
+   <div class="actions"><button class="btn secondary" id="refreshOriginalVenueStatus" type="button">対応状況を更新</button></div>
+   <p class="small muted" id="originalVenueStatusMessage" aria-live="polite">ログイン後に対応状況を読み込みます。</p>
+   <div id="originalVenueStatusTable"></div>
+  </div>
   <div class="panel">
     <h2>レース基本情報</h2>
     <div class="grid">
@@ -1364,10 +1371,10 @@ async function cloudInit(){
  const {data:{session},error}=await cloudClient.auth.getSession();
  if(error){cloudStatus('ログイン状態を確認できません：'+error.message);return}
  cloudUser=session?.user||null;cloudRenderAuth();
- if(cloudUser){await cloudSync();}
+ if(cloudUser){await cloudSync();await loadOriginalExhibitionVenueStatus();}
  cloudClient.auth.onAuthStateChange((_event,sessionNow)=>{
   cloudUser=sessionNow?.user||null;cloudRenderAuth();
-  if(cloudUser)setTimeout(()=>{cloudSync();if(!$('analysis').classList.contains('hidden'))loadHistoricalMotorHistory()},0);
+  if(cloudUser)setTimeout(()=>{cloudSync();loadOriginalExhibitionVenueStatus();if(!$('analysis').classList.contains('hidden'))loadHistoricalMotorHistory()},0);
   else cloudStatus('ログアウトしました。端末内の記録と自動バックアップは残っています。');
  });
 }
@@ -1445,6 +1452,20 @@ async function collectOriginalExhibitionForRace(){
  }catch(err){status.textContent='取得に失敗しました：'+(err.message||'不明なエラー');}
  finally{btn.disabled=false}
 }
+async function loadOriginalExhibitionVenueStatus(){
+ const msg=$('originalVenueStatusMessage'),box=$('originalVenueStatusTable');
+ if(!cloudClient||!cloudUser){msg.textContent='先にログインしてください。';box.innerHTML='';return}
+ msg.textContent='24場の取得状況を読み込んでいます…';
+ try{
+  const {data,error}=await cloudClient.from('venue_original_exhibition_capabilities').select('venue_code,venue_name,lap_status,half_lap_status,turn_status,straight_status,historical_status,observed_races,last_success_date').order('venue_code');
+  if(error)throw error;
+  const label=v=>({observed:'取得実績あり',not_checked:'未確認',confirmed_unavailable:'確認済み・未掲載',unsupported:'非対応確認済み',available:'取得可能',limited:'一部取得可能',unavailable:'取得不可'}[v]||v||'未確認');
+  const rows=(data||[]).map(x=>'<tr><td>'+x.venue_code+'. '+x.venue_name+'</td><td>'+label(x.lap_status)+'</td><td>'+label(x.half_lap_status)+'</td><td>'+label(x.turn_status)+'</td><td>'+label(x.straight_status)+'</td><td>'+x.observed_races+'R</td><td>'+(x.last_success_date||'—')+'</td></tr>').join('');
+  box.innerHTML='<div style="overflow-x:auto"><table class="data-table"><thead><tr><th>競艇場</th><th>一周</th><th>半周</th><th>回り足</th><th>直線</th><th>取得レース</th><th>最終取得日</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+  msg.textContent='24場の管理情報を表示しています。取得実績は現在の保存データに基づきます。';
+ }catch(err){msg.textContent='読み込みに失敗しました：'+(err.message||'不明なエラー');box.innerHTML=''}
+}
+$('refreshOriginalVenueStatus').onclick=loadOriginalExhibitionVenueStatus;
 $('originalCollectStart').onclick=collectOriginalExhibitionForRace;
 const originalCollectToday=new Date();originalCollectToday.setMinutes(originalCollectToday.getMinutes()-originalCollectToday.getTimezoneOffset());$('originalCollectDate').value=originalCollectToday.toISOString().slice(0,10);
 $('originalCollectVenue').value='びわこ';
