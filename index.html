@@ -649,22 +649,44 @@ async function renderFHistory(){
 async function renderAllRacerFInfo(){
  const out=$('allFList'),coverage=$('allFCoverage'),search=$('allFSearch');
  if(!cloudClient||!cloudUser){coverage.textContent='ログイン後に表示できます。';return}
- coverage.textContent='選手マスターとF情報を照合しています…';out.innerHTML='';
+ coverage.textContent='選手マスターとボートレース日和のF情報・事故率を照合しています…';out.innerHTML='';
  const [mr,sr]=await Promise.all([
-  cloudClient.from('racer_master').select('racer_registration_no,racer_name,racer_class').eq('user_id',cloudUser.id).order('racer_registration_no'),
-  cloudClient.from('racer_incident_source_snapshots').select('racer_registration_no,current_f_count,unserved_f_count,previous_f_count,accident_points,accident_rate,suspension_start_date,suspension_end_date,source_name,captured_at').eq('user_id',cloudUser.id).order('captured_at',{ascending:false})
+  cloudClient.from('racer_master').select('racer_registration_no,racer_name,racer_class').eq('user_id',cloudUser.id).order('racer_registration_no').range(0,1999),
+  cloudClient.from('racer_incident_source_snapshots').select('racer_registration_no,current_f_count,unserved_f_count,previous_f_count,accident_points,accident_rate,suspension_start_date,suspension_end_date,source_name,captured_at').eq('user_id',cloudUser.id).order('captured_at',{ascending:false}).range(0,4999)
  ]);
  if(mr.error||sr.error){coverage.textContent='取得できませんでした：'+(mr.error||sr.error).message;return}
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const fmt=v=>v===null||v===undefined||v===''?'—':esc(v);
- const racers=mr.data||[],latest=new Map();
- for(const x of (sr.data||[])){if(!latest.has(String(x.racer_registration_no)))latest.set(String(x.racer_registration_no),x)}
- const rows=racers.map(r=>({r,s:latest.get(String(r.racer_registration_no))||null}));
+ const racers=mr.data||[],byRacer=new Map();
+ // Source priority: race-specific detail is authoritative for F counts/points;
+ // shinsa list is used as the fallback for accident rate only.
+ const priority={'ボートレース日和（出走表詳細）':3,'ボートレース日和（自動取得）':2,'ボートレース日和（級別審査・参考事故率）':1};
+ for(const x of (sr.data||[])){
+  const key=String(x.racer_registration_no),obj=byRacer.get(key)||{fields:{},sources:new Set(),latest:null};
+  obj.sources.add(x.source_name||'');
+  if(!obj.latest||String(x.captured_at||'')>String(obj.latest))obj.latest=x.captured_at;
+  const p=priority[x.source_name]||0;
+  for(const field of ['current_f_count','unserved_f_count','previous_f_count','accident_points','suspension_start_date','suspension_end_date']){
+   if(x[field]!==null&&x[field]!==undefined&&x[field]!==''&&(obj.fields[field]===undefined||p>(obj.fields[field+'_priority']||0))){
+    obj.fields[field]=x[field];obj.fields[field+'_priority']=p;
+   }
+  }
+  if(x.accident_rate!==null&&x.accident_rate!==undefined&&x.accident_rate!==''&&(obj.fields.accident_rate===undefined||p>(obj.fields.accident_rate+'_priority')||p>(obj.fields.accident_rate_priority||0))){
+   obj.fields.accident_rate=x.accident_rate;obj.fields.accident_rate_priority=p;
+  }
+  byRacer.set(key,obj);
+ }
+ const rows=racers.map(r=>({r,s:byRacer.get(String(r.racer_registration_no))||null}));
  const render=()=>{
   const q=(search.value||'').trim().toLowerCase();
   const filtered=rows.filter(x=>!q||String(x.r.racer_name||'').toLowerCase().includes(q)||String(x.r.racer_registration_no||'').includes(q));
-  coverage.textContent='選手マスター：'+racers.length.toLocaleString()+'名｜F情報取得済み：'+rows.filter(x=>x.s).length.toLocaleString()+'名｜表示：'+filtered.length.toLocaleString()+'名';
-  out.innerHTML='<table><thead><tr><th>選手</th><th>今期F</th><th>未消化F</th><th>前期F</th><th>事故点</th><th>事故率</th><th>F休み期間</th></tr></thead><tbody>'+filtered.map(({r,s})=>'<tr><td><b>'+esc(r.racer_name||'')+'</b><br><span class="small muted">'+esc(r.racer_registration_no)+'／'+esc(r.racer_class||'')+'</span></td><td>'+fmt(s?.current_f_count)+'</td><td>'+fmt(s?.unserved_f_count)+'</td><td>'+fmt(s?.previous_f_count)+'</td><td>'+fmt(s?.accident_points)+'</td><td>'+fmt(s?.accident_rate)+'</td><td>'+fmt(s?.suspension_start_date)+'〜'+fmt(s?.suspension_end_date)+'</td></tr>').join('')+'</tbody></table>';
+  const populated=rows.filter(x=>x.s&&Object.keys(x.s.fields).some(k=>!k.endsWith('_priority')&&x.s.fields[k]!==null&&x.s.fields[k]!==undefined&&x.s.fields[k]!=='')).length;
+  const rateCount=rows.filter(x=>x.s?.fields?.accident_rate!==undefined).length;
+  coverage.textContent='選手マスター：'+racers.length.toLocaleString()+'名｜何らかの情報あり：'+populated.toLocaleString()+'名｜事故率取得：'+rateCount.toLocaleString()+'名｜表示：'+filtered.length.toLocaleString()+'名';
+  out.innerHTML='<table><thead><tr><th>選手</th><th>今期F</th><th>未消化F</th><th>前期F</th><th>事故点</th><th>事故率</th><th>F休み期間</th></tr></thead><tbody>'+filtered.map(({r,s})=>{
+   const f=s?.fields||{};
+   return '<tr><td><b>'+esc(r.racer_name||'')+'</b><br><span class="small muted">'+esc(r.racer_registration_no)+'／'+esc(r.racer_class||'')+'</span></td><td>'+fmt(f.current_f_count)+'</td><td>'+fmt(f.unserved_f_count)+'</td><td>'+fmt(f.previous_f_count)+'</td><td>'+fmt(f.accident_points)+'</td><td>'+fmt(f.accident_rate)+'</td><td>'+fmt(f.suspension_start_date)+'〜'+fmt(f.suspension_end_date)+'</td></tr>';
+  }).join('')+'</tbody></table>';
  };
  search.oninput=render;render();
 }
