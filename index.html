@@ -159,6 +159,69 @@ table{min-width:520px}
 .f-history-table-wrap input[type="date"]{min-width:150px;width:150px;padding:8px;font-size:14px}
 .f-history-table-wrap .btn{min-width:64px}
 
+
+/* F履歴：スマホでは横スクロールを廃止し、1件ずつ縦型カードで表示 */
+@media (max-width: 600px) {
+  .f-history-table-wrap { overflow: visible; }
+  .f-history-table-wrap table {
+    min-width: 0 !important;
+    width: 100% !important;
+    border-collapse: separate;
+    border-spacing: 0 12px;
+    table-layout: fixed;
+  }
+  .f-history-table-wrap thead { display: none; }
+  .f-history-table-wrap tbody { display: block; width: 100%; }
+  .f-history-table-wrap tr[data-f-row] {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 10px;
+    padding: 12px;
+    margin-bottom: 12px;
+    border: 1px solid #d5deeb;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(20,35,60,.06);
+  }
+  .f-history-table-wrap td {
+    display: block;
+    min-width: 0;
+    padding: 4px 0 !important;
+    border: 0 !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+    font-size: 14px;
+  }
+  .f-history-table-wrap td::before {
+    display: block;
+    margin-bottom: 5px;
+    color: #718096;
+    font-size: 12px;
+    font-weight: 800;
+  }
+  .f-history-table-wrap td:nth-child(1) { grid-column: 1 / -1; }
+  .f-history-table-wrap td:nth-child(1)::before { content: "選手・F発生日"; }
+  .f-history-table-wrap td:nth-child(2)::before { content: "場所"; }
+  .f-history-table-wrap td:nth-child(3)::before { content: "累計F／当期F"; }
+  .f-history-table-wrap td:nth-child(4)::before { content: "休み開始日"; }
+  .f-history-table-wrap td:nth-child(5)::before { content: "休み終了日"; }
+  .f-history-table-wrap td:nth-child(6) { grid-column: 1 / -1; }
+  .f-history-table-wrap td:nth-child(6)::before { content: "状況"; }
+  .f-history-table-wrap td:nth-child(7) { grid-column: 1 / -1; }
+  .f-history-table-wrap td:nth-child(7)::before { content: "保存"; }
+  .f-history-table-wrap input[type="date"] {
+    box-sizing: border-box;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100%;
+    padding: 9px 6px !important;
+    font-size: 13px !important;
+  }
+  .f-history-table-wrap .btn {
+    width: 100%;
+    min-height: 42px;
+  }
+}
 </style>
 </head>
 <body>
