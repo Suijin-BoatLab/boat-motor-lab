@@ -29,8 +29,8 @@ async function fetchOriginal(date: string, target: Target) {
   });
   if (response.status === 404) return { status: "not_published" as const, boats: {} };
   if (!response.ok) throw new Error(`BOATCAST HTTP ${response.status}`);
-  const raw = (await response.text()).replace(/^\\uFEFF/, "");
-  const rows = raw.split(/\\r?\\n/).map((line) => line.split("\\t"));
+  const raw = (await response.text()).replace(/^\uFEFF/, "");
+  const rows = raw.split(/\r?\n/).map((line) => line.split("\t"));
   if (rows[0]?.[0]?.trim() !== "data=" || rows[1]?.[0]?.trim() !== "1") {
     return { status: "no_data" as const, boats: {} };
   }
@@ -44,7 +44,7 @@ async function fetchOriginal(date: string, target: Target) {
   };
   const keys: Record<number, string> = {};
   for (let index = 0; index < Math.min(count, labels.length); index++) {
-    const label = String(labels[index] ?? "").replace(/\\s/g, "");
+    const label = String(labels[index] ?? "").replace(/\s/g, "");
     if (labelMap[label]) keys[index + 2] = labelMap[label];
   }
   if (!Object.keys(keys).length) return { status: "unsupported_metrics" as const, boats: {} };
@@ -67,7 +67,7 @@ Deno.serve(async (req: Request) => {
   try {
     if (req.method !== "POST") return json({ error: "POST only" }, 405);
     const authHeader = req.headers.get("Authorization") ?? "";
-    const token = authHeader.replace(/^Bearer\\s+/i, "");
+    const token = authHeader.replace(/^Bearer\s+/i, "");
     if (!token || token === authHeader) return json({ error: "ログインが必要です" }, 401);
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
@@ -79,7 +79,7 @@ Deno.serve(async (req: Request) => {
 
     const body = await req.json();
     const date = String(body?.date ?? "");
-    if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(date) ||
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) ||
       new Date(date + "T00:00:00Z").toISOString().slice(0, 10) !== date) {
       return json({ error: "日付はYYYY-MM-DDで指定してください" }, 400);
     }
