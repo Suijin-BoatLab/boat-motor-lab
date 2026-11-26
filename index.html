@@ -1686,8 +1686,8 @@ async function syncRacerProfiles(){
    offset=data.next_offset;
   }
   out.textContent='取得完了：'+processed+'名を確認／保存 '+saved+'名／取得・保存エラー '+errors+'名。項目取得数：'+Object.entries(fieldCounts).map(([k,v])=>k+' '+v+'件').join('・')+'。選手検索を再実行すると反映されます。';
-  if(typeof searchRacerMaster==='function')await searchRacerMaster();
- }catch(err){out.textContent='取得を中断しました：'+(err.message||'不明なエラー')+'。途中まで保存したプロフィールは保持されています。再実行すると続きから確認できます。';}
+  if(typeof loadRacerMaster==='function')await loadRacerMaster(0);
+ }catch(err){out.textContent='取得を中断しました：'+(err.message||'不明なエラー')+'。途中まで保存したプロフィールは保持されています。再実行すると先頭から再確認します（既存項目は上書き更新）。';}
  finally{btn.disabled=false;}
 }
 $('racerProfileSync').onclick=syncRacerProfiles;
