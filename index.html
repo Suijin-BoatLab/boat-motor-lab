@@ -417,7 +417,7 @@ table{min-width:520px}
       <div class="field"><label for="racerMasterBranch">支部</label><select id="racerMasterBranch"><option value="">すべて</option><option>群馬</option><option>埼玉</option><option>東京</option><option>静岡</option><option>愛知</option><option>三重</option><option>福井</option><option>滋賀</option><option>大阪</option><option>兵庫</option><option>徳島</option><option>香川</option><option>岡山</option><option>広島</option><option>山口</option><option>福岡</option><option>佐賀</option><option>長崎</option></select></div>
     </div>
     <div class="actions"><button class="btn primary" id="racerMasterSearchBtn">選手を検索</button><button class="btn secondary" id="racerMasterRefresh">条件をクリア</button></div>
-    <div class="actions"><button class="btn primary" id="racerProfileSync">プロフィール取得テスト（1名）</button></div><p class="small muted" id="racerProfileSyncStatus" aria-live="polite">登録済み選手の基本情報を6名ずつ確認・保存します。既存の値は取得できた項目だけ更新します。</p>
+    <div class="actions"><button class="btn primary" id="racerProfileSync">プロフィール取得テスト（1名）</button><button class="btn secondary" id="racerProfileBulk">全選手プロフィール取得を開始・再開</button></div><p class="small muted" id="racerProfileSyncStatus" aria-live="polite">まず1名テストを実施し、問題なければ全選手を6名ずつ取得できます。</p><div class="progress-wrap" style="margin-top:10px"><progress id="racerProfileProgress" max="100" value="0" style="width:100%;height:14px"></progress><p class="small muted" id="racerProfileProgressText">プロフィール取得：0 / 0名</p></div>
     <p class="small muted" id="racerMasterStatus" aria-live="polite">選手名または登録番号を入力して検索してください。</p>
     <div id="racerMasterList"></div>
     <div id="racerMasterDetail" class="hidden"></div>
@@ -1666,16 +1666,16 @@ async function loadRaceMotors(){
  }
 }
 
-// Import all historical results for the racers in the currently selected race.
+// One-racer schema test, then resumable six-racer profile synchronization.
 async function syncRacerProfiles(){
  const out=$('racerProfileSyncStatus'),btn=$('racerProfileSync');
  if(!cloudClient||!cloudUser){out.textContent='先に「保存・設定」でログインしてください。';return;}
  if(btn.disabled)return;
- if(!confirm('まず選手1名だけでプロフィール取得テストを行います。全員分の一括取得はまだ行いません。よろしいですか？'))return;
+ if(!confirm('選手1名だけでプロフィール取得テストを行います。よろしいですか？'))return;
  btn.disabled=true;
  try{
   out.textContent='プロフィール取得テスト中：1名分の公開データを確認しています…';
-  const {data,error}=await cloudClient.functions.invoke('sync-racer-profiles',{body:{offset:0,batch_size:1}});
+  const {data,error}=await cloudClient.functions.invoke('sync-racer-profiles',{body:{offset:0,batch_size:1,skip_checked:false}});
   if(error){let detail='';try{if(error?.context&&typeof error.context.json==='function'){const body=await error.context.json();detail=body?.error||body?.message||JSON.stringify(body);}}catch(_){}throw new Error(detail||error.message||'プロフィール取得に失敗しました');}
   if(data?.error)throw new Error(data.error);
   const item=(data.results||[])[0];
@@ -1689,6 +1689,40 @@ async function syncRacerProfiles(){
  finally{btn.disabled=false;}
 }
 $('racerProfileSync').onclick=syncRacerProfiles;
+
+async function bulkSyncRacerProfiles(){
+ const btn=$('racerProfileBulk'),testBtn=$('racerProfileSync'),out=$('racerProfileSyncStatus'),bar=$('racerProfileProgress'),label=$('racerProfileProgressText');
+ if(!cloudClient||!cloudUser){out.textContent='先に「保存・設定」でログインしてください。';return;}
+ if(btn.disabled)return;
+ if(!confirm('プロフィール未取得の選手を中心に、6名ずつ順番に取得します。約1,600名分の処理には時間がかかります。途中で画面を閉じても、次回は保存した続きから再開できます。開始しますか？'))return;
+ btn.disabled=true;testBtn.disabled=true;
+ const cursorKey='boatMotorLab_profile_sync_offset_v1';
+ let offset=Number(localStorage.getItem(cursorKey)||0);
+ if(!Number.isInteger(offset)||offset<0)offset=0;
+ let processed=0,saved=0,failed=0,total=0,checked=0;
+ try{
+  while(true){
+   out.textContent='プロフィール取得中… '+processed+'名処理／保存 '+saved+'名／失敗 '+failed+'名。画面を閉じずにお待ちください。';
+   const {data,error}=await cloudClient.functions.invoke('sync-racer-profiles',{body:{offset,batch_size:6,skip_checked:true}});
+   if(error){let detail='';try{if(error?.context&&typeof error.context.json==='function'){const body=await error.context.json();detail=body?.error||body?.message||JSON.stringify(body);}}catch(_){}throw new Error(detail||error.message||'取得処理に失敗しました');}
+   if(data?.error)throw new Error(data.error);
+   total=Number(data.total)||total;checked=Number(data.checked)||checked;
+   const rows=data.results||[];
+   if(!rows.length){localStorage.setItem(cursorKey,'0');break;}
+   processed+=rows.length;saved+=rows.filter(x=>x.status==='saved'||x.status==='already_checked').length;failed+=rows.filter(x=>!['saved','already_checked'].includes(x.status)).length;
+   offset=Number(data.next_offset??(offset+rows.length));
+   localStorage.setItem(cursorKey,String(offset));
+   const pct=total?Math.min(100,Math.round((offset/total)*100)):0;
+   bar.value=pct;label.textContent='今回の進行位置：'+Math.min(offset,total)+' / '+total+'名（'+pct+'%）';
+   if(data.done||data.next_offset===null){localStorage.setItem(cursorKey,'0');break;}
+  }
+  out.textContent='プロフィール取得処理が完了しました。今回処理 '+processed+'名／保存・確認 '+saved+'名／要確認 '+failed+'名。失敗分は先頭から再実行すると再試行できます。';
+  if(typeof loadRacerMaster==='function')await loadRacerMaster(0);
+ }catch(err){
+  out.textContent='途中で停止しました：'+(err.message||'不明なエラー')+'。進行位置 '+offset+' から再開できます。';
+ }finally{btn.disabled=false;testBtn.disabled=false;}
+}
+$('racerProfileBulk').onclick=bulkSyncRacerProfiles;
 
 const publicToday=new Date();const publicYesterday=new Date(publicToday);publicYesterday.setDate(publicYesterday.getDate()-1);
 const publicStart=new Date(publicToday);publicStart.setDate(publicStart.getDate()-180);
