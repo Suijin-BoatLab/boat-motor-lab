@@ -1448,27 +1448,38 @@ function renderVenueRaceCards(){
 
 async function loadRaceFInfo({date,venue,raceNo,racers,panel}){
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const show=v=>(v===null||v===undefined||v===''?'未取得':esc(v));
  const roster=Object.entries(racers||{}).map(([key,p])=>({lane:Number(p?.entry_number||key),name:p?.name||'選手名未登録',reg:String(p?.number||'').trim()})).filter(x=>x.reg);
- if(!cloudClient||!cloudUser){panel.innerHTML='<div class="panel"><b>F情報</b><p class="home-sub">F情報を表示するには「保存・設定」からログインしてください。</p></div>';return}
- if(!roster.length){panel.innerHTML='<div class="panel"><b>F情報</b><p class="home-sub">出走表から登録番号を取得できませんでした。</p></div>';return}
- panel.innerHTML='<div class="panel"><b>🚩 F情報｜'+raceNo+'R</b><p class="home-sub">選手ごとの登録済みF履歴を確認しています…</p></div>';
+ if(!cloudClient||!cloudUser){panel.innerHTML='<div class="panel"><b>🚩 F情報</b><p class="home-sub">F情報を表示するには「保存・設定」からログインしてください。</p></div>';return}
+ if(!roster.length){panel.innerHTML='<div class="panel"><b>🚩 F情報</b><p class="home-sub">出走表から登録番号を取得できませんでした。</p></div>';return}
+ panel.innerHTML='<div class="panel"><b>🚩 F情報｜'+raceNo+'R</b><p class="home-sub">F回数・休み日程・事故情報を登録番号で照合しています…</p></div>';
  const regs=roster.map(x=>x.reg);
- const {data,error}=await cloudClient.from('racer_f_incidents_enriched')
-  .select('racer_registration_no,racer_name,incident_date,venue_name,race_no,lane,f_type,suspension_start_date,suspension_end_date,suspension_days,examination_period_start,f_order_in_examination_period,current_suspension_status,may_be_unserved_carryover')
-  .eq('user_id',cloudUser.id).in('racer_registration_no',regs).order('incident_date',{ascending:false});
- if(error){panel.innerHTML='<div class="panel"><b>🚩 F情報</b><p class="home-sub">F情報を読み込めませんでした：'+esc(error.message)+'</p></div>';return}
- const rows=data||[],today=new Date().toLocaleDateString('sv-SE'),month=Number(today.slice(5,7));
- const periodStart=month>=5&&month<=10?today.slice(0,4)+'-05-01':month>=11?today.slice(0,4)+'-11-01':String(Number(today.slice(0,4))-1)+'-11-01';
+ const [summaryResult,snapshotResult,incidentResult]=await Promise.all([
+  cloudClient.from('racer_f_period_summary').select('racer_registration_no,racer_name,current_f_count,unserved_f_count,previous_f_count,suspension_start_date,suspension_end_date,suspension_status,latest_f_data_at').eq('user_id',cloudUser.id).in('racer_registration_no',regs),
+  cloudClient.from('racer_incident_source_snapshots').select('racer_registration_no,current_f_count,unserved_f_count,previous_f_count,accident_points,accident_rate,suspension_start_date,suspension_end_date,source_name,source_url,captured_at,data_status,notes').eq('user_id',cloudUser.id).in('racer_registration_no',regs),
+  cloudClient.from('racer_f_incidents_enriched').select('racer_registration_no,racer_name,incident_date,venue_name,race_no,lane,f_type,suspension_start_date,suspension_end_date').eq('user_id',cloudUser.id).in('racer_registration_no',regs).order('incident_date',{ascending:false})
+ ]);
+ const error=summaryResult.error||snapshotResult.error||incidentResult.error;
+ if(error){panel.innerHTML='<div class="panel"><b>🚩 F情報</b><p class="home-sub">情報を読み込めませんでした：'+esc(error.message)+'</p></div>';return}
+ const summaries=summaryResult.data||[],snapshots=snapshotResult.data||[],incidents=incidentResult.data||[];
  const body=roster.sort((a,b)=>a.lane-b.lane).map(p=>{
-  const own=rows.filter(r=>String(r.racer_registration_no)===p.reg),current=own.filter(r=>r.incident_date>=periodStart);
-  const latest=own[0],active=own.find(r=>r.suspension_start_date&&r.suspension_end_date&&r.suspension_start_date<=today&&r.suspension_end_date>=today);
-  const schedule=active||latest;
-  const suspension=schedule?(schedule.suspension_start_date&&schedule.suspension_end_date?(today<schedule.suspension_start_date?'休み開始前':today>schedule.suspension_end_date?'休み消化済み':'休み消化中'):'休み日程未登録'):'—';
-  const scheduleDates=schedule&&schedule.suspension_start_date&&schedule.suspension_end_date?'開始 '+esc(schedule.suspension_start_date)+' ／ 終了 '+esc(schedule.suspension_end_date):'開始日・終了日 未登録';
-  const detail=latest?esc(latest.incident_date)+' '+esc(latest.venue_name||'')+' '+esc(latest.race_no||'')+'R／'+esc(latest.lane||'')+'号艇／'+esc(latest.f_type||'本番F'):'F履歴なし';
-  return '<tr><td><b>'+p.lane+'号艇 '+esc(p.name)+'</b><br><span class="small muted">登録 '+esc(p.reg)+'</span></td><td><b>'+own.length+'回</b>／当期 '+current.length+'回</td><td>'+detail+'</td><td><b>'+esc(suspension)+'</b><br><span class="small muted">'+scheduleDates+'</span>'+(latest?.may_be_unserved_carryover?'／前期持越し候補':'')+'</td></tr>';
+  const summary=summaries.find(x=>String(x.racer_registration_no)===p.reg);
+  const snap=snapshots.find(x=>String(x.racer_registration_no)===p.reg);
+  const own=incidents.filter(x=>String(x.racer_registration_no)===p.reg);
+  const current=snap?.current_f_count??summary?.current_f_count;
+  const unserved=snap?.unserved_f_count??summary?.unserved_f_count;
+  const previous=snap?.previous_f_count??summary?.previous_f_count;
+  const start=snap?.suspension_start_date??summary?.suspension_start_date;
+  const end=snap?.suspension_end_date??summary?.suspension_end_date;
+  const suspension=snap?.data_status==='verified'?(start&&end?(new Date().toLocaleDateString('sv-SE')<start?'開始前':new Date().toLocaleDateString('sv-SE')<=end?'消化中':'消化済み'):'日程未確認'):(summary?.suspension_status||'日程未確認');
+  const latest=own[0];
+  const latestText=latest?esc(latest.incident_date)+' '+esc(latest.venue_name||'')+' '+esc(latest.race_no||'')+'R／'+esc(latest.f_type||'本番F'):'履歴未登録';
+  const accidentStatus=snap?.data_status==='verified'?'確認済み':snap?.data_status==='partial'?'一部取得':'未取得';
+  return '<tr><td><b>'+p.lane+'号艇 '+esc(p.name)+'</b><br><span class="small muted">登録 '+esc(p.reg)+'</span></td><td>'+show(current)+'</td><td>'+show(unserved)+'</td><td>'+show(previous)+'</td><td>'+show(snap?.accident_points)+'</td><td>'+show(snap?.accident_rate)+'</td><td><b>'+esc(suspension)+'</b><br><span class="small muted">'+(start&&end?'開始 '+esc(start)+'／終了 '+esc(end):'休み日程 未取得')+'</span></td><td><span class="small">'+latestText+'</span><br><span class="small muted">'+esc(accidentStatus)+(snap?.source_name?'／'+esc(snap.source_name):'')+'</span></td></tr>';
  }).join('');
- panel.innerHTML='<div class="panel"><div class="racecard-heading"><h3>🚩 F情報｜'+esc(venue)+' '+raceNo+'R</h3><span class="muted small">'+rows.length+'件のF履歴</span></div><p class="home-sub">既存のF管理データを登録番号で照合しています。履歴がない選手は「F履歴なし」と表示します。</p><div class="tablewrap"><table class="racecard-table"><thead><tr><th>選手</th><th>累計／当期F</th><th>最新F情報</th><th>F休み状況・日程</th></tr></thead><tbody>'+body+'</tbody></table></div><p class="home-sub">※ 当期区分は既存F管理画面と同じ期区分で集計。未登録のFや休み日程は反映されません。</p></div>';
+ const verified=snapshots.filter(x=>x.data_status==='verified').length;
+ const missing=roster.length-verified;
+ panel.innerHTML='<div class="panel"><div class="racecard-heading"><h3>🚩 F情報・事故情報｜'+esc(venue)+' '+raceNo+'R</h3><span class="muted small">'+roster.length+'選手</span></div><p class="home-sub">選手登録番号でF履歴・F休み・事故情報を照合。外部ソース未取得の値は「未取得」と表示します。</p><div class="tablewrap"><table class="racecard-table"><thead><tr><th>選手</th><th>今期F</th><th>未消化</th><th>前期F</th><th>事故点</th><th>事故率</th><th>F休み</th><th>最新履歴・取得状況</th></tr></thead><tbody>'+body+'</tbody></table></div><p class="home-sub">外部データ確認済み '+verified+'／'+roster.length+'人。未確認 '+missing+'人。既存F履歴 '+incidents.length+'件。F履歴の集計値は登録済み履歴の範囲であり、全選手の完全取得を意味しません。</p></div>';
 }
 
 async function loadSavedRaceResultsForVenue(date,venue){
