@@ -17,8 +17,7 @@ Deno.serve(async(req:Request)=>{
   const auth=await sql`select exists(select 1 from vault.decrypted_secrets where name='race_result_sync_cron_token' and decrypted_secret=${token}) as ok`;
   if(!auth[0]?.ok)return reply({error:"自動収集の認証に失敗しました"},401);
   const now=jstParts();
-  const forceTest=new URL(req.url).searchParams.get("test")==="1";
-  if(!forceTest&&(now.hour<8||now.hour>23||(now.hour===23&&now.minute!==0)))return reply({success:true,skipped:true,reason:"収集時間外",jst_hour:now.hour,jst_minute:now.minute});
+  if(now.hour<8||now.hour>23||(now.hour===23&&now.minute!==0))return reply({success:true,skipped:true,reason:"収集時間外",jst_hour:now.hour,jst_minute:now.minute});
   const owners=await sql`select user_id from public.historical_motor_entries group by user_id order by count(*) desc limit 1`;
   const owner=owners[0]?.user_id;if(!owner)return reply({error:"保存先ユーザーがありません"},500);
   const [y,m,d]=now.date.split("-");
@@ -55,9 +54,9 @@ Deno.serve(async(req:Request)=>{
    }
    const key=`${venue}-${raceNo}`;
    const metrics=metricKeys.filter(Boolean) as string[];
-   const status=updated===6?"saved":updated>0?"partial":"no_matching_entries";
+   const status=updated>0?"saved":"error";
    await sql`insert into public.original_exhibition_collection_checks(user_id,race_date,venue_code,race_no,status,lap_found,half_lap_found,turn_found,straight_found,saved_boats,detail,checked_at)
-    values(${owner},${date},${venue},${raceNo},${status},${metrics.includes("lap_time")},${metrics.includes("half_lap_time")},${metrics.includes("turn_time")},${metrics.includes("straight_time")},${updated},${status==="no_matching_entries"?"出走表データに対応する艇データなし":null},now())
+    values(${owner},${date},${venue},${raceNo},${status},${metrics.includes("lap_time")},${metrics.includes("half_lap_time")},${metrics.includes("turn_time")},${metrics.includes("straight_time")},${updated},${status==="error"?"出走表データに対応する艇データなし":null},now())
     on conflict(user_id,race_date,venue_code,race_no) do update set status=excluded.status,lap_found=original_exhibition_collection_checks.lap_found or excluded.lap_found,half_lap_found=original_exhibition_collection_checks.half_lap_found or excluded.half_lap_found,turn_found=original_exhibition_collection_checks.turn_found or excluded.turn_found,straight_found=original_exhibition_collection_checks.straight_found or excluded.straight_found,saved_boats=greatest(original_exhibition_collection_checks.saved_boats,excluded.saved_boats),detail=excluded.detail,checked_at=now()`;
    if(updated>0){savedRaces.add(key);summary.push({race:key,updated,metrics});}
   }
