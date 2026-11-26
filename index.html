@@ -329,6 +329,7 @@ table{min-width:520px}
 </section>
 
 <section id="analysis" class="hidden">
+  <div class="racecard-toolbar"><button class="btn secondary" id="backToRaceCards">← 出走表一覧へ戻る</button><span class="muted small" id="analysisBackLabel"></span></div>
   <h1>モーター分析</h1><div class="muted small">モーター指標と選手成績を分けて集計。モーター番号は競艇場ごとに区別し、展示Fは通常ST平均に含めません。</div>
   <div class="panel">
     <h2>対象レースを選んで機力分析</h2>
@@ -478,6 +479,7 @@ $('raceDate').value=new Date().toLocaleDateString('sv-SE');
 $('backtestTo').value=new Date().toLocaleDateString('sv-SE');$('backtestFrom').value=new Date(Date.now()-6*86400000).toLocaleDateString('sv-SE');
 document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
 $('backToVenues').onclick=()=>showTab('home');
+ $('backToRaceCards').onclick=()=>{if(homeVenue){renderVenueRaceCards();showTab('racecards');}else showTab('home');};
 $('openSelectedRaceEntry').onclick=()=>{const date=$('homeDate').value,venue=homeVenue,race=homeRace;if(!date||!venue||!race){$('raceAnalysisStatus').textContent='先に開催日・競艇場・レース番号を選択してください。';return;}showTab('entry');$('venue').value=venue;$('raceDate').value=date;$('raceNo').value=String(race);$('fetchMsg').textContent='開催一覧で選択したレースです。「選択レースのデータを取得」から出走表を読み込めます。';};
 function showTab(tab){document.querySelectorAll('main section').forEach(s=>s.classList.toggle('hidden',s.id!==tab));const navTab=tab==='racecards'?'home':tab;document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===navTab));const nav=document.querySelector('header nav'),activeNav=nav?.querySelector('button[data-tab="'+navTab+'"]');if(nav&&activeNav){const targetLeft=Math.max(0,activeNav.offsetLeft-(nav.clientWidth-activeNav.offsetWidth)/2);nav.scrollTo({left:targetLeft,behavior:'smooth'});}if(tab==='history')renderHistory();if(tab==='fHistory')renderFHistory();if(tab==='backtest')loadBacktestRuns();if(tab==='analysis'){renderAnalysis();loadHistoricalMotorHistory();}if(tab==='backup'){$('backupCount').textContent=races.length+'レース';updateBackupStatus();const notice=$('storageRecoveryNotice');if(notice)notice.classList.toggle('hidden',!startupStorageIssue);}window.scrollTo(0,0)}
 async function loadBacktestRuns(){
@@ -1253,7 +1255,7 @@ function renderVenueRaceCards(){
   const cutoff=race.closed_at?escapeRaceText(race.closed_at.slice(11,16)+'締切'):'';
   return '<article class="panel"><div class="racecard-heading"><div><h2>'+n+'R '+(title||'出走表')+'</h2><div class="racecard-meta">'+cutoff+'　'+(race.day_number_source?escapeRaceText(race.day_number_source):'')+'</div></div><span class="tag">'+(Object.keys(racers).length||0)+'艇</span></div><div class="tablewrap"><table class="racecard-table"><thead><tr><th>枠</th><th>選手</th><th>登録番号</th><th>級別</th><th>全国勝率</th><th>当地勝率</th><th>モーター</th><th>モーター2連率</th></tr></thead><tbody>'+(rows||'<tr><td colspan="8">出走表データなし</td></tr>')+'</tbody></table></div><div class="racecard-actions"><button class="btn primary" data-analyze-race="'+n+'">📊 このレースの機力分析</button><button class="btn secondary" data-entry-race="'+n+'">✍️ このレースを入力</button></div></article>';
  }).join('');
- $('racecardList').querySelectorAll('[data-analyze-race]').forEach(b=>b.onclick=()=>{homeRace=Number(b.dataset.analyzeRace);$('analysisRaceDate').value=date;$('analysisRaceVenue').value=homeVenue;$('analysisRaceNo').value=String(homeRace);showTab('analysis');runAnalysisForSelectedRace();});
+ $('racecardList').querySelectorAll('[data-analyze-race]').forEach(b=>b.onclick=()=>{homeRace=Number(b.dataset.analyzeRace);$('analysisRaceDate').value=date;$('analysisRaceVenue').value=homeVenue;$('analysisRaceNo').value=String(homeRace);$('analysisBackLabel').textContent=homeVenue+'｜'+date;showTab('analysis');runAnalysisForSelectedRace();});
  $('racecardList').querySelectorAll('[data-entry-race]').forEach(b=>b.onclick=()=>{const n=Number(b.dataset.entryRace);showTab('entry');$('venue').value=homeVenue;$('raceDate').value=date;$('raceNo').value=String(n);$('fetchMsg').textContent='開催一覧で選択したレースです。「選択レースのデータを取得」から出走表を読み込めます。';});
 }
 
