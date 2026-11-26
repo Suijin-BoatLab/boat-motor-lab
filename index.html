@@ -1574,7 +1574,7 @@ async function loadRaceShobugake({date,venue,raceNo,racers,panel,button}){
   if(readError)throw readError;
   const found=rows||[];
   const body=found.length?'<div class="tablewrap"><table class="racecard-table"><thead><tr><th>艇</th><th>選手</th><th>勝負がけ情報（原文）</th></tr></thead><tbody>'+found.map(x=>'<tr><td>'+esc(x.lane)+'</td><td>'+esc(x.racer_name)+'<br>'+esc(x.racer_registration_no)+'</td><td>'+esc(x.shobugake_text)+'</td></tr>').join('')+'</tbody></table></div>':'<p class="home-sub">このレースでは勝負がけに関する記述を確認できませんでした。記述がないことを「勝負がけ対象外」とは判定しません。</p>';
-  panel.innerHTML='<div class="panel"><div class="racecard-heading"><h3>🔥 勝負がけ情報｜'+esc(venue)+' '+raceNo+'R</h3><span class="muted small">'+found.length+'人</span></div><p class="home-sub">取得 '+Number(data.participants||0)+'選手／記述検出 '+Number(data.found||0)+'件／保存 '+Number(data.saved||0)+'件</p>'+body+'<p class="small muted">出典：<a href="'+esc(data.url||'https://www.kyoteibiyori.com/')+'" target="_blank" rel="noopener">ボートレース日和</a>。原文を保存しています。</p></div>';
+  panel.innerHTML='<div class="panel"><div class="racecard-heading"><h3>🔥 勝負がけ情報｜'+esc(venue)+' '+raceNo+'R</h3><span class="muted small">'+found.length+'人</span></div><p class="home-sub">取得 '+Number(data.participants||0)+'選手／記述検出 '+Number(data.found||0)+'件／保存 '+Number(data.saved||0)+'件</p>'+body+'</div>';
  }catch(e){panel.innerHTML='<div class="panel"><b>🔥 勝負がけ情報</b><p class="home-sub">取得エラー：'+esc(e?.message||e)+'</p></div>'}
  finally{if(button)button.disabled=false}
 }
