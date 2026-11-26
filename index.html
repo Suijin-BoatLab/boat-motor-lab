@@ -1221,7 +1221,7 @@ async function syncSelectedRaceResult(){
  btn.disabled=true;status.textContent='公式公開データをもとに結果・払戻を取得しています…';panel.innerHTML='';
  try{
   const {data,error}=await cloudClient.functions.invoke('sync-race-results',{body:{date,venue_code:code,race_no:race}});
-  if(error){const detail=typeof error?.context?.body?.text==='function'?await error.context.body.text().catch(()=> ''):'';throw new Error(detail||error.message||'結果取得に失敗しました')}
+  if(error){let detail='';try{if(typeof error?.context?.text==='function')detail=await error.context.text();else if(typeof error?.context?.body?.text==='function')detail=await error.context.body.text();}catch(_){}throw new Error(detail||error.message||'結果取得に失敗しました')}
   if(data?.error)throw new Error(data.error);
   // 艇愛DBの実データ形式は source_data.entries[]。
   // st_flag / st は本番結果の値のみを確認し、展示 preview は参照しない。
@@ -1304,7 +1304,7 @@ async function loadRaceMotors(){
   const {data,error}=await cloudClient.functions.invoke('analyze-race-motors',{body:{date,venue_code:code,race_no:homeRace}});
   if(requestId!==motorRequestId)return;
   if(error){
-   const detail=typeof error?.context?.body?.text==='function'?await error.context.body.text().catch(()=> ''):'';
+   let detail='';try{if(typeof error?.context?.text==='function')detail=await error.context.text();else if(typeof error?.context?.body?.text==='function')detail=await error.context.body.text();}catch(_){}
    throw new Error(detail||error.message||'分析サーバーとの通信に失敗しました');
   }
   if(data?.error)throw new Error(data.error);
@@ -1332,7 +1332,7 @@ async function loadRaceMotors(){
    const h7=windowFor(c,7),h30=windowFor(c,30),h90=windowFor(c,90),h180=windowFor(c,180),score=scores.has(c.lane)?scores.get(c.lane):null,coverage=scoreParts.get(c.lane)?.components?.length||0,motorScore=motorScores.has(c.lane)?motorScores.get(c.lane):null,scoreReasons=(scoreParts.get(c.lane)?.components||[]).join('・');
    const label=score===null?'評価データ不足':score>=70?'総合評価：高':score>=40?'総合評価：中':'総合評価：低';
    const cls=score===null?'trend-flat':score>=60?'trend-up':score<40?'trend-down':'trend-flat';
-   const current=c.current||{},r=c.racer||{},rates=c.motor_rates||{},racer90=r.history_90d||{},startTime=r.start_time||{};
+   const current=c.current||{},r=c.racer||{},rates=c.motor_rates||{},racer90=r.history_90d||{},startTime=r.start_time||{},startPrediction=r.start_prediction||{},startComparison=r.start_comparison||{status:'比較データなし',delta:null};
    const st10=startTime.last10||{},st90=startTime.last90d||{},stVenue=startTime.venue||{},courseSt=startTime.by_course||{},coursePerformance=r.course_performance||{},courseFit=r.course_fit||{},decision=r.decision_methods||{};const f=r.f_history||{},fr=r.f_return_performance||{};
    const stLabel=(v,n)=>v===null||v===undefined?'—（'+(Number(n)||0)+'件）':Number(v).toFixed(3)+'秒（'+(Number(n)||0)+'件）';
    const decisionText=Object.entries(decision.method_rate||{}).sort((a,b)=>Number(b[1])-Number(a[1])).map(([k,v])=>safe(k)+' '+(Number(v)*100).toFixed(1)+'%').join('／')||'未蓄積';
