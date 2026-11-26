@@ -84,8 +84,8 @@ Deno.serve(async (req: Request) => {
       return json({ error: "日付はYYYY-MM-DDで指定してください" }, 400);
     }
     const targetsInput = body?.targets;
-    if (!Array.isArray(targetsInput) || targetsInput.length < 1 || targetsInput.length > 24) {
-      return json({ error: "targetsは1〜24レースで指定してください" }, 400);
+    if (!Array.isArray(targetsInput) || targetsInput.length < 1 || targetsInput.length > 288) {
+      return json({ error: "targetsは1〜288レースで指定してください" }, 400);
     }
     const targets: Target[] = [];
     for (const item of targetsInput) {
@@ -107,7 +107,7 @@ Deno.serve(async (req: Request) => {
     const summary: Record<string, unknown>[] = [];
     let savedEntries = 0;
 
-    for (const target of uniqueTargets) {
+    await Promise.all(uniqueTargets.map(async (target) => {
       try {
         const race = apiData?.programs?.stadiums?.[String(target.venue_code)]?.races?.[String(target.race_no)];
         if (!race) {
@@ -181,7 +181,7 @@ Deno.serve(async (req: Request) => {
       } catch (error) {
         summary.push({ ...target, status: "error", saved: 0, message: error instanceof Error ? error.message : "取得エラー" });
       }
-    }
+    }));
     const checkRows = summary.map((item: any) => ({
       user_id: auth.user.id,
       race_date: date,
