@@ -246,7 +246,7 @@ table{min-width:520px}
 .racecard-empty{padding:14px;color:#718097;text-align:center}
 @media(max-width:600px){.racecard-table{font-size:12px}.racecard-table th,.racecard-table td{padding:8px 6px}.racecard-heading{align-items:center}}
 
-</style>
+\n.venue-meta.venue-cutoff{font-weight:800;font-variant-numeric:tabular-nums}\n.venue-meta.cutoff-urgent{color:#d92d20!important;font-weight:950;font-variant-numeric:tabular-nums}\n</style>
 </head>
 <body>
 <header><div class="brand">BOAT <span>MOTOR</span> LAB</div><div class="sub">MOTOR PERFORMANCE & RACE HISTORY</div><nav><button class="active" data-tab="home">🚩<br>開催一覧</button><button data-tab="entry">✍️<br>データ入力</button><button data-tab="analysis">📊<br>機力分析</button><button data-tab="history">🗂️<br>記録一覧</button><button data-tab="fHistory">🚩<br>F管理</button><button data-tab="backtest">🎯<br>検証</button><button data-tab="backup">☁️<br>保存・設定</button></nav></header>
@@ -1236,7 +1236,45 @@ $('homeDate').value=localDate();$('homeDateLabel').textContent=$('homeDate').val
 document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>{showTab(b.dataset.tab);document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('active',x===b));}));
 $('reloadSchedule').onclick=loadSchedule;$('homeDate').onchange=()=>{ $('homeDateLabel').textContent=$('homeDate').value;loadSchedule(); };
 async function loadSchedule(){const requestId=++scheduleRequestId,d=$('homeDate').value,compact=d.replaceAll('-','');$('scheduleStatus').textContent='全国24場の開催情報を取得中…（最大15秒）';try{const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),15000);let r;try{r=await fetch('https://boatraceopenapi.github.io/api/v1/'+d.slice(0,4)+'/'+compact+'.json',{cache:'no-store',signal:controller.signal});}finally{clearTimeout(timeout)}if(requestId!==scheduleRequestId)return;if(!r.ok)throw Error(r.status===404?'開催データがまだ公開されていないか、開催がありません':'開催情報取得エラー '+r.status);const payload=await r.json();if(requestId!==scheduleRequestId)return;homePayload=payload;renderVenues();const st=homePayload?.programs?.stadiums||{};const first=venues.find((v,i)=>Object.keys(st[String(i+1)]?.races||{}).length>0);if(first){homeVenue=first;const nums=Object.keys(st[String(venueCodes[first])] ?.races||{}).map(Number).filter(n=>n>=1&&n<=12).sort((a,b)=>a-b);homeRace=nums.includes(1)?1:(nums[0]||1);renderVenues();renderRaces();if(nums.length)loadRaceMotors();}else{homeVenue='';$('selectedVenueTitle').textContent='開催中の競艇場がありません';$('racePills').innerHTML='';$('raceMotorCards').innerHTML='';$('selectedRaceTitle').textContent='6艇のモーター機力比較';$('raceAnalysisStatus').textContent='この日の出走データはありません。';}$('scheduleStatus').textContent=d+' の開催情報';}catch(e){if(requestId!==scheduleRequestId)return;homePayload=null;homeVenue='';renderVenues();$('selectedVenueTitle').textContent='開催情報を表示できません';$('racePills').innerHTML='';$('raceMotorCards').innerHTML='';$('selectedRaceTitle').textContent='6艇のモーター機力比較';$('raceAnalysisStatus').textContent='開催情報を取得できません。';$('scheduleStatus').textContent=(e.name==='AbortError'?'通信が15秒以内に完了しませんでした。通信先APIまたは通信環境を確認してください':(e.message||'不明なエラー'))+'。日付を変えるか、時間をおいて再読み込みしてください。';}}
-function renderVenues(){const st=homePayload?.programs?.stadiums||{};$('venueGrid').innerHTML=venues.map((v,i)=>{const data=st[String(i+1)],rs=data?.races||{},active=!!data;return '<button class="venue-card '+(active?'active':'')+'" data-v="'+v+'"><strong>'+v+(favorites.includes(v)?' ♥':'')+'</strong><span class="venue-meta '+(active?'grade':'')+'">'+(active?'開催中':'開催なし')+'</span><span class="venue-meta">'+(active?Object.keys(rs).length+'R':'—')+'</span></button>'}).join('');$('venueGrid').querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>{if(homeVenue===b.dataset.v){favorites=favorites.includes(homeVenue)?favorites.filter(x=>x!==homeVenue):[...favorites,homeVenue];localStorage.setItem('bml_favs',JSON.stringify(favorites));}homeVenue=b.dataset.v;renderVenues();const nums=Object.keys(homePayload?.programs?.stadiums?.[String(venueCodes[homeVenue])]?.races||{}).map(Number).filter(n=>n>=1&&n<=12).sort((a,b)=>a-b);homeRace=nums.includes(1)?1:(nums[0]||1);renderRaces();renderVenueRaceCards();showTab('racecards');});}
+function raceCutoffDate(race,date){
+ const raw=String(race?.closed_at||'').trim();
+ if(!raw)return null;
+ // The schedule API normally supplies a full local timestamp. Also accept HH:mm[:ss].
+ if(/^\\d{1,2}:\\d{2}(:\\d{2})?$/.test(raw)){
+  const parts=raw.split(':').map(Number);
+  const d=new Date(date+'T00:00:00');
+  d.setHours(parts[0],parts[1],parts[2]||0,0);
+  return d;
+ }
+ const parsed=new Date(raw);
+ return Number.isNaN(parsed.getTime())?null:parsed;
+}
+function getVenueLiveRace(racesForVenue,date,now=new Date()){
+ const entries=Object.entries(racesForVenue||{}).map(([key,race])=>({number:Number(key),race,cutoff:raceCutoffDate(race,date)})).filter(x=>x.number>=1&&x.number<=12&&x.cutoff).sort((a,b)=>a.cutoff-b.cutoff);
+ if(!entries.length)return null;
+ if(date>localDate())return entries[0];
+ if(date<localDate())return entries[entries.length-1];
+ return entries.find(x=>x.cutoff.getTime()>now.getTime())||null;
+}
+function renderVenues(){
+ const st=homePayload?.programs?.stadiums||{},date=$('homeDate').value,now=new Date();
+ $('venueGrid').innerHTML=venues.map((v,i)=>{
+  const data=st[String(i+1)],rs=data?.races||{},active=!!data,next=getVenueLiveRace(rs,date,now);
+  const cutoff=next?.cutoff,minutes=cutoff?Math.ceil((cutoff-now)/60000):null,urgent=minutes!==null&&minutes<=5&&minutes>0;
+  const status=active?(next?'投票受付中':'本日終了'):'開催なし';
+  const raceLabel=next?next.number+'R':'—';
+  const timeLabel=next?cutoff.toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit',hour12:false})+'締切':'—';
+  return '<button class="venue-card '+(active?'active':'')+'" data-v="'+v+'"><strong>'+v+(favorites.includes(v)?' ♥':'')+'</strong><span class="venue-meta '+(next?'grade':'')+'">'+status+'</span><span class="venue-meta '+(urgent?'cutoff-urgent':'venue-cutoff')+'">'+(next?raceLabel+'　'+timeLabel:raceLabel)+'</span></button>';
+ }).join('');
+ $('venueGrid').querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>{
+  if(homeVenue===b.dataset.v){favorites=favorites.includes(homeVenue)?favorites.filter(x=>x!==homeVenue):[...favorites,homeVenue];localStorage.setItem('bml_favs',JSON.stringify(favorites));}
+  homeVenue=b.dataset.v;renderVenues();
+  const nums=Object.keys(homePayload?.programs?.stadiums?.[String(venueCodes[homeVenue])]?.races||{}).map(Number).filter(n=>n>=1&&n<=12).sort((a,b)=>a-b);
+  const live=getVenueLiveRace(homePayload?.programs?.stadiums?.[String(venueCodes[homeVenue])]?.races||{},date,new Date());
+  homeRace=live?.number||(nums.includes(1)?1:(nums[0]||1));
+  renderRaces();renderVenueRaceCards();showTab('racecards');
+ });
+}
 function escapeRaceText(v){return String(v??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function renderVenueRaceCards(){
  const venue=homeVenue,date=$('homeDate').value,rs=homePayload?.programs?.stadiums?.[String(venueCodes[venue])]?.races||{};
@@ -1299,6 +1337,10 @@ setInterval(async()=>{
  try{await loadSavedRaceResultsForVenue($('racecardDateLabel').textContent||$('homeDate').value,homeVenue);}
  finally{savedResultRefreshBusy=false;}
 },60000);
+// Keep each venue's active race and five-minute warning in sync with the local clock.
+let venueClockTimer=null;
+if(!venueClockTimer)venueClockTimer=setInterval(()=>{if(homePayload&&$('home')&&!$('home').classList.contains('hidden'))renderVenues();},10000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&homePayload&&$('home')&&!$('home').classList.contains('hidden'))renderVenues();});
 function renderRaces(){const rs=homePayload?.programs?.stadiums?.[String(venueCodes[homeVenue])]?.races||{};$('selectedVenueTitle').textContent=homeVenue+'｜レース選択';const nums=Object.keys(rs).map(Number).filter(n=>n>=1&&n<=12).sort((a,b)=>a-b);$('racePills').innerHTML=nums.length?nums.map(n=>'<button class="race-pill '+(n===homeRace?'active':'')+'" data-r="'+n+'">'+n+'R</button>').join(''):'<span class="home-sub">この日の開催情報はありません。</span>';if(!nums.length){$('raceMotorCards').innerHTML='';$('selectedRaceTitle').textContent=homeVenue+'｜モーター比較';$('raceAnalysisStatus').textContent='この競艇場の開催データはありません。';return}$('racePills').querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{homeRace=Number(b.dataset.r);renderRaces();loadRaceMotors();});}
 function fmt(v){return v===null||v===undefined||v===''?'—':v}
 function mean(rows,k){const a=rows.map(x=>x?.[k]).filter(v=>v!==null&&v!==undefined&&v!=='').map(Number).filter(Number.isFinite);return a.length?a.reduce((p,c)=>p+c,0)/a.length:null}
