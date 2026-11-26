@@ -1223,42 +1223,29 @@ async function syncSelectedRaceResult(){
   const {data,error}=await cloudClient.functions.invoke('sync-race-results',{body:{date,venue_code:code,race_no:race}});
   if(error){const detail=typeof error?.context?.body?.text==='function'?await error.context.body.text().catch(()=> ''):'';throw new Error(detail||error.message||'結果取得に失敗しました')}
   if(data?.error)throw new Error(data.error);
-  // 本番結果の racers を対象に、F表記または負の start_timing を検出する。
-  // preview.racers（展示ST）は対象外。公開API仕様の result.racers を優先する。
+  // 艇愛DBの実データ形式は source_data.entries[]。
+  // st_flag / st は本番結果の値のみを確認し、展示 preview は参照しない。
   let autoFCount=0,autoFSkipped=0,autoFWarning='';
   try{
    const source=data?.source_data??{};
-   const resultGroups=[];
-   const walkResults=(node)=>{
-    if(!node||typeof node!=='object')return;
-    if(Array.isArray(node)){node.forEach(walkResults);return;}
-    if(node.result&&typeof node.result==='object'&&node.result.racers&&typeof node.result.racers==='object'){
-     resultGroups.push(node.result.racers);
-    }
-    // 取得元によってはレース結果オブジェクト自体が渡される場合がある。
-    if(node.racers&&typeof node.racers==='object'&&
-       (node.technique_number!==undefined||node.result_status!==undefined||node.payouts!==undefined)){
-     resultGroups.push(node.racers);
-    }
-    Object.values(node).forEach(walkResults);
-   };
-   walkResults(source);
-   const normalizeF=value=>String(value??'').trim().toUpperCase().replace(/[\\s　]/g,'');
+   const entries=Array.isArray(source.entries)?source.entries:[];
    const found=new Map();
-   for(const racers of resultGroups){
-    for(const [entryKey,entry] of Object.entries(racers)){
-     if(!entry||typeof entry!=='object')continue;
-     const raw=entry.start_timing??entry.start_timing_source??entry.st??entry.actual_st??'';
-     const normalized=normalizeF(raw);
-     const isF=/^F(?:[.．+＋-]?\\d*)?$/.test(normalized)||
-       (typeof raw==='number'&&Number.isFinite(raw)&&raw<0)||
-       (typeof raw==='string'&&/^-0?\\.\\d+$/.test(raw.trim()));
-     if(!isF)continue;
-     const reg=String(entry.number??entry.regno??entry.racer_registration_no??entry.registration_no??'').replace(/\\D/g,'');
-     const lane=Number(entry.entry_number??entry.boat_no??entry.lane??entryKey);
-     if(!/^\\d{4}$/.test(reg)||!Number.isInteger(lane)||lane<1||lane>6){autoFSkipped++;continue;}
-     found.set(reg+':'+lane,{reg,lane,name:entry.name??entry.racer_name??null,rawSt:String(raw||'F')});
-    }
+   const isOfficialF=(entry)=>{
+    const flag=String(entry.st_flag??'').trim().toUpperCase();
+    const st=entry.st;
+    const flagIsF=/^F(?:[.．+＋-]?\\d*)?$/.test(flag);
+    const stText=String(st??'').trim().toUpperCase().replace(/[\\s　]/g,'');
+    const stIsF=/^F(?:[.．+＋-]?\\d*)?$/.test(stText);
+    const stIsNegative=(typeof st==='number'&&Number.isFinite(st)&&st<0)||
+      (typeof st==='string'&&/^-0?\\.\\d+$/.test(st.trim()));
+    return flagIsF||stIsF||stIsNegative;
+   };
+   for(const entry of entries){
+    if(!entry||typeof entry!=='object'||!isOfficialF(entry))continue;
+    const reg=String(entry.regno??entry.racer_registration_no??'').replace(/\\D/g,'');
+    const lane=Number(entry.boat);
+    if(!/^\\d{4}$/.test(reg)||!Number.isInteger(lane)||lane<1||lane>6){autoFSkipped++;continue;}
+    found.set(reg+':'+lane,{reg,lane,name:entry.name??null,rawSt:String(entry.st_flag??entry.st??'F')});
    }
    for(const incident of found.values()){
     const {data:existing,error:lookupError}=await cloudClient.from('racer_f_incidents')
@@ -1271,11 +1258,15 @@ async function syncSelectedRaceResult(){
      user_id:cloudUser.id,racer_registration_no:incident.reg,racer_name:incident.name,
      incident_date:date,venue_code:code,venue_name:homeVenue,race_no:race,lane:incident.lane,
      f_type:'本番F',source_name:'race_result_auto',
-     source_data:{entry_method:'本番結果 result.racers の start_timing から自動連携',actual_st:incident.rawSt}
+     source_data:{entry_method:'艇愛DB本番結果 entries[] の st_flag / st から自動連携',actual_st_raw:incident.rawSt}
     });
-    if(insertError)throw insertError;
+    if(insertError){
+     if(insertError.code==='23505'){autoFSkipped++;continue;}
+     throw insertError;
+    }
     autoFCount++;
    }
+   if(!Array.isArray(source.entries))autoFWarning='取得元に entries[] がありません。F判定は実行していません。';
   }catch(fSyncError){autoFWarning=fSyncError?.message||String(fSyncError);}
   const raw=data?.source_data??{},keys=Object.keys(raw);
   const safe=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
