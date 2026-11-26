@@ -1494,11 +1494,17 @@ async function collectOriginalExhibitionRange(){
    status.textContent='過去データ収集中 '+(n+1)+'/'+days+'日目：'+date+'（24場・全12R）';
    try{
     const targets=[];for(let venue_code=1;venue_code<=24;venue_code++)for(let race_no=1;race_no<=12;race_no++)targets.push({venue_code,race_no});
-    const {data,error}=await cloudClient.functions.invoke('collect-original-exhibition',{body:{date,targets}});
-    if(error)throw new Error(error.message||'通信エラー');
-    if(data?.error){if(/未公開|開催がありません/.test(data.error)){emptyDays++;details.push(date+'：開催データなし');continue}throw new Error(data.error)}
-    const items=data.summary||[],ok=items.filter(x=>x.status==='saved');savedRaces+=ok.length;savedBoats+=Number(data.saved_entries)||0;checkedRaces+=Number(data.checked_races)||0;
-    const errs=items.filter(x=>x.status==='error');if(errs.length){failedDays++;details.push(date+'：取得エラー '+errs.length+'レース')}
+    let dayHadData=false,dayErrors=0;
+    for(let offset=0;offset<targets.length;offset+=24){
+     const batch=targets.slice(offset,offset+24);
+     const {data,error}=await cloudClient.functions.invoke('collect-original-exhibition',{body:{date,targets:batch}});
+     if(error)throw new Error(error.message||'通信エラー');
+     if(data?.error){if(/未公開|開催がありません/.test(data.error)){if(!dayHadData){emptyDays++;details.push(date+'：開催データなし')}break}throw new Error(data.error)}
+     dayHadData=true;const items=data.summary||[],ok=items.filter(x=>x.status==='saved');savedRaces+=ok.length;savedBoats+=Number(data.saved_entries)||0;checkedRaces+=Number(data.checked_races)||0;
+     dayErrors+=items.filter(x=>x.status==='error').length;
+     status.textContent='過去データ収集中 '+(n+1)+'/'+days+'日目：'+date+'（'+Math.min(offset+batch.length,targets.length)+'/288レース確認）';
+    }
+    if(dayErrors){failedDays++;details.push(date+'：取得エラー '+dayErrors+'レース')}
    }catch(e){failedDays++;details.push(date+'：'+(e.message||'取得失敗'))}
   }
   status.textContent='期間収集完了：'+from+'〜'+to+'／保存 '+savedRaces+'レース・'+savedBoats+'艇';
