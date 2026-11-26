@@ -425,7 +425,7 @@ table{min-width:520px}
   <div class="panel"><h2>データ件数</h2><div id="backupCount" class="muted">0レース</div><p class="small muted" id="autoBackupStatus">自動バックアップ状態を確認中</p><div class="actions"><button class="btn secondary" id="restoreLocal">自動バックアップから復元</button></div></div>
 </section>
 </main>
-<footer>BOAT MOTOR LAB v19 · レース別機力分析 / データは入力者の確認を前提とした分析用記録です</footer>
+<footer>BOAT MOTOR LAB v20 · レース別機力分析 / データは入力者の確認を前提とした分析用記録です</footer>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const venues=['桐生','戸田','江戸川','平和島','多摩川','浜名湖','蒲郡','常滑','津','三国','びわこ','住之江','尼崎','鳴門','丸亀','児島','宮島','徳山','下関','若松','芦屋','福岡','唐津','大村'];
@@ -1308,6 +1308,11 @@ async function syncSelectedRaceResult(options={}){
  const status=$(options.statusId||'raceResultStatus'),panel=$(options.panelId||'raceResultPanel'),btn=options.button||$('syncRaceResult');
  if(!cloudClient||!cloudUser){status.textContent='結果データを保存するにはログインしてください。';return}
  if(!date||!code||!race){status.textContent='開催日・競艇場・レース番号を選択してください。';return}
+ // 自動巡回で保存済みの結果を最優先し、手動取得APIの未公開判定で上書きしない。
+ try{
+  await loadSavedRaceResultsForVenue(date,venue);
+  if(panel.innerHTML.trim()){return;}
+ }catch(savedLoadError){console.warn('保存済み結果の確認に失敗。個別取得を続行します。',savedLoadError);}
  btn.disabled=true;status.textContent='公式公開データをもとに結果・払戻を取得しています…';panel.innerHTML='';
  try{
   const {data,error}=await cloudClient.functions.invoke('sync-race-results',{body:{date,venue_code:code,race_no:race}});
