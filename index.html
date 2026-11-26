@@ -174,8 +174,8 @@ table{min-width:520px}
   .f-history-table-wrap tbody { display: block; width: 100%; }
   .f-history-table-wrap tr[data-f-row] {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 10px;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 12px;
     padding: 12px;
     margin-bottom: 12px;
     border: 1px solid #d5deeb;
@@ -184,6 +184,7 @@ table{min-width:520px}
     box-shadow: 0 2px 8px rgba(20,35,60,.06);
   }
   .f-history-table-wrap td {
+    grid-column: 1 / -1 !important;
     display: block;
     min-width: 0;
     padding: 4px 0 !important;
