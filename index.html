@@ -1518,19 +1518,22 @@ function getVenueLiveRace(racesForVenue,date,now=new Date()){
 function renderVenues(){
  const st=homePayload?.programs?.stadiums||{},date=$('homeDate').value,now=new Date();
  $('venueGrid').innerHTML=venues.map((v,i)=>{
-  const data=st[String(i+1)],rs=data?.races||{},active=!!data,next=getVenueLiveRace(rs,date,now);
+  const stadiumCode=venueCodes[v],data=st[String(stadiumCode)],rs=data?.races||{},active=!!data,next=getVenueLiveRace(rs,date,now);
   const cutoff=next?.cutoff,minutes=cutoff?Math.ceil((cutoff-now)/60000):null,urgent=minutes!==null&&minutes<=5&&minutes>0;
   const status=active?(next?'投票受付中':'本日終了'):'開催なし';
   const raceLabel=next?next.number+'R':'—';
   const timeLabel=next?cutoff.toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit',hour12:false})+'締切':'—';
-  return '<button class="venue-card '+(active?'active':'')+'" data-v="'+v+'"><strong>'+v+(favorites.includes(v)?' ♥':'')+'</strong><span class="venue-meta '+(next?'grade':'')+'">'+status+'</span><span class="venue-meta '+(urgent?'cutoff-urgent':'venue-cutoff')+'">'+(next?raceLabel+'　'+timeLabel:raceLabel)+'</span></button>';
+  return '<button class="venue-card '+(active?'active':'')+'" data-v="'+v+'" data-race="'+(next?next.number:'')+'"><strong>'+v+(favorites.includes(v)?' ♥':'')+'</strong><span class="venue-meta '+(next?'grade':'')+'">'+status+'</span><span class="venue-meta '+(urgent?'cutoff-urgent':'venue-cutoff')+'">'+(next?raceLabel+'　'+timeLabel:raceLabel)+'</span></button>';
  }).join('');
  $('venueGrid').querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>{
   if(homeVenue===b.dataset.v){favorites=favorites.includes(homeVenue)?favorites.filter(x=>x!==homeVenue):[...favorites,homeVenue];localStorage.setItem('bml_favs',JSON.stringify(favorites));}
   homeVenue=b.dataset.v;renderVenues();
-  const nums=Object.keys(homePayload?.programs?.stadiums?.[String(venueCodes[homeVenue])]?.races||{}).map(Number).filter(n=>n>=1&&n<=12).sort((a,b)=>a-b);
-  const live=getVenueLiveRace(homePayload?.programs?.stadiums?.[String(venueCodes[homeVenue])]?.races||{},date,new Date());
-  homeRace=live?.number||(nums.includes(1)?1:(nums[0]||1));
+  const selectedRaces=homePayload?.programs?.stadiums?.[String(venueCodes[homeVenue])]?.races||{};
+  const nums=Object.keys(selectedRaces).map(Number).filter(n=>n>=1&&n<=12).sort((a,b)=>a-b);
+  // カードに表示した次レース番号をそのまま引き継ぎ、別計算によるズレを防ぐ。
+  const displayedRace=Number(b.dataset.race);
+  const live=getVenueLiveRace(selectedRaces,date,new Date());
+  homeRace=(displayedRace>=1&&displayedRace<=12)?displayedRace:(live?.number||(nums.includes(1)?1:(nums[0]||1)));
   renderRaces();renderVenueRaceCards();showTab('racecards');
   // 開催一覧カードに表示した次レースへ直接移動する（出走表一覧の先頭1Rには留まらない）。
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
