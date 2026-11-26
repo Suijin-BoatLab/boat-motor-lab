@@ -140,6 +140,7 @@ Deno.serve(async (req: Request) => {
             boat_number: Number(racer.boat_number) || null,
             exhibition_time: numberOrNull(previewRacer.exhibition_time),
             lap_time: original.lap_time ?? null,
+            half_lap_time: original.half_lap_time ?? null,
             straight_time: original.straight_time ?? null,
             turn_time: original.turn_time ?? null,
             exhibition_st_raw: previewRacer.start_timing == null ? null : String(previewRacer.start_timing),
@@ -172,6 +173,7 @@ Deno.serve(async (req: Request) => {
           ...target, status: "saved", saved: safeRows.length,
           metrics: {
             lap: rows.filter((x: any) => x.lap_time != null).length,
+            half_lap: rows.filter((x: any) => x.half_lap_time != null).length,
             turn: rows.filter((x: any) => x.turn_time != null).length,
             straight: rows.filter((x: any) => x.straight_time != null).length,
           },
