@@ -314,7 +314,7 @@ table{min-width:520px}
  <div class="panel">
   <div class="actions"><button class="btn secondary" id="refreshFHistory">F履歴を更新</button></div>
   <h2>全選手のF履歴を補完</h2>
-  <p class="small muted">保存済みの選手履歴に登録されている選手を対象に、艇愛ボートレースDBから直近180日以内の全出走結果を自動取得し、本番Fを登録します。内部では通信負荷を抑えるため6名ずつ処理します。対象は既存履歴に登場した選手です。</p>
+  <p class="small muted">選手マスターに登録された全選手を対象に、艇愛ボートレースDBから直近180日以内の全出走結果を自動取得し、本番Fを登録します。内部では通信負荷を抑えるため6名ずつ処理します。</p>
   <div class="grid">
    <div class="field"><label for="fBackfillFrom">取得開始日（最大180日）</label><input id="fBackfillFrom" type="date"></div>
    <div class="field"><label for="fBackfillTo">取得終了日</label><input id="fBackfillTo" type="date"></div>
@@ -322,7 +322,7 @@ table{min-width:520px}
   </div>
   <div class="actions"><button class="btn primary" id="runFBackfill">全選手のF履歴を一括取得</button></div>
   <p class="small muted" id="fBackfillStatus" aria-live="polite">ボタンを1回押すと、対象選手を6名ずつ自動で最後まで取得します。</p>
-  <p class="small muted">データ提供：<a href="https://boatrace-db.jp/" target="_blank" rel="noopener">艇愛ボートレースDB</a>。更新は原則1日1回です。過去180日より前のF履歴や、未登録選手の情報はこの処理だけでは補完されません。</p>
+  <p class="small muted">データ提供：<a href="https://boatrace-db.jp/" target="_blank" rel="noopener">艇愛ボートレースDB</a>。更新は原則1日1回です。過去180日より前のF履歴はこの処理だけでは補完されません。選手名簿は「保存・設定」の選手マスターで管理します。</p>
   <h2>F履歴を追加</h2>
   <div class="grid">
    <div class="field"><label for="fNewReg">選手登録番号</label><input id="fNewReg" inputmode="numeric" placeholder="例：3812"></div>
