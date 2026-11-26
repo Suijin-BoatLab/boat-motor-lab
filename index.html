@@ -246,7 +246,10 @@ table{min-width:520px}
 .racecard-empty{padding:14px;color:#718097;text-align:center}
 @media(max-width:600px){.racecard-table{font-size:12px}.racecard-table th,.racecard-table td{padding:8px 6px}.racecard-heading{align-items:center}}
 
-\n.venue-meta.venue-cutoff{font-weight:800;font-variant-numeric:tabular-nums}\n.venue-meta.cutoff-urgent{color:#d92d20!important;font-weight:950;font-variant-numeric:tabular-nums}\n</style>
+
+.venue-meta.venue-cutoff{font-weight:800;font-variant-numeric:tabular-nums}
+.venue-meta.cutoff-urgent{color:#d92d20!important;font-weight:950;font-variant-numeric:tabular-nums}
+</style>
 </head>
 <body>
 <header><div class="brand">BOAT <span>MOTOR</span> LAB</div><div class="sub">MOTOR PERFORMANCE & RACE HISTORY</div><nav><button class="active" data-tab="home">🚩<br>開催一覧</button><button data-tab="entry">✍️<br>データ入力</button><button data-tab="analysis">📊<br>機力分析</button><button data-tab="history">🗂️<br>記録一覧</button><button data-tab="fHistory">🚩<br>F管理</button><button data-tab="backtest">🎯<br>検証</button><button data-tab="backup">☁️<br>保存・設定</button></nav></header>
@@ -1240,7 +1243,7 @@ function raceCutoffDate(race,date){
  const raw=String(race?.closed_at||'').trim();
  if(!raw)return null;
  // The schedule API normally supplies a full local timestamp. Also accept HH:mm[:ss].
- if(/^\\d{1,2}:\\d{2}(:\\d{2})?$/.test(raw)){
+ if(/^\d{1,2}:\d{2}(:\d{2})?$/.test(raw)){
   const parts=raw.split(':').map(Number);
   const d=new Date(date+'T00:00:00');
   d.setHours(parts[0],parts[1],parts[2]||0,0);
