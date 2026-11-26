@@ -251,7 +251,7 @@ table{min-width:520px}
 <body>
 <header><div class="brand">BOAT <span>MOTOR</span> LAB</div><div class="sub">MOTOR PERFORMANCE & RACE HISTORY</div><nav><button class="active" data-tab="home">🚩<br>開催一覧</button><button data-tab="entry">✍️<br>データ入力</button><button data-tab="analysis">📊<br>機力分析</button><button data-tab="history">🗂️<br>記録一覧</button><button data-tab="fHistory">🚩<br>F管理</button><button data-tab="backtest">🎯<br>検証</button><button data-tab="backup">☁️<br>保存・設定</button></nav></header>
 <main>
-<section id="home"><div class="home-toolbar"><b id="homeDateLabel">開催日</b><input id="homeDate" type="date"><button class="btn primary" id="reloadSchedule">開催情報更新</button></div><p class="home-sub" id="scheduleStatus">開催情報を取得しています…</p><p class="home-sub">データ出典：<a href="https://boatraceopenapi.github.io/" target="_blank" rel="noopener">Boatrace Open API（非公式）</a>。更新遅延や欠損の可能性があるため、重要な情報は公式発表でも確認してください。</p><div class="home-title">全国24場 開催一覧</div><div class="venue-grid" id="venueGrid"></div><div class="panel hidden"><div class="home-title" id="selectedVenueTitle">競艇場を選択</div><div class="race-pills" id="racePills"></div></div><div class="panel"><div class="home-title" id="selectedRaceTitle">6艇のモーター機力比較</div><p class="home-sub">過去30日・180日の展示タイム平均、記録件数、F・1着記録、上昇・下降傾向を表示します。周回・直線・回り足の過去データは公開APIに含まれないため、この比較には使用しません。数値は同一競艇場内の参考比較です。</p><p class="home-sub" id="raceAnalysisStatus">競艇場とレース番号を選択してください。</p><div class="actions"><button class="btn primary" id="openSelectedRaceEntry">✍️ このレースを入力</button><button class="btn secondary" id="syncRaceResult">🏁 このレースの結果・払戻を取得</button></div><p class="home-sub" id="raceResultStatus">レース終了後に結果を取得できます。</p><div id="raceResultPanel"></div><div id="raceMotorCards"></div></div></section>
+<section id="home"><div class="home-toolbar"><b id="homeDateLabel">開催日</b><input id="homeDate" type="date"><button class="btn primary" id="reloadSchedule">開催情報更新</button></div><p class="home-sub" id="scheduleStatus">開催情報を取得しています…</p><p class="home-sub">データ出典：<a href="https://boatraceopenapi.github.io/" target="_blank" rel="noopener">Boatrace Open API（非公式）</a>。更新遅延や欠損の可能性があるため、重要な情報は公式発表でも確認してください。</p><div class="home-title">全国24場 開催一覧</div><div class="venue-grid" id="venueGrid"></div><div class="panel hidden"><div class="home-title" id="selectedVenueTitle">競艇場を選択</div><div class="race-pills" id="racePills"></div></div><div class="panel"><div class="home-title" id="selectedRaceTitle">6艇のモーター機力比較</div><p class="home-sub">過去30日・180日の展示タイム平均、記録件数、F・1着記録、上昇・下降傾向を表示します。周回・直線・回り足の過去データは公開APIに含まれないため、この比較には使用しません。数値は同一競艇場内の参考比較です。</p><p class="home-sub" id="raceAnalysisStatus">競艇場とレース番号を選択してください。</p><div class="actions"><button class="btn primary" id="openSelectedRaceEntry">✍️ このレースを入力</button></div><div id="raceMotorCards"></div></div></section>
 <section id="racecards" class="hidden">
  <div class="racecard-toolbar"><button class="btn secondary" id="backToVenues">← 開催場一覧へ戻る</button><span class="muted small" id="racecardDateLabel"></span></div>
  <div class="panel">
@@ -1253,9 +1253,10 @@ function renderVenueRaceCards(){
   }).join('');
   const title=[race.title,race.subtitle].filter(Boolean).map(escapeRaceText).join('｜');
   const cutoff=race.closed_at?escapeRaceText(race.closed_at.slice(11,16)+'締切'):'';
-  return '<article class="panel"><div class="racecard-heading"><div><h2>'+n+'R '+(title||'出走表')+'</h2><div class="racecard-meta">'+cutoff+'　'+(race.day_number_source?escapeRaceText(race.day_number_source):'')+'</div></div><span class="tag">'+(Object.keys(racers).length||0)+'艇</span></div><div class="tablewrap"><table class="racecard-table"><thead><tr><th>枠</th><th>選手</th><th>登録番号</th><th>級別</th><th>全国勝率</th><th>当地勝率</th><th>モーター</th><th>モーター2連率</th></tr></thead><tbody>'+(rows||'<tr><td colspan="8">出走表データなし</td></tr>')+'</tbody></table></div><div class="racecard-actions"><button class="btn primary" data-analyze-race="'+n+'">📊 このレースの機力分析</button><button class="btn secondary" data-entry-race="'+n+'">✍️ このレースを入力</button></div></article>';
+  return '<article class="panel" id="racecard-'+n+'"><div class="racecard-heading"><div><h2>'+n+'R '+(title||'出走表')+'</h2><div class="racecard-meta">'+cutoff+'　'+(race.day_number_source?escapeRaceText(race.day_number_source):'')+'</div></div><span class="tag">'+(Object.keys(racers).length||0)+'艇</span></div><div class="tablewrap"><table class="racecard-table"><thead><tr><th>枠</th><th>選手</th><th>登録番号</th><th>級別</th><th>全国勝率</th><th>当地勝率</th><th>モーター</th><th>モーター2連率</th></tr></thead><tbody>'+(rows||'<tr><td colspan="8">出走表データなし</td></tr>')+'</tbody></table></div><div class="racecard-actions"><button class="btn primary" data-analyze-race="'+n+'">📊 機力分析</button><button class="btn secondary" data-result-race="'+n+'">🏁 結果・払戻</button><button class="btn secondary" data-entry-race="'+n+'">✍️ データ入力</button></div><p class="home-sub" id="raceResultStatus-'+n+'">レース終了後に結果・払戻を取得できます。</p><div id="raceResultPanel-'+n+'"></div></article>';
  }).join('');
  $('racecardList').querySelectorAll('[data-analyze-race]').forEach(b=>b.onclick=()=>{homeRace=Number(b.dataset.analyzeRace);$('analysisRaceDate').value=date;$('analysisRaceVenue').value=homeVenue;$('analysisRaceNo').value=String(homeRace);$('analysisBackLabel').textContent=homeVenue+'｜'+date;showTab('analysis');runAnalysisForSelectedRace();});
+ $('racecardList').querySelectorAll('[data-result-race]').forEach(b=>b.onclick=()=>{const n=Number(b.dataset.resultRace);syncSelectedRaceResult({date,venue:homeVenue,race:n,statusId:'raceResultStatus-'+n,panelId:'raceResultPanel-'+n,button:b});});
  $('racecardList').querySelectorAll('[data-entry-race]').forEach(b=>b.onclick=()=>{const n=Number(b.dataset.entryRace);showTab('entry');$('venue').value=homeVenue;$('raceDate').value=date;$('raceNo').value=String(n);$('fetchMsg').textContent='開催一覧で選択したレースです。「選択レースのデータを取得」から出走表を読み込めます。';});
 }
 
@@ -1263,10 +1264,10 @@ function renderRaces(){const rs=homePayload?.programs?.stadiums?.[String(venueCo
 function fmt(v){return v===null||v===undefined||v===''?'—':v}
 function mean(rows,k){const a=rows.map(x=>x?.[k]).filter(v=>v!==null&&v!==undefined&&v!=='').map(Number).filter(Number.isFinite);return a.length?a.reduce((p,c)=>p+c,0)/a.length:null}
 function validCount(rows,k){return rows.filter(x=>x?.[k]!==null&&x?.[k]!==undefined&&x?.[k]!==''&&Number.isFinite(Number(x[k]))).length}
-async function syncSelectedRaceResult(){
- const status=$('raceResultStatus'),panel=$('raceResultPanel'),btn=$('syncRaceResult');
+async function syncSelectedRaceResult(options={}){
+ const date=options.date||$('homeDate').value,venue=options.venue||homeVenue,race=Number(options.race||homeRace),code=venueCodes[venue];
+ const status=$(options.statusId||'raceResultStatus'),panel=$(options.panelId||'raceResultPanel'),btn=options.button||$('syncRaceResult');
  if(!cloudClient||!cloudUser){status.textContent='結果データを保存するにはログインしてください。';return}
- const date=$('homeDate').value,code=venueCodes[homeVenue],race=Number(homeRace);
  if(!date||!code||!race){status.textContent='開催日・競艇場・レース番号を選択してください。';return}
  btn.disabled=true;status.textContent='公式公開データをもとに結果・払戻を取得しています…';panel.innerHTML='';
  try{
@@ -1306,7 +1307,7 @@ async function syncSelectedRaceResult(){
     if(existing?.length){autoFSkipped++;continue;}
     const {error:insertError}=await cloudClient.from('racer_f_incidents').insert({
      user_id:cloudUser.id,racer_registration_no:incident.reg,racer_name:incident.name,
-     incident_date:date,venue_code:code,venue_name:homeVenue,race_no:race,lane:incident.lane,
+     incident_date:date,venue_code:code,venue_name:venue,race_no:race,lane:incident.lane,
      f_type:'本番F',source_name:'race_result_auto',
      source_data:{entry_method:'艇愛DB本番結果 entries[] の st_flag / st から自動連携',actual_st_raw:incident.rawSt}
     });
@@ -1331,7 +1332,7 @@ async function syncSelectedRaceResult(){
  }catch(err){status.textContent='取得できませんでした：'+(err?.message||String(err))}
  finally{btn.disabled=false}
 }
-$('syncRaceResult').onclick=syncSelectedRaceResult;
+if($('syncRaceResult'))$('syncRaceResult').onclick=syncSelectedRaceResult;
 async function loadRaceMotors(){
  const requestId=++motorRequestId,date=$('homeDate').value,code=venueCodes[homeVenue],race=homePayload?.programs?.stadiums?.[String(code)]?.races?.[String(homeRace)];
  $('selectedRaceTitle').textContent=homeVenue+' '+homeRace+'R｜'+date;
