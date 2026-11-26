@@ -1242,9 +1242,9 @@ async function syncSelectedRaceResult(){
    };
    for(const entry of entries){
     if(!entry||typeof entry!=='object'||!isOfficialF(entry))continue;
-    const reg=String(entry.regno??entry.racer_registration_no??'').replace(/\\D/g,'');
+    const reg=String(entry.regno??entry.racer_registration_no??'').replace(/\D/g,'');
     const lane=Number(entry.boat);
-    if(!/^\\d{4}$/.test(reg)||!Number.isInteger(lane)||lane<1||lane>6){autoFSkipped++;continue;}
+    if(!/^\d{4}$/.test(reg)||!Number.isInteger(lane)||lane<1||lane>6){autoFSkipped++;continue;}
     found.set(reg+':'+lane,{reg,lane,name:entry.name??null,rawSt:String(entry.st_flag??entry.st??'F')});
    }
    for(const incident of found.values()){
