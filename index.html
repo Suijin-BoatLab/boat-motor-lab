@@ -1471,7 +1471,7 @@ async function loadRaceFInfo({date,venue,raceNo,racers,panel}){
   const previous=snap?.previous_f_count;
   const start=snap?.suspension_start_date;
   const end=snap?.suspension_end_date;
-  const suspension=snap?.data_status==='verified'?(start&&end?(new Date().toLocaleDateString('sv-SE')<start?'開始前':new Date().toLocaleDateString('sv-SE')<=end?'消化中':'消化済み'):'日程未確認') :'日程未確認';
+  const suspension=(start&&end)?(new Date().toLocaleDateString('sv-SE')<start?'開始前':new Date().toLocaleDateString('sv-SE')<=end?'消化中':'消化済み'):'日程未確認';
   const latest=own[0];
   const latestText=latest?esc(latest.incident_date)+' '+esc(latest.venue_name||'')+' '+esc(latest.race_no||'')+'R／'+esc(latest.f_type||'本番F'):'履歴未登録';
   const accidentStatus=snap?.data_status==='verified'?'確認済み':snap?.data_status==='partial'?'一部取得':'未取得';
