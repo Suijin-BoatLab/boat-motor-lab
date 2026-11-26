@@ -1644,7 +1644,7 @@ async function loadRaceMotors(){
   const parts=new Map();for(const boat of boats)parts.set(boat.lane,{weighted:0,weight:0,components:[]});
   for(const boat of boats){const p=parts.get(boat.lane),m=motorScores.get(boat.lane);if(m!==undefined){p.weighted+=m*.40;p.weight+=.40;p.components.push('モーター');}}
   const rankMetric=(name,value,weight,valid,ascending=false)=>{const eligible=boats.filter(valid).sort((a,b)=>ascending?Number(value(a))-Number(value(b)):Number(value(b))-Number(value(a)));if(eligible.length<2)return;let i=0;while(i<eligible.length){let j=i;const base=Number(value(eligible[i]));while(j+1<eligible.length&&Math.abs(Number(value(eligible[j+1]))-base)<.000001)j++;const rank=100*(1-(i+j)/2/(eligible.length-1));for(let k=i;k<=j;k++){const p=parts.get(eligible[k].lane);p.weighted+=rank*weight;p.weight+=weight;p.components.push(name);}i=j+1;}};
-  rankMetric('スタート力',x=>x.racer?.start_prediction?.average,.25,x=>x.racer?.start_prediction?.average!=null&&Number(x.racer?.start_prediction?.count)>=5,true);
+  rankMetric('スタート力',x=>x.racer?.start_prediction?.average,.25,x=>x.racer?.start_prediction?.average!=null&&Number(x.racer?.start_prediction?.count)>=5&&Number(x.racer?.start_prediction?.coverage)>=2,true);
   rankMetric('選手近況',x=>x.racer?.history_90d?.top2_rate,.20,x=>Number(x.racer?.history_90d?.starts)>=10&&x.racer?.history_90d?.top2_rate!=null);
   rankMetric('コース適性',x=>x.racer?.course_fit?.delta,.15,x=>Number(x.racer?.course_fit?.starts)>=5&&x.racer?.course_fit?.delta!=null);
   const scores=new Map();for(const [lane,p] of parts)if(p.weight>=.40&&p.components.length>=2)scores.set(lane,Math.round(p.weighted/p.weight));
@@ -1667,7 +1667,7 @@ async function loadRaceMotors(){
   const withHistory=boats.filter(x=>Number(x.history_rows)>0).length;
   const capture=data.original_capture||{};const captureMsg=capture.status==='saved'?'当日オリジナル展示をクラウド保存：'+capture.saved+'艇。':capture.status==='save_failed'?'当日オリジナル展示は取得しましたが、履歴保存に失敗：'+safe(capture.message||'保存エラー')+'。':'当日オリジナル展示は未取得（公開前・非対応・取得元停止の可能性）。';
   const t=data.timings||{};const timingMsg=Object.keys(t).length?' 処理時間：出走データ '+(t.open_api_fetch_ms??'-')+'ms／BOATCAST '+(t.boatcast_fetch_parse_ms??'-')+'ms／履歴取得 '+(t.racer_history_fetch_ms??'-')+'ms（選手90日）／分析・保存 '+(t.calculate_and_save_ms??'-')+'ms／合計 '+(t.total_ms??'-')+'ms。':'';
-  $('raceAnalysisStatus').textContent='分析完了：'+withHistory+'艇に過去履歴あり。'+captureMsg+timingMsg+'順位目安は過去データとの照合で調整した相対比較です。30日展示平均40％・180日展示平均30％・30日展示ST平均30％を基本にします。各項目は必要件数を満たす場合のみ使用し、2項目以上を比較できる場合だけスコアを表示します。選手の本番ST（直近10走・90日・場別）と決まり手率は、モーター機力とは別の選手特性として表示し、機力スコアには混ぜません。これは着順や舟券的中率の予測値ではありません。データ件数・F回数を併記しています。周回/直線/回り足は公開元から取得できた場合のみ表示します。';
+  $('raceAnalysisStatus').textContent='分析完了：'+withHistory+'艇に過去履歴あり。'+captureMsg+timingMsg+'順位目安は過去データとの照合で調整した相対比較です。30日展示平均40％・180日展示平均30％・30日展示ST平均30％を基本にします。各項目は必要件数を満たす場合のみ使用し、2項目以上を比較できる場合だけスコアを表示します。選手の本番ST（直近10走・90日・場別）は重複する期間の件数を単純合算せず、各期間の有効件数を個別表示します。スタート力を総合評価に使うのは、必要件数を満たした2期間以上がある場合だけです。決まり手率はモーター機力とは別の選手特性として表示し、機力スコアには混ぜません。これは着順や舟券的中率の予測値ではありません。データ件数・F回数を併記しています。周回/直線/回り足は公開元から取得できた場合のみ表示します。';
  }catch(e){
   if(requestId!==motorRequestId)return;
   $('raceAnalysisStatus').textContent='機力分析を完了できませんでした：'+(e.message||'不明なエラー')+'。ログイン状態と過去データの取り込み状況を確認してください。';
