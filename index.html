@@ -252,7 +252,7 @@ table{min-width:520px}
 </style>
 </head>
 <body>
-<header><div class="brand">BOAT <span>MOTOR</span> LAB</div><div class="sub">MOTOR PERFORMANCE & RACE HISTORY</div><nav><button class="active" data-tab="home">🚩<br>開催一覧</button><button data-tab="entry">✍️<br>データ入力</button><button data-tab="analysis">📊<br>機力分析</button><button data-tab="history">🗂️<br>記録一覧</button><button data-tab="fHistory">🚩<br>F情報</button><button data-tab="backtest">🎯<br>検証</button><button data-tab="backup">☁️<br>保存・設定</button></nav></header>
+<header><div class="brand">BOAT <span>MOTOR</span> LAB</div><div class="sub">MOTOR PERFORMANCE & RACE HISTORY</div><nav><button class="active" data-tab="home">🚩<br>開催一覧</button><button data-tab="entry">✍️<br>データ入力</button><button data-tab="analysis">📊<br>機力分析</button><button data-tab="history">🗂️<br>記録一覧</button><button data-tab="fHistory">🚩<br>F情報</button><button data-tab="shobugake">🔥<br>勝負がけ情報</button><button data-tab="backtest">🎯<br>検証</button><button data-tab="backup">☁️<br>保存・設定</button></nav></header>
 <main>
 <section id="home"><div class="home-toolbar"><b id="homeDateLabel">開催日</b><input id="homeDate" type="date"><button class="btn primary" id="reloadSchedule">開催情報更新</button></div><p class="home-sub" id="scheduleStatus">開催情報を取得しています…</p><p class="home-sub">データ出典：<a href="https://boatraceopenapi.github.io/" target="_blank" rel="noopener">Boatrace Open API（非公式）</a>。更新遅延や欠損の可能性があるため、重要な情報は公式発表でも確認してください。</p><div class="home-title">全国24場 開催一覧</div><div class="venue-grid" id="venueGrid"></div><div class="panel hidden"><div class="home-title" id="selectedVenueTitle">競艇場を選択</div><div class="race-pills" id="racePills"></div></div><div class="hidden" aria-hidden="true"><div id="selectedRaceTitle">機力分析</div><p id="raceAnalysisStatus"></p><button id="openSelectedRaceEntry" type="button">このレースを入力</button><div id="raceMotorCards"></div></div></section>
 <section id="racecards" class="hidden">
@@ -344,6 +344,20 @@ table{min-width:520px}
   <div class="tablewrap" id="fHistoryList"></div>
  </div>
  <div class="notice">F休み開始日・終了日は確認できた情報を入力してください。未確認の日付を推測で登録しないでください。</div>
+</section>
+
+<section id="shobugake" class="hidden">
+ <h1>勝負がけ情報</h1>
+ <p class="muted small">ボートレース日和の出走表コメント等から、勝負がけに関する記述を収集・保存します。対象になった時点の情報を残し、レース結果と照合するための記録です。</p>
+ <div class="panel">
+  <div class="actions"><button class="btn secondary" id="refreshShobugake">勝負がけデータを更新</button></div>
+  <div class="statgrid" id="shobugakeSummary"></div>
+  <div class="field"><label for="shobugakeSearch">選手名・登録番号・記述内容で検索</label><input id="shobugakeSearch" placeholder="選手名、登録番号、勝負がけの文言"></div>
+  <div class="grid"><div class="field"><label for="shobugakeFrom">対象開始日</label><input id="shobugakeFrom" type="date"></div><div class="field"><label for="shobugakeTo">対象終了日</label><input id="shobugakeTo" type="date"></div></div>
+  <p class="small muted" id="shobugakeStatus">ログイン後に保存済みデータを表示します。データ取得処理は現在構築中です。</p>
+  <div class="tablewrap" id="shobugakeList"></div>
+ </div>
+ <div class="notice">出典：<a href="https://www.kyoteibiyori.com/" target="_blank" rel="noopener">ボートレース日和</a>。コメントに記載された表現を原文のまま保存し、独自の勝負がけ判定や予想評価は行いません。</div>
 </section>
 
 <section id="analysis" class="hidden">
@@ -585,7 +599,7 @@ $('racerMasterSearchBtn')?.addEventListener('click',()=>loadRacerMaster(0));
 $('racerMasterRefresh')?.addEventListener('click',()=>{$('racerMasterSearch').value='';$('racerMasterReg').value='';$('racerMasterGrade').value='';$('racerMasterBranch').value='';$('racerMasterList').innerHTML='';$('racerMasterDetail').classList.add('hidden');$('racerMasterStatus').textContent='選手名または登録番号を入力して検索してください。';});
 $('racerMasterSearch')?.addEventListener('keydown',e=>{if(e.key==='Enter')loadRacerMaster(0);});
 $('racerMasterReg')?.addEventListener('keydown',e=>{if(e.key==='Enter')loadRacerMaster(0);});
-function showTab(tab){document.querySelectorAll('main section').forEach(s=>s.classList.toggle('hidden',s.id!==tab));const navTab=tab==='racecards'?'home':tab;document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===navTab));const nav=document.querySelector('header nav'),activeNav=nav?.querySelector('button[data-tab="'+navTab+'"]');if(nav&&activeNav){const targetLeft=Math.max(0,activeNav.offsetLeft-(nav.clientWidth-activeNav.offsetWidth)/2);nav.scrollTo({left:targetLeft,behavior:'smooth'});}if(tab==='history')renderHistory();if(tab==='fHistory')renderFHistory();if(tab==='backtest')loadBacktestRuns();if(tab==='backup')loadRacerMaster();if(tab==='analysis'){renderAnalysis();loadHistoricalMotorHistory();}if(tab==='backup'){$('backupCount').textContent=races.length+'レース';updateBackupStatus();const notice=$('storageRecoveryNotice');if(notice)notice.classList.toggle('hidden',!startupStorageIssue);}window.scrollTo(0,0)}
+function showTab(tab){document.querySelectorAll('main section').forEach(s=>s.classList.toggle('hidden',s.id!==tab));const navTab=tab==='racecards'?'home':tab;document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===navTab));const nav=document.querySelector('header nav'),activeNav=nav?.querySelector('button[data-tab="'+navTab+'"]');if(nav&&activeNav){const targetLeft=Math.max(0,activeNav.offsetLeft-(nav.clientWidth-activeNav.offsetWidth)/2);nav.scrollTo({left:targetLeft,behavior:'smooth'});}if(tab==='history')renderHistory();if(tab==='fHistory')renderFHistory();if(tab==='shobugake')renderShobugake();if(tab==='backtest')loadBacktestRuns();if(tab==='backup')loadRacerMaster();if(tab==='analysis'){renderAnalysis();loadHistoricalMotorHistory();}if(tab==='backup'){$('backupCount').textContent=races.length+'レース';updateBackupStatus();const notice=$('storageRecoveryNotice');if(notice)notice.classList.toggle('hidden',!startupStorageIssue);}window.scrollTo(0,0)}
 async function loadBacktestRuns(){
  const box=$('backtestRuns');if(!box)return;
  if(!cloudClient||!cloudUser){box.textContent='検証履歴を見るにはログインしてください。';return}
@@ -614,6 +628,28 @@ async function runPredictionBacktest(){
  finally{btn.disabled=false;}
 }
 $('backtestRun')?.addEventListener('click',runPredictionBacktest);
+async function renderShobugake(){
+ const status=$('shobugakeStatus'),list=$('shobugakeList'),summary=$('shobugakeSummary');
+ if(!cloudClient||!cloudUser){status.textContent='勝負がけ情報を見るには「保存・設定」からログインしてください。';list.innerHTML='';summary.innerHTML='';return}
+ status.textContent='保存済みの勝負がけ情報を読み込んでいます…';list.innerHTML='';
+ let q=cloudClient.from('racer_shobugake_source_snapshots').select('race_date,venue_name,race_no,lane,racer_registration_no,racer_name,shobugake_text,shobugake_category,source_url,captured_at').eq('user_id',cloudUser.id).order('race_date',{ascending:false}).order('venue_no').order('race_no').limit(2000);
+ const from=$('shobugakeFrom')?.value,to=$('shobugakeTo')?.value;
+ if(from)q=q.gte('race_date',from);if(to)q=q.lte('race_date',to);
+ const {data,error}=await q;
+ if(error){status.textContent='読み込みエラー：'+error.message;return}
+ const rows=data||[],esc=v=>String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+ summary.innerHTML='<div class="stat"><b>'+rows.length+'</b><span>保存データ件数</span></div><div class="stat"><b>'+new Set(rows.map(x=>x.racer_registration_no)).size+'</b><span>対象選手数</span></div><div class="stat"><b>'+new Set(rows.map(x=>x.race_date)).size+'</b><span>対象日数</span></div>';
+ const term=String($('shobugakeSearch')?.value||'').trim().toLowerCase();
+ const filtered=rows.filter(x=>!term||[x.racer_name,x.racer_registration_no,x.shobugake_text,x.shobugake_category].some(v=>String(v||'').toLowerCase().includes(term)));
+ if(!filtered.length){status.textContent=rows.length?'検索条件に一致するデータはありません。':'保存済みデータはまだありません。';list.innerHTML='<div class="empty">勝負がけデータはまだありません。取得機能の準備ができ次第、ここに反映します。</div>';return}
+ status.textContent='表示 '+filtered.length+'件（最大2,000件）';
+ list.innerHTML='<table><thead><tr><th>日付・場・R</th><th>艇</th><th>選手</th><th>勝負がけ記述（原文）</th><th>出典</th></tr></thead><tbody>'+filtered.map(x=>'<tr><td>'+esc(x.race_date)+'<br>'+esc(x.venue_name)+' '+esc(x.race_no)+'R</td><td>'+esc(x.lane||'—')+'</td><td>'+esc(x.racer_name||'')+'<br>'+esc(x.racer_registration_no)+'</td><td>'+esc(x.shobugake_text)+'</td><td><a href="'+esc(x.source_url)+'" target="_blank" rel="noopener">ボートレース日和</a></td></tr>').join('')+'</tbody></table>';
+}
+$('refreshShobugake')?.addEventListener('click',renderShobugake);
+$('shobugakeSearch')?.addEventListener('input',renderShobugake);
+$('shobugakeFrom')?.addEventListener('change',renderShobugake);
+$('shobugakeTo')?.addEventListener('change',renderShobugake);
+
 async function renderFHistory(){
  const status=$('fHistoryStatus'),list=$('fHistoryList'),summary=$('fHistorySummary');
  if(!cloudClient||!cloudUser){status.textContent='F履歴を見るには「保存・設定」からログインしてください。';list.innerHTML='';summary.innerHTML='';return}
