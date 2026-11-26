@@ -350,7 +350,14 @@ table{min-width:520px}
  <h1>勝負がけ情報</h1>
  <p class="muted small">ボートレース日和の出走表コメント等から、勝負がけに関する記述を収集・保存します。対象になった時点の情報を残し、レース結果と照合するための記録です。</p>
  <div class="panel">
-  <div class="actions"><button class="btn secondary" id="refreshShobugake">勝負がけデータを更新</button></div>
+  <h2>ボートレース日和から取得</h2>
+  <div class="grid">
+   <div class="field"><label for="shobugakeFetchDate">開催日</label><input id="shobugakeFetchDate" type="date"></div>
+   <div class="field"><label for="shobugakeVenue">競艇場</label><select id="shobugakeVenue"></select></div>
+   <div class="field"><label for="shobugakeRace">レース</label><select id="shobugakeRace"><option value="1">1R</option><option value="2">2R</option><option value="3">3R</option><option value="4">4R</option><option value="5">5R</option><option value="6">6R</option><option value="7">7R</option><option value="8">8R</option><option value="9">9R</option><option value="10">10R</option><option value="11">11R</option><option value="12">12R</option></select></div>
+  </div>
+  <div class="actions"><button class="btn primary" id="fetchShobugake">このレースの勝負がけ情報を取得</button><button class="btn secondary" id="refreshShobugake">保存データを更新</button></div>
+  <p class="small muted" id="shobugakeFetchStatus">取得対象のレースを指定してください。</p>
   <div class="statgrid" id="shobugakeSummary"></div>
   <div class="field"><label for="shobugakeSearch">選手名・登録番号・記述内容で検索</label><input id="shobugakeSearch" placeholder="選手名、登録番号、勝負がけの文言"></div>
   <div class="grid"><div class="field"><label for="shobugakeFrom">対象開始日</label><input id="shobugakeFrom" type="date"></div><div class="field"><label for="shobugakeTo">対象終了日</label><input id="shobugakeTo" type="date"></div></div>
@@ -628,6 +635,26 @@ async function runPredictionBacktest(){
  finally{btn.disabled=false;}
 }
 $('backtestRun')?.addEventListener('click',runPredictionBacktest);
+const shobugakeVenueCodes={'桐生':1,'戸田':2,'江戸川':3,'平和島':4,'多摩川':5,'浜名湖':6,'蒲郡':7,'常滑':8,'津':9,'三国':10,'びわこ':11,'住之江':12,'尼崎':13,'鳴門':14,'丸亀':15,'児島':16,'宮島':17,'徳山':18,'下関':19,'若松':20,'芦屋':21,'福岡':22,'唐津':23,'大村':24};
+$('shobugakeVenue').innerHTML=Object.keys(shobugakeVenueCodes).map(v=>'<option value="'+shobugakeVenueCodes[v]+'">'+v+'</option>').join('');
+$('shobugakeFetchDate').value=new Date().toLocaleDateString('sv-SE');
+async function fetchShobugake(){
+ const status=$('shobugakeFetchStatus'),btn=$('fetchShobugake');
+ if(!cloudClient||!cloudUser){status.textContent='先に「保存・設定」からログインしてください。';return}
+ if(btn.disabled)return;
+ const date=$('shobugakeFetchDate').value,place_no=Number($('shobugakeVenue').value),race_no=Number($('shobugakeRace').value);
+ if(!date){status.textContent='開催日を指定してください。';return}
+ btn.disabled=true;status.textContent='ボートレース日和から出走表コメントを取得しています…';
+ try{
+  const {data,error}=await cloudClient.functions.invoke('sync-kyoteibiyori-shobugake-data',{body:{date,place_no,race_no}});
+  if(error)throw error;
+  if(data?.error)throw new Error(data.error);
+  status.textContent='取得完了：勝負がけ記述 '+Number(data.found||0)+'件／保存 '+Number(data.saved||0)+'件。'+(data.note||'');
+  await renderShobugake();
+ }catch(e){status.textContent='取得できませんでした：'+(e?.message||String(e));}
+ finally{btn.disabled=false}
+}
+$('fetchShobugake')?.addEventListener('click',fetchShobugake);
 async function renderShobugake(){
  const status=$('shobugakeStatus'),list=$('shobugakeList'),summary=$('shobugakeSummary');
  if(!cloudClient||!cloudUser){status.textContent='勝負がけ情報を見るには「保存・設定」からログインしてください。';list.innerHTML='';summary.innerHTML='';return}
