@@ -252,7 +252,7 @@ table{min-width:520px}
 </style>
 </head>
 <body>
-<header><div class="brand">BOAT <span>MOTOR</span> LAB</div><div class="sub">MOTOR PERFORMANCE & RACE HISTORY</div><nav><button class="active" data-tab="home">🚩<br>開催一覧</button><button data-tab="entry">✍️<br>データ入力</button><button data-tab="analysis">📊<br>機力分析</button><button data-tab="history">🗂️<br>記録一覧</button><button data-tab="fHistory">🚩<br>F情報</button><button data-tab="shobugake">🔥<br>勝負がけ情報</button><button data-tab="backtest">🎯<br>検証</button><button data-tab="backup">☁️<br>保存・設定</button></nav></header>
+<header><div class="brand">BOAT <span>MOTOR</span> LAB</div><div class="sub">MOTOR PERFORMANCE & RACE HISTORY</div><nav><button class="active" data-tab="home">🚩<br>開催一覧</button><button data-tab="entry">✍️<br>データ入力</button><button data-tab="analysis">📊<br>機力分析</button><button data-tab="history">🗂️<br>記録一覧</button><button data-tab="fHistory">🚩<br>F情報</button><button data-tab="backtest">🎯<br>検証</button><button data-tab="backup">☁️<br>保存・設定</button></nav></header>
 <main>
 <section id="home"><div class="home-toolbar"><b id="homeDateLabel">開催日</b><input id="homeDate" type="date"><button class="btn primary" id="reloadSchedule">開催情報更新</button></div><p class="home-sub" id="scheduleStatus">開催情報を取得しています…</p><p class="home-sub">データ出典：<a href="https://boatraceopenapi.github.io/" target="_blank" rel="noopener">Boatrace Open API（非公式）</a>。更新遅延や欠損の可能性があるため、重要な情報は公式発表でも確認してください。</p><div class="home-title">全国24場 開催一覧</div><div class="venue-grid" id="venueGrid"></div><div class="panel hidden"><div class="home-title" id="selectedVenueTitle">競艇場を選択</div><div class="race-pills" id="racePills"></div></div><div class="hidden" aria-hidden="true"><div id="selectedRaceTitle">機力分析</div><p id="raceAnalysisStatus"></p><button id="openSelectedRaceEntry" type="button">このレースを入力</button><div id="raceMotorCards"></div></div></section>
 <section id="racecards" class="hidden">
@@ -1550,16 +1550,34 @@ function renderVenueRaceCards(){
   }).join('');
   const title=[race.title,race.subtitle].filter(Boolean).map(escapeRaceText).join('｜');
   const cutoff=race.closed_at?escapeRaceText(race.closed_at.slice(11,16)+'締切'):'';
-  return '<article class="panel" id="racecard-'+n+'"><div class="racecard-heading"><div><h2>'+n+'R '+(title||'出走表')+'</h2><div class="racecard-meta">'+cutoff+'　'+(race.day_number_source?escapeRaceText(race.day_number_source):'')+'</div></div><span class="tag">'+(Object.keys(racers).length||0)+'艇</span></div><div class="tablewrap"><table class="racecard-table"><thead><tr><th>枠</th><th>選手</th><th>登録番号</th><th>級別</th><th>全国勝率</th><th>当地勝率</th><th>モーター</th><th>モーター2連率</th></tr></thead><tbody>'+(rows||'<tr><td colspan="8">出走表データなし</td></tr>')+'</tbody></table></div><div class="racecard-actions"><button class="btn primary" data-analyze-race="'+n+'">📊 機力分析</button><button class="btn secondary" data-finfo-race="'+n+'">🚩 F情報</button><button class="btn secondary" data-entry-race="'+n+'">✍️ データ入力</button><button class="btn secondary" data-result-race="'+n+'">🏁 結果・払戻</button></div><div id="raceFInfoPanel-'+n+'" class="hidden"></div><p class="home-sub" id="raceResultStatus-'+n+'">レース終了後に結果・払戻を取得できます。</p><div id="raceResultPanel-'+n+'"></div></article>';
+  return '<article class="panel" id="racecard-'+n+'"><div class="racecard-heading"><div><h2>'+n+'R '+(title||'出走表')+'</h2><div class="racecard-meta">'+cutoff+'　'+(race.day_number_source?escapeRaceText(race.day_number_source):'')+'</div></div><span class="tag">'+(Object.keys(racers).length||0)+'艇</span></div><div class="tablewrap"><table class="racecard-table"><thead><tr><th>枠</th><th>選手</th><th>登録番号</th><th>級別</th><th>全国勝率</th><th>当地勝率</th><th>モーター</th><th>モーター2連率</th></tr></thead><tbody>'+(rows||'<tr><td colspan="8">出走表データなし</td></tr>')+'</tbody></table></div><div class="racecard-actions"><button class="btn primary" data-analyze-race="'+n+'">📊 機力分析</button><button class="btn secondary" data-finfo-race="'+n+'">🚩 F情報</button><button class="btn secondary" data-shobugake-race="'+n+'">🔥 勝負がけ</button><button class="btn secondary" data-entry-race="'+n+'">✍️ データ入力</button><button class="btn secondary" data-result-race="'+n+'">🏁 結果・払戻</button></div><div id="raceFInfoPanel-'+n+'" class="hidden"></div><div id="raceShobugakePanel-'+n+'" class="hidden"></div><p class="home-sub" id="raceResultStatus-'+n+'">レース終了後に結果・払戻を取得できます。</p><div id="raceResultPanel-'+n+'"></div></article>';
  }).join('');
  $('racecardList').querySelectorAll('[data-analyze-race]').forEach(b=>b.onclick=()=>{homeRace=Number(b.dataset.analyzeRace);$('analysisRaceDate').value=date;$('analysisRaceVenue').value=homeVenue;$('analysisRaceNo').value=String(homeRace);$('analysisBackLabel').textContent=homeVenue+'｜'+date;showTab('analysis');runAnalysisForSelectedRace();});
  $('racecardList').querySelectorAll('[data-result-race]').forEach(b=>b.onclick=()=>{const n=Number(b.dataset.resultRace);syncSelectedRaceResult({date,venue:homeVenue,race:n,statusId:'raceResultStatus-'+n,panelId:'raceResultPanel-'+n,button:b});});
+ $('racecardList').querySelectorAll('[data-shobugake-race]').forEach(b=>b.onclick=()=>{const n=Number(b.dataset.shobugakeRace),race=rs[String(n)]||{};const panel=$('raceShobugakePanel-'+n);panel.classList.remove('hidden');loadRaceShobugake({date,venue:homeVenue,raceNo:n,racers:race.racers||{},panel,button:b});});
  $('racecardList').querySelectorAll('[data-finfo-race]').forEach(b=>b.onclick=()=>{const n=Number(b.dataset.finfoRace),race=rs[String(n)]||{};const panel=$('raceFInfoPanel-'+n);panel.classList.remove('hidden');loadRaceFInfo({date,venue:homeVenue,raceNo:n,racers:race.racers||{},panel});});
  loadSavedRaceResultsForVenue(date,venue);
  $('racecardList').querySelectorAll('[data-entry-race]').forEach(b=>b.onclick=()=>{const n=Number(b.dataset.entryRace);showTab('entry');$('venue').value=homeVenue;$('raceDate').value=date;$('raceNo').value=String(n);$('fetchMsg').textContent='開催一覧で選択したレースです。「選択レースのデータを取得」から出走表を読み込めます。';});
 }
 
 
+async function loadRaceShobugake({date,venue,raceNo,racers,panel,button}){
+ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const venueNo=venues.indexOf(venue)+1;
+ if(!cloudClient||!cloudUser){panel.innerHTML='<div class="panel"><b>🔥 勝負がけ情報</b><p class="home-sub">情報を取得するには「保存・設定」からログインしてください。</p></div>';return}
+ panel.innerHTML='<div class="panel"><b>🔥 勝負がけ情報｜'+esc(venue)+' '+raceNo+'R</b><p class="home-sub">ボートレース日和から取得しています…</p></div>';
+ if(button)button.disabled=true;
+ try{
+  const {data,error}=await cloudClient.functions.invoke('sync-kyoteibiyori-shobugake-data',{body:{date,place_no:venueNo,race_no:raceNo}});
+  if(error)throw error;if(data?.error)throw new Error(data.error);
+  const {data:rows,error:readError}=await cloudClient.from('racer_shobugake_source_snapshots').select('lane,racer_registration_no,racer_name,shobugake_text,source_url,captured_at').eq('user_id',cloudUser.id).eq('race_date',date).eq('venue_no',venueNo).eq('race_no',raceNo).order('lane');
+  if(readError)throw readError;
+  const found=rows||[];
+  const body=found.length?'<div class="tablewrap"><table class="racecard-table"><thead><tr><th>艇</th><th>選手</th><th>勝負がけ情報（原文）</th></tr></thead><tbody>'+found.map(x=>'<tr><td>'+esc(x.lane)+'</td><td>'+esc(x.racer_name)+'<br>'+esc(x.racer_registration_no)+'</td><td>'+esc(x.shobugake_text)+'</td></tr>').join('')+'</tbody></table></div>':'<p class="home-sub">このレースでは勝負がけに関する記述を確認できませんでした。記述がないことを「勝負がけ対象外」とは判定しません。</p>';
+  panel.innerHTML='<div class="panel"><div class="racecard-heading"><h3>🔥 勝負がけ情報｜'+esc(venue)+' '+raceNo+'R</h3><span class="muted small">'+found.length+'人</span></div><p class="home-sub">取得 '+Number(data.participants||0)+'選手／記述検出 '+Number(data.found||0)+'件／保存 '+Number(data.saved||0)+'件</p>'+body+'<p class="small muted">出典：<a href="'+esc(data.url||'https://www.kyoteibiyori.com/')+'" target="_blank" rel="noopener">ボートレース日和</a>。原文を保存しています。</p></div>';
+ }catch(e){panel.innerHTML='<div class="panel"><b>🔥 勝負がけ情報</b><p class="home-sub">取得エラー：'+esc(e?.message||e)+'</p></div>'}
+ finally{if(button)button.disabled=false}
+}
 async function loadRaceFInfo({date,venue,raceNo,racers,panel}){
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const show=v=>(v===null||v===undefined||v===''?'未取得':esc(v));
