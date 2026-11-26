@@ -336,6 +336,11 @@ table{min-width:520px}
   <div class="actions"><button class="btn primary" id="addFIncident">F履歴を登録</button></div>
   <p class="small muted" id="fHistoryStatus" aria-live="polite">ログイン後にF履歴を読み込みます。</p>
   <div id="fHistorySummary" class="statgrid"></div>
+  <h2>全選手のF情報一覧</h2>
+  <p class="small muted">選手マスター1,643名を一覧化し、取得できたF情報だけを表示します。未取得の項目を「0」とは扱いません。</p>
+  <div class="field"><label for="allFSearch">選手名・登録番号で検索</label><input id="allFSearch" placeholder="例：選手名または登録番号"></div>
+  <div class="small muted" id="allFCoverage">一覧を読み込んでください。</div>
+  <div class="tablewrap" id="allFList"></div>
   <div class="tablewrap" id="fHistoryList"></div>
  </div>
  <div class="notice">F休み開始日・終了日は確認できた情報を入力してください。未確認の日付を推測で登録しないでください。</div>
@@ -640,7 +645,30 @@ async function renderFHistory(){
  }));
 }
 
-$('refreshFHistory').addEventListener('click',renderFHistory);
+
+async function renderAllRacerFInfo(){
+ const out=$('allFList'),coverage=$('allFCoverage'),search=$('allFSearch');
+ if(!cloudClient||!cloudUser){coverage.textContent='ログイン後に表示できます。';return}
+ coverage.textContent='選手マスターとF情報を照合しています…';out.innerHTML='';
+ const [mr,sr]=await Promise.all([
+  cloudClient.from('racer_master').select('racer_registration_no,racer_name,racer_class').eq('user_id',cloudUser.id).order('racer_registration_no'),
+  cloudClient.from('racer_incident_source_snapshots').select('racer_registration_no,current_f_count,unserved_f_count,previous_f_count,accident_points,accident_rate,suspension_start_date,suspension_end_date,source_name,captured_at').eq('user_id',cloudUser.id).order('captured_at',{ascending:false})
+ ]);
+ if(mr.error||sr.error){coverage.textContent='取得できませんでした：'+(mr.error||sr.error).message;return}
+ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const fmt=v=>v===null||v===undefined||v===''?'—':esc(v);
+ const racers=mr.data||[],latest=new Map();
+ for(const x of (sr.data||[])){if(!latest.has(String(x.racer_registration_no)))latest.set(String(x.racer_registration_no),x)}
+ const rows=racers.map(r=>({r,s:latest.get(String(r.racer_registration_no))||null}));
+ const render=()=>{
+  const q=(search.value||'').trim().toLowerCase();
+  const filtered=rows.filter(x=>!q||String(x.r.racer_name||'').toLowerCase().includes(q)||String(x.r.racer_registration_no||'').includes(q));
+  coverage.textContent='選手マスター：'+racers.length.toLocaleString()+'名｜F情報取得済み：'+rows.filter(x=>x.s).length.toLocaleString()+'名｜表示：'+filtered.length.toLocaleString()+'名';
+  out.innerHTML='<table><thead><tr><th>選手</th><th>今期F</th><th>未消化F</th><th>前期F</th><th>事故点</th><th>事故率</th><th>F休み期間</th></tr></thead><tbody>'+filtered.map(({r,s})=>'<tr><td><b>'+esc(r.racer_name||'')+'</b><br><span class="small muted">'+esc(r.racer_registration_no)+'／'+esc(r.racer_class||'')+'</span></td><td>'+fmt(s?.current_f_count)+'</td><td>'+fmt(s?.unserved_f_count)+'</td><td>'+fmt(s?.previous_f_count)+'</td><td>'+fmt(s?.accident_points)+'</td><td>'+fmt(s?.accident_rate)+'</td><td>'+fmt(s?.suspension_start_date)+'〜'+fmt(s?.suspension_end_date)+'</td></tr>').join('')+'</tbody></table>';
+ };
+ search.oninput=render;render();
+}
+$('refreshFHistory').addEventListener('click',renderFHistory);\n$('refreshFHistory').addEventListener('click',renderAllRacerFInfo);
 (function setupFBackfill(){
  const today=new Date(),toEl=$('fBackfillTo'),fromEl=$('fBackfillFrom');
  const fmt=d=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
