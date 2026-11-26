@@ -671,7 +671,7 @@ async function renderAllRacerFInfo(){
     obj.fields[field]=x[field];obj.fields[field+'_priority']=p;
    }
   }
-  if(x.accident_rate!==null&&x.accident_rate!==undefined&&x.accident_rate!==''&&(obj.fields.accident_rate===undefined||p>(obj.fields.accident_rate+'_priority')||p>(obj.fields.accident_rate_priority||0))){
+  if(x.accident_rate!==null&&x.accident_rate!==undefined&&x.accident_rate!==''&&(obj.fields.accident_rate===undefined||p>(obj.fields.accident_rate_priority||0))){
    obj.fields.accident_rate=x.accident_rate;obj.fields.accident_rate_priority=p;
   }
   byRacer.set(key,obj);
