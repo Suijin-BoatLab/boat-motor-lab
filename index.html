@@ -408,13 +408,18 @@ table{min-width:520px}
   </div>
 
   <div class="panel" id="racerMasterPanel">
-    <h2>選手マスター（全選手の個別情報を一元管理）</h2>
-    <p class="small muted">これまでに取り込んだ全レース・モーター履歴から選手を登録番号で統合しています。新しい出走表や履歴に選手が登場した場合も自動で追加します。</p>
-    <div class="statgrid"><div class="panel"><b id="racerMasterCount">—</b><p class="small muted">登録選手数</p></div></div>
-    <div class="field"><label for="racerMasterSearch">選手名・登録番号で検索</label><input id="racerMasterSearch" placeholder="例：峰 竜太 / 4320"></div>
-    <div class="actions"><button class="btn primary" id="racerMasterSearchBtn">選手を検索</button><button class="btn secondary" id="racerMasterRefresh">一覧を更新</button></div>
-    <p class="small muted" id="racerMasterStatus" aria-live="polite">ログイン後に選手一覧を表示します。</p>
-    <div class="tablewrap" id="racerMasterList"></div>
+    <h2>選手マスター検索</h2>
+    <p class="small muted">全選手の情報は登録番号で一元管理。必要な選手だけ検索して、個別ページで確認できます。</p>
+    <div class="grid">
+      <div class="field wide"><label for="racerMasterSearch">選手名（全部・一部）</label><input id="racerMasterSearch" placeholder="例：峰 竜太"></div>
+      <div class="field"><label for="racerMasterReg">登録番号</label><input id="racerMasterReg" inputmode="numeric" maxlength="4" placeholder="例：4320"></div>
+      <div class="field"><label for="racerMasterGrade">級別</label><select id="racerMasterGrade"><option value="">すべて</option><option>A1</option><option>A2</option><option>B1</option><option>B2</option></select></div>
+      <div class="field"><label for="racerMasterBranch">支部</label><select id="racerMasterBranch"><option value="">すべて</option><option>群馬</option><option>埼玉</option><option>東京</option><option>静岡</option><option>愛知</option><option>三重</option><option>福井</option><option>滋賀</option><option>大阪</option><option>兵庫</option><option>徳島</option><option>香川</option><option>岡山</option><option>広島</option><option>山口</option><option>福岡</option><option>佐賀</option><option>長崎</option></select></div>
+    </div>
+    <div class="actions"><button class="btn primary" id="racerMasterSearchBtn">選手を検索</button><button class="btn secondary" id="racerMasterRefresh">条件をクリア</button></div>
+    <p class="small muted" id="racerMasterStatus" aria-live="polite">選手名または登録番号を入力して検索してください。</p>
+    <div id="racerMasterList"></div>
+    <div id="racerMasterDetail" class="hidden"></div>
   </div>
   <div class="panel"><h2>過去データ取り込み</h2><p class="small muted">直近6か月分のレース別・艇別データを7日ずつ取得し、詳細履歴と日別集計を保存します。日別集計がすでにあっても、詳細履歴が不足している日は再取得します。取得元の更新遅延・欠損・開催なしの日は保存されない場合があります。</p><div class="actions"><button class="btn primary" id="historyImportStart">過去6か月分の詳細履歴を取り込む</button></div><p class="small muted" id="historyImportStatus" aria-live="polite">ログイン後に実行できます。</p></div>
 
@@ -503,23 +508,44 @@ document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()
 $('backToVenues').onclick=()=>showTab('home');
  $('backToRaceCards').onclick=()=>{if(homeVenue){renderVenueRaceCards();showTab('racecards');}else showTab('home');};
 $('openSelectedRaceEntry').onclick=()=>{const date=$('homeDate').value,venue=homeVenue,race=homeRace;if(!date||!venue||!race){$('raceAnalysisStatus').textContent='先に開催日・競艇場・レース番号を選択してください。';return;}showTab('entry');$('venue').value=venue;$('raceDate').value=date;$('raceNo').value=String(race);$('fetchMsg').textContent='開催一覧で選択したレースです。「選択レースのデータを取得」から出走表を読み込めます。';};
+function racerMasterEsc(v){return String(v??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 async function loadRacerMaster(){
- const status=$('racerMasterStatus'),list=$('racerMasterList'),count=$('racerMasterCount');
+ const status=$('racerMasterStatus'),list=$('racerMasterList'),detail=$('racerMasterDetail');
  if(!cloudClient||!cloudUser){status.textContent='選手マスターを見るにはログインしてください。';list.innerHTML='';return;}
- status.textContent='選手一覧を読み込んでいます…';
- const q=$('racerMasterSearch')?.value.trim()||'';
- let query=cloudClient.from('racer_master').select('racer_registration_no,racer_name,racer_class,branch,first_seen_date,last_seen_date',{count:'exact'}).eq('user_id',cloudUser.id).order('racer_registration_no').limit(100);
- if(q)query=query.or('racer_name.ilike.%'+q+'%,racer_registration_no.ilike.%'+q+'%');
- const {data,error,count:total}=await query;
- if(error){status.textContent='選手一覧を読み込めません：'+error.message;return;}
- count.textContent=Number(total??0).toLocaleString('ja-JP')+'名';
- if(!data?.length){list.innerHTML='';status.textContent=q?'該当する選手はいません。':'選手データがありません。';return;}
- list.innerHTML='<table><thead><tr><th>登録番号</th><th>選手名</th><th>級別</th><th>支部</th></tr></thead><tbody>'+data.map(x=>'<tr><td>'+escapeHtml(x.racer_registration_no)+'</td><td>'+escapeHtml(x.racer_name||'—')+'</td><td>'+escapeHtml(x.racer_class||'—')+'</td><td>'+escapeHtml(x.branch||'—')+'</td></tr>').join('')+'</tbody></table>';
- status.textContent=(q?'検索結果 ':'一覧の先頭')+data.length+'名を表示中。全登録数 '+Number(total??0)+'名。';
+ const name=$('racerMasterSearch').value.trim(),reg=$('racerMasterReg').value.trim(),grade=$('racerMasterGrade').value,branch=$('racerMasterBranch').value;
+ if(!name&&!reg&&!grade&&!branch){status.textContent='選手名・登録番号・級別・支部のいずれかを指定してください。';list.innerHTML='';detail.classList.add('hidden');return;}
+ status.textContent='検索しています…';detail.classList.add('hidden');detail.innerHTML='';
+ let q=cloudClient.from('racer_master').select('racer_registration_no,racer_name,racer_class,branch,first_seen_date,last_seen_date,profile_data',{count:'exact'}).eq('user_id',cloudUser.id).order('racer_registration_no').limit(100);
+ if(name)q=q.ilike('racer_name','%'+name+'%');
+ if(reg)q=q.eq('racer_registration_no',reg);
+ if(grade)q=q.eq('racer_class',grade);
+ if(branch)q=q.eq('branch',branch);
+ const {data,error,count}=await q;
+ if(error){status.textContent='検索できません：'+error.message;return;}
+ $('racerMasterCount') && ($('racerMasterCount').textContent=Number(count??0).toLocaleString('ja-JP')+'名');
+ if(!data?.length){status.textContent='該当する選手が見つかりません。';list.innerHTML='';return;}
+ status.textContent='検索結果 '+Number(count??data.length)+'名（最大100名表示）。選手をタップすると個別情報を表示します。';
+ list.innerHTML='<div class="tablewrap"><table><thead><tr><th>登録番号</th><th>選手名</th><th>級別</th><th>支部</th></tr></thead><tbody>'+data.map((x,i)=>'<tr><td>'+racerMasterEsc(x.racer_registration_no)+'</td><td><button class="btn secondary" data-racer-index="'+i+'">'+racerMasterEsc(x.racer_name)+'</button></td><td>'+racerMasterEsc(x.racer_class)+'</td><td>'+racerMasterEsc(x.branch)+'</td></tr>').join('')+'</tbody></table></div>';
+ list.querySelectorAll('[data-racer-index]').forEach(btn=>btn.addEventListener('click',()=>showRacerMasterDetail(data[Number(btn.dataset.racerIndex)])));
+}
+async function showRacerMasterDetail(r){
+ const box=$('racerMasterDetail');box.classList.remove('hidden');box.innerHTML='<div class="panel"><p>選手情報を読み込んでいます…</p></div>';
+ const reg=String(r.racer_registration_no);
+ const [f,h]=await Promise.all([
+  cloudClient.from('racer_f_incidents').select('incident_date,venue_name,race_no,lane,f_type,suspension_start_date,suspension_end_date,suspension_days,notes').eq('user_id',cloudUser.id).eq('racer_registration_no',reg).order('incident_date',{ascending:false}).limit(50),
+  cloudClient.from('historical_racer_entries').select('race_date,venue_name,race_no,lane,actual_course,finish_rank,actual_st,actual_st_raw,actual_st_is_f,decision_method').eq('user_id',cloudUser.id).eq('racer_registration_no',reg).order('race_date',{ascending:false}).limit(100)
+ ]);
+ const incidents=f.data||[],rows=h.data||[],recent=rows.slice(0,10),valid=rows.filter(x=>x.actual_st!==null&&!x.actual_st_is_f),avg=valid.length?(valid.reduce((a,x)=>a+Number(x.actual_st),0)/valid.length).toFixed(2):'—';
+ const wins=rows.filter(x=>Number(x.finish_rank)===1).length,top2=rows.filter(x=>Number(x.finish_rank)<=2&&x.finish_rank!==null).length;
+ const profile=r.profile_data||{};
+ box.innerHTML='<div class="panel"><div class="actions" style="justify-content:space-between"><h2>選手個別情報</h2><button class="btn secondary" id="racerMasterClose">検索結果に戻る</button></div><h1>'+racerMasterEsc(r.racer_name)+'</h1><p class="muted">登録番号 '+racerMasterEsc(reg)+' ／ '+racerMasterEsc(r.racer_class)+' ／ '+racerMasterEsc(r.branch)+'</p><div class="statgrid"><div class="stat"><b>'+rows.length+'</b><span>保存済み出走</span></div><div class="stat"><b>'+avg+'</b><span>平均ST（保存分）</span></div><div class="stat"><b>'+incidents.length+'</b><span>登録F履歴</span></div></div><h2 style="margin-top:18px">基本情報</h2><table><tbody><tr><th>初回確認日</th><td>'+racerMasterEsc(r.first_seen_date)+'</td></tr><tr><th>最終確認日</th><td>'+racerMasterEsc(r.last_seen_date)+'</td></tr><tr><th>追加プロフィール</th><td>'+racerMasterEsc(Object.keys(profile).length?'取得済み':'未取得')+'</td></tr></tbody></table><h2 style="margin-top:18px">F履歴・休み</h2>'+ (incidents.length?'<div class="tablewrap"><table><thead><tr><th>F発生日</th><th>場・R</th><th>種別</th><th>休み</th></tr></thead><tbody>'+incidents.map(x=>'<tr><td>'+racerMasterEsc(x.incident_date)+'</td><td>'+racerMasterEsc(x.venue_name)+' '+racerMasterEsc(x.race_no)+'R</td><td>'+racerMasterEsc(x.f_type)+'</td><td>'+racerMasterEsc(x.suspension_start_date||'未登録')+'〜'+racerMasterEsc(x.suspension_end_date||'未登録')+'</td></tr>').join('')+'</tbody></table></div>':'<p class="muted">登録されたF履歴はありません（未取得の場合もあります）。</p>')+'<h2 style="margin-top:18px">直近10走（保存済みデータ）</h2>'+(recent.length?'<div class="tablewrap"><table><thead><tr><th>日付</th><th>場・R</th><th>艇</th><th>進入</th><th>着順</th><th>ST</th><th>決まり手</th></tr></thead><tbody>'+recent.map(x=>'<tr><td>'+racerMasterEsc(x.race_date)+'</td><td>'+racerMasterEsc(x.venue_name)+' '+racerMasterEsc(x.race_no)+'R</td><td>'+racerMasterEsc(x.lane)+'</td><td>'+racerMasterEsc(x.actual_course)+'</td><td>'+racerMasterEsc(x.finish_rank)+'</td><td>'+racerMasterEsc(x.actual_st_raw||x.actual_st)+'</td><td>'+racerMasterEsc(x.decision_method)+'</td></tr>').join('')+'</tbody></table></div>':'<p class="muted">出走履歴はまだ保存されていません。</p>')+'<p class="small muted">※数値はアプリに保存されている履歴の範囲です。未取得データを0として扱いません。</p></div>';
+ $('racerMasterClose').addEventListener('click',()=>box.classList.add('hidden'));
+ box.scrollIntoView({behavior:'smooth',block:'start'});
 }
 $('racerMasterSearchBtn')?.addEventListener('click',loadRacerMaster);
-$('racerMasterRefresh')?.addEventListener('click',loadRacerMaster);
+$('racerMasterRefresh')?.addEventListener('click',()=>{$('racerMasterSearch').value='';$('racerMasterReg').value='';$('racerMasterGrade').value='';$('racerMasterBranch').value='';$('racerMasterList').innerHTML='';$('racerMasterDetail').classList.add('hidden');$('racerMasterStatus').textContent='選手名または登録番号を入力して検索してください。';});
 $('racerMasterSearch')?.addEventListener('keydown',e=>{if(e.key==='Enter')loadRacerMaster();});
+$('racerMasterReg')?.addEventListener('keydown',e=>{if(e.key==='Enter')loadRacerMaster();});
 function showTab(tab){document.querySelectorAll('main section').forEach(s=>s.classList.toggle('hidden',s.id!==tab));const navTab=tab==='racecards'?'home':tab;document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===navTab));const nav=document.querySelector('header nav'),activeNav=nav?.querySelector('button[data-tab="'+navTab+'"]');if(nav&&activeNav){const targetLeft=Math.max(0,activeNav.offsetLeft-(nav.clientWidth-activeNav.offsetWidth)/2);nav.scrollTo({left:targetLeft,behavior:'smooth'});}if(tab==='history')renderHistory();if(tab==='fHistory')renderFHistory();if(tab==='backtest')loadBacktestRuns();if(tab==='backup')loadRacerMaster();if(tab==='analysis'){renderAnalysis();loadHistoricalMotorHistory();}if(tab==='backup'){$('backupCount').textContent=races.length+'レース';updateBackupStatus();const notice=$('storageRecoveryNotice');if(notice)notice.classList.toggle('hidden',!startupStorageIssue);}window.scrollTo(0,0)}
 async function loadBacktestRuns(){
  const box=$('backtestRuns');if(!box)return;
