@@ -537,7 +537,17 @@ async function showRacerMasterDetail(r){
  const reg=String(r.racer_registration_no),since=new Date(Date.now()-90*86400000).toISOString().slice(0,10);
  const [f,h]=await Promise.all([
   cloudClient.from('racer_f_incidents').select('incident_date,venue_name,race_no,lane,f_type,suspension_start_date,suspension_end_date,suspension_days,notes').eq('user_id',cloudUser.id).eq('racer_registration_no',reg).order('incident_date',{ascending:false}).limit(100),
-  cloudClient.from('historical_racer_entries').select('race_date,venue_name,race_no,lane,actual_course,finish_rank,actual_st,actual_st_raw,actual_st_is_f,decision_method').eq('user_id',cloudUser.id).eq('racer_registration_no',reg).order('race_date',{ascending:false}).limit(1000)
+  (async()=>{
+   const all=[];let start=0;
+   while(true){
+    const {data,error}=await cloudClient.from('historical_racer_entries').select('race_date,venue_name,race_no,lane,actual_course,finish_rank,actual_st,actual_st_raw,actual_st_is_f,decision_method').eq('user_id',cloudUser.id).eq('racer_registration_no',reg).order('race_date',{ascending:false}).range(start,start+999);
+    if(error)return {data:null,error};
+    all.push(...(data||[]));
+    if(!data||data.length<1000)break;
+    start+=1000;
+   }
+   return {data:all,error:null};
+  })()
  ]);
  if(h.error||f.error){box.innerHTML='<div class="panel">選手情報の取得に失敗しました。'+racerMasterEsc(h.error?.message||f.error?.message)+'</div>';return;}
  const incidents=f.data||[],rows=h.data||[],recent=rows.slice(0,10),recent90=rows.filter(x=>x.race_date>=since),valid=rows.filter(x=>x.actual_st!==null&&!x.actual_st_is_f),valid90=recent90.filter(x=>x.actual_st!==null&&!x.actual_st_is_f);
