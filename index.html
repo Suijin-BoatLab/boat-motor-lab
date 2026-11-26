@@ -1220,12 +1220,40 @@ async function syncSelectedRaceResult(){
   const {data,error}=await cloudClient.functions.invoke('sync-race-results',{body:{date,venue_code:code,race_no:race}});
   if(error){const detail=typeof error?.context?.body?.text==='function'?await error.context.body.text().catch(()=> ''):'';throw new Error(detail||error.message||'結果取得に失敗しました')}
   if(data?.error)throw new Error(data.error);
+  // 本番Fをレース記録から検出し、F管理へ自動登録する。展示Fは対象外。
+  let autoFCount=0,autoFSkipped=0,autoFWarning='';
+  try{
+   const {data:raceRow,error:raceLookupError}=await cloudClient.from('race_records')
+    .select('id').eq('user_id',cloudUser.id).eq('race_date',date).eq('venue_code',code).eq('race_no',race).maybeSingle();
+   if(raceLookupError)throw raceLookupError;
+   if(!raceRow?.id)throw new Error('結果同期後のレース記録が見つかりません。本番Fの自動登録は保留しました。');
+   const {data:fBoats,error:fBoatError}=await cloudClient.from('race_entries')
+    .select('lane,racer_name,racer_registration_no,actual_st_raw,actual_st_is_f')
+    .eq('user_id',cloudUser.id).eq('race_id',raceRow.id).eq('actual_st_is_f',true);
+   if(fBoatError)throw fBoatError;
+   for(const boat of (fBoats||[])){
+    const reg=String(boat.racer_registration_no||'').trim();
+    if(!/^\\d{4}$/.test(reg)){autoFSkipped++;continue;}
+    const {error:insertError}=await cloudClient.from('racer_f_incidents').insert({
+     user_id:cloudUser.id,racer_registration_no:reg,racer_name:boat.racer_name||null,
+     incident_date:date,venue_code:code,venue_name:homeVenue,race_no:race,lane:boat.lane,
+     f_type:'本番F',source_name:'race_result_auto',
+     source_data:{entry_method:'レース結果から自動連携',actual_st_raw:boat.actual_st_raw||'F'}
+    });
+    if(insertError){if(insertError.code==='23505')autoFSkipped++;else throw insertError;}
+    else autoFCount++;
+   }
+  }catch(fSyncError){autoFWarning=fSyncError?.message||String(fSyncError);}
   const raw=data?.source_data??{},keys=Object.keys(raw);
   const safe=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const decisionLabel=data?.decision_method?safe(data.decision_method):'未解析（元データ保存済み）';
   const winnerLabel=data?.winning_racer_registration_no?'登録番号 '+safe(data.winning_racer_registration_no)+'／進入 '+safe(data.winning_course??'—')+'コース':'勝者情報は未解析';
   panel.innerHTML='<div class="panel"><b>結果データをクラウドに保存しました</b><p class="home-sub">保存先：レース結果・払戻データ</p><p class="home-sub">決まり手：<b>'+decisionLabel+'</b>｜'+winnerLabel+'</p><p class="home-sub">解析状態：'+safe(data?.decision_parse_status||'確認中')+'／取得元：<a href="https://boatrace-db.jp/" target="_blank" rel="noopener">艇愛ボートレースDB</a></p><p class="home-sub">取得データ項目：'+safe(keys.join('、')||'確認中')+'</p><details><summary>取得した元データを確認</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere;font-size:11px">'+safe(JSON.stringify(raw,null,2))+'</pre></details></div>';
-  status.textContent=data?.decision_parse_status==='parsed'?'保存完了。決まり手と勝者情報を取得しました。':'保存完了。決まり手データの項目構造を確認するため、元データを保持しました。';
+  status.textContent=(data?.decision_parse_status==='parsed'?'保存完了。決まり手と勝者情報を取得しました。':'保存完了。決まり手データの項目構造を確認するため、元データを保持しました。')+
+   (autoFCount?' 本番F '+autoFCount+'件をF管理へ自動登録しました。':'')+
+   (autoFSkipped?' 重複・登録番号不明 '+autoFSkipped+'件は追加していません。':'')+
+   (autoFWarning?' F自動連携は保留：'+autoFWarning:'');
+  if(autoFCount&&typeof renderFHistory==='function'&&$('fHistory')&&!$('fHistory').classList.contains('hidden'))await renderFHistory();
  }catch(err){status.textContent='取得できませんでした：'+(err?.message||String(err))}
  finally{btn.disabled=false}
 }
