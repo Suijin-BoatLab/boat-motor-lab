@@ -1253,7 +1253,7 @@ function renderVenueRaceCards(){
   const cutoff=race.closed_at?escapeRaceText(race.closed_at.slice(11,16)+'締切'):'';
   return '<article class="panel"><div class="racecard-heading"><div><h2>'+n+'R '+(title||'出走表')+'</h2><div class="racecard-meta">'+cutoff+'　'+(race.day_number_source?escapeRaceText(race.day_number_source):'')+'</div></div><span class="tag">'+(Object.keys(racers).length||0)+'艇</span></div><div class="tablewrap"><table class="racecard-table"><thead><tr><th>枠</th><th>選手</th><th>登録番号</th><th>級別</th><th>全国勝率</th><th>当地勝率</th><th>モーター</th><th>モーター2連率</th></tr></thead><tbody>'+(rows||'<tr><td colspan="8">出走表データなし</td></tr>')+'</tbody></table></div><div class="racecard-actions"><button class="btn primary" data-analyze-race="'+n+'">📊 このレースの機力分析</button><button class="btn secondary" data-entry-race="'+n+'">✍️ このレースを入力</button></div></article>';
  }).join('');
- $('racecardList').querySelectorAll('[data-analyze-race]').forEach(b=>b.onclick=()=>{homeRace=Number(b.dataset.analyzeRace);showTab('home');renderRaces();loadRaceMotors();});
+ $('racecardList').querySelectorAll('[data-analyze-race]').forEach(b=>b.onclick=()=>{homeRace=Number(b.dataset.analyzeRace);$('analysisRaceDate').value=date;$('analysisRaceVenue').value=homeVenue;$('analysisRaceNo').value=String(homeRace);showTab('analysis');runAnalysisForSelectedRace();});
  $('racecardList').querySelectorAll('[data-entry-race]').forEach(b=>b.onclick=()=>{const n=Number(b.dataset.entryRace);showTab('entry');$('venue').value=homeVenue;$('raceDate').value=date;$('raceNo').value=String(n);$('fetchMsg').textContent='開催一覧で選択したレースです。「選択レースのデータを取得」から出走表を読み込めます。';});
 }
 
