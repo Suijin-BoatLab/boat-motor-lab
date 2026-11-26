@@ -252,7 +252,7 @@ table{min-width:520px}
 </style>
 </head>
 <body>
-<header><div class="brand">BOAT <span>MOTOR</span> LAB</div><div class="sub">MOTOR PERFORMANCE & RACE HISTORY</div><nav><button class="active" data-tab="home">🚩<br>開催一覧</button><button data-tab="entry">✍️<br>データ入力</button><button data-tab="analysis">📊<br>機力分析</button><button data-tab="history">🗂️<br>記録一覧</button><button data-tab="fHistory">🚩<br>F管理</button><button data-tab="backtest">🎯<br>検証</button><button data-tab="backup">☁️<br>保存・設定</button></nav></header>
+<header><div class="brand">BOAT <span>MOTOR</span> LAB</div><div class="sub">MOTOR PERFORMANCE & RACE HISTORY</div><nav><button class="active" data-tab="home">🚩<br>開催一覧</button><button data-tab="entry">✍️<br>データ入力</button><button data-tab="analysis">📊<br>機力分析</button><button data-tab="history">🗂️<br>記録一覧</button><button data-tab="fHistory">🚩<br>F情報</button><button data-tab="backtest">🎯<br>検証</button><button data-tab="backup">☁️<br>保存・設定</button></nav></header>
 <main>
 <section id="home"><div class="home-toolbar"><b id="homeDateLabel">開催日</b><input id="homeDate" type="date"><button class="btn primary" id="reloadSchedule">開催情報更新</button></div><p class="home-sub" id="scheduleStatus">開催情報を取得しています…</p><p class="home-sub">データ出典：<a href="https://boatraceopenapi.github.io/" target="_blank" rel="noopener">Boatrace Open API（非公式）</a>。更新遅延や欠損の可能性があるため、重要な情報は公式発表でも確認してください。</p><div class="home-title">全国24場 開催一覧</div><div class="venue-grid" id="venueGrid"></div><div class="panel hidden"><div class="home-title" id="selectedVenueTitle">競艇場を選択</div><div class="race-pills" id="racePills"></div></div><div class="hidden" aria-hidden="true"><div id="selectedRaceTitle">機力分析</div><p id="raceAnalysisStatus"></p><button id="openSelectedRaceEntry" type="button">このレースを入力</button><div id="raceMotorCards"></div></div></section>
 <section id="racecards" class="hidden">
@@ -309,7 +309,7 @@ table{min-width:520px}
 </section>
 
 <section id="fHistory" class="hidden">
- <h1>フライング管理</h1>
+ <h1>F情報</h1>
  <p class="muted small">登録済みのF履歴とF休みの日程を確認・更新できます。休み日程が未登録の場合、消化済みとは判定しません。</p>
  <div class="panel">
   <div class="actions"><button class="btn secondary" id="refreshFHistory">F履歴を更新</button></div>
