@@ -273,6 +273,8 @@ table{min-width:520px}
     <div class="field"><label for="originalCollectRace">レース番号</label><select id="originalCollectRace"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option></select></div>
    </div>
    <div class="actions"><button class="btn primary" id="originalCollectStart">このレースの展示タイムを取得</button><button class="btn secondary" id="originalCollectAllStart" type="button">選択日の24場・全12Rを一括収集</button></div>
+   <div class="boatgrid"><div class="field"><label for="originalCollectFrom">過去データ開始日</label><input id="originalCollectFrom" type="date"></div><div class="field"><label for="originalCollectTo">過去データ終了日</label><input id="originalCollectTo" type="date"></div></div>
+   <div class="actions"><button class="btn secondary" id="originalCollectRangeStart" type="button">期間内を一括収集（最大7日）</button></div>
    <p class="small muted" id="originalCollectStatus" aria-live="polite">ログイン後に実行できます。</p>
    <div id="originalCollectResult"></div>
   </div>
@@ -1476,6 +1478,35 @@ async function collectOriginalExhibitionAll(){
  finally{btn.disabled=false;$('originalCollectStart').disabled=false}
 }
 $('originalCollectAllStart').onclick=collectOriginalExhibitionAll;
+async function collectOriginalExhibitionRange(){
+ const btn=$('originalCollectRangeStart'),status=$('originalCollectStatus'),result=$('originalCollectResult');
+ if(!cloudClient||!cloudUser){status.textContent='先にログインしてください。';return}
+ if(btn.disabled)return;
+ const from=$('originalCollectFrom').value,to=$('originalCollectTo').value;
+ if(!from||!to||from>to){status.textContent='開始日と終了日を確認してください。';return}
+ const start=new Date(from+'T00:00:00'),end=new Date(to+'T00:00:00'),days=Math.round((end-start)/86400000)+1;
+ if(days>7){status.textContent='一度に収集できる期間は最大7日です。7日以内に分けて実行してください。';return}
+ btn.disabled=true;$('originalCollectAllStart').disabled=true;$('originalCollectStart').disabled=true;
+ result.innerHTML='';let savedRaces=0,savedBoats=0,failedDays=0,emptyDays=0,checkedRaces=0;const details=[];
+ try{
+  for(let n=0;n<days;n++){
+   const d=new Date(start);d.setDate(start.getDate()+n);const local=new Date(d);local.setMinutes(local.getMinutes()-local.getTimezoneOffset());const date=local.toISOString().slice(0,10);
+   status.textContent='過去データ収集中 '+(n+1)+'/'+days+'日目：'+date+'（24場・全12R）';
+   try{
+    const targets=[];for(let venue_code=1;venue_code<=24;venue_code++)for(let race_no=1;race_no<=12;race_no++)targets.push({venue_code,race_no});
+    const {data,error}=await cloudClient.functions.invoke('collect-original-exhibition',{body:{date,targets}});
+    if(error)throw new Error(error.message||'通信エラー');
+    if(data?.error){if(/未公開|開催がありません/.test(data.error)){emptyDays++;details.push(date+'：開催データなし');continue}throw new Error(data.error)}
+    const items=data.summary||[],ok=items.filter(x=>x.status==='saved');savedRaces+=ok.length;savedBoats+=Number(data.saved_entries)||0;checkedRaces+=Number(data.checked_races)||0;
+    const errs=items.filter(x=>x.status==='error');if(errs.length){failedDays++;details.push(date+'：取得エラー '+errs.length+'レース')}
+   }catch(e){failedDays++;details.push(date+'：'+(e.message||'取得失敗'))}
+  }
+  status.textContent='期間収集完了：'+from+'〜'+to+'／保存 '+savedRaces+'レース・'+savedBoats+'艇';
+  result.innerHTML='<p class="small muted">確認 '+checkedRaces+'レース。開催なし '+emptyDays+'日、要確認 '+failedDays+'日。'+(details.length?'<br>'+details.join('<br>'):'')+'</p>';
+  await loadOriginalExhibitionVenueStatus();
+ }finally{btn.disabled=false;$('originalCollectAllStart').disabled=false;$('originalCollectStart').disabled=false}
+}
+$('originalCollectRangeStart').onclick=collectOriginalExhibitionRange;
 async function loadOriginalExhibitionVenueStatus(){
  const msg=$('originalVenueStatusMessage'),box=$('originalVenueStatusTable');
  if(!cloudClient||!cloudUser){msg.textContent='先にログインしてください。';box.innerHTML='';return}
@@ -1515,6 +1546,8 @@ async function loadOriginalExhibitionVenueStatus(){
 $('refreshOriginalVenueStatus').onclick=loadOriginalExhibitionVenueStatus;
 $('originalCollectStart').onclick=collectOriginalExhibitionForRace;
 const originalCollectToday=new Date();originalCollectToday.setMinutes(originalCollectToday.getMinutes()-originalCollectToday.getTimezoneOffset());$('originalCollectDate').value=originalCollectToday.toISOString().slice(0,10);
+$('originalCollectTo').value=originalCollectToday.toISOString().slice(0,10);
+const originalCollectFromDate=new Date(originalCollectToday);originalCollectFromDate.setDate(originalCollectFromDate.getDate()-6);$('originalCollectFrom').value=originalCollectFromDate.toISOString().slice(0,10);
 $('originalCollectVenue').value='びわこ';
 
 $('cloudBackfill').onclick=cloudBackfillExisting;
