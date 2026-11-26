@@ -425,7 +425,7 @@ table{min-width:520px}
   <div class="panel"><h2>データ件数</h2><div id="backupCount" class="muted">0レース</div><p class="small muted" id="autoBackupStatus">自動バックアップ状態を確認中</p><div class="actions"><button class="btn secondary" id="restoreLocal">自動バックアップから復元</button></div></div>
 </section>
 </main>
-<footer>BOAT MOTOR LAB v18 · レース別機力分析 / データは入力者の確認を前提とした分析用記録です</footer>
+<footer>BOAT MOTOR LAB v19 · レース別機力分析 / データは入力者の確認を前提とした分析用記録です</footer>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const venues=['桐生','戸田','江戸川','平和島','多摩川','浜名湖','蒲郡','常滑','津','三国','びわこ','住之江','尼崎','鳴門','丸亀','児島','宮島','徳山','下関','若松','芦屋','福岡','唐津','大村'];
@@ -1291,6 +1291,14 @@ async function loadSavedRaceResultsForVenue(date,venue){
   status.textContent='自動取得済み：着順 '+entries.length+'艇・払戻 '+payouts.length+'件';
  }
 }
+let savedResultRefreshBusy=false;
+setInterval(async()=>{
+ const section=$('racecards');
+ if(savedResultRefreshBusy||!section||section.classList.contains('hidden')||!homeVenue||!cloudClient||!cloudUser)return;
+ savedResultRefreshBusy=true;
+ try{await loadSavedRaceResultsForVenue($('racecardDateLabel').textContent||$('homeDate').value,homeVenue);}
+ finally{savedResultRefreshBusy=false;}
+},60000);
 function renderRaces(){const rs=homePayload?.programs?.stadiums?.[String(venueCodes[homeVenue])]?.races||{};$('selectedVenueTitle').textContent=homeVenue+'｜レース選択';const nums=Object.keys(rs).map(Number).filter(n=>n>=1&&n<=12).sort((a,b)=>a-b);$('racePills').innerHTML=nums.length?nums.map(n=>'<button class="race-pill '+(n===homeRace?'active':'')+'" data-r="'+n+'">'+n+'R</button>').join(''):'<span class="home-sub">この日の開催情報はありません。</span>';if(!nums.length){$('raceMotorCards').innerHTML='';$('selectedRaceTitle').textContent=homeVenue+'｜モーター比較';$('raceAnalysisStatus').textContent='この競艇場の開催データはありません。';return}$('racePills').querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{homeRace=Number(b.dataset.r);renderRaces();loadRaceMotors();});}
 function fmt(v){return v===null||v===undefined||v===''?'—':v}
 function mean(rows,k){const a=rows.map(x=>x?.[k]).filter(v=>v!==null&&v!==undefined&&v!=='').map(Number).filter(Number.isFinite);return a.length?a.reduce((p,c)=>p+c,0)/a.length:null}
