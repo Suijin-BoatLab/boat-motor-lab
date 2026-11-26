@@ -1762,9 +1762,10 @@ async function loadRaceFInfo({date,venue,raceNo,racers,panel}){
   // 「本番F」と「F」は同一事故の対になる場合があるため、休み日程・履歴表示はF側を優先する。
   const own=ownAll.filter(x=>String(x.f_type||'').trim()==='F');
   const effective=own.length?own:ownAll;
-  const current=snap?.data_status==='verified'?snap?.current_f_count:null;
-  const unserved=snap?.data_status==='verified'?snap?.unserved_f_count:null;
-  const previous=snap?.data_status==='verified'?snap?.previous_f_count:null;
+  // 期別集計テーブルを優先し、未取得ステータスのスナップショットだけを理由に有効な0件を消さない。
+  const current=summary?.current_f_count??snap?.current_f_count??null;
+  const unserved=summary?.unserved_f_count??snap?.unserved_f_count??null;
+  const previous=summary?.previous_f_count??snap?.previous_f_count??null;
   const dated=[...own].filter(x=>x.suspension_start_date||x.suspension_end_date);
   const active=dated.find(x=>x.current_suspension_status==='消化中'||x.current_suspension_status==='開始前')||dated[0];
   const start=active?.suspension_start_date||snap?.suspension_start_date;
@@ -1773,7 +1774,8 @@ async function loadRaceFInfo({date,venue,raceNo,racers,panel}){
   const latest=effective[0];
   const latestText=latest?esc(latest.incident_date)+' '+esc(latest.venue_name||'')+' '+esc(latest.race_no||'')+'R／'+esc(latest.f_type||'F'):'履歴未登録';
   const accidentStatus=snap?.data_status==='verified'?'確認済み':snap?.data_status==='partial'?'一部取得':'未取得';
-  return '<tr><td><b>'+p.lane+'号艇 '+esc(p.name)+'</b><br><span class="small muted">登録 '+esc(p.reg)+'</span></td><td>'+show(current)+'</td><td>'+show(unserved)+'</td><td>'+show(previous)+'</td><td>'+show(snap?.accident_points)+'</td><td>'+show(snap?.accident_rate)+'</td><td><b>'+esc(suspension)+'</b><br><span class="small muted">'+(start&&end?'開始 '+esc(start)+'／終了 '+esc(end):'休み日程 未取得')+'</span></td><td><span class="small">'+latestText+'</span><br><span class="small muted">'+esc(accidentStatus)+(snap?.source_name?'／'+esc(snap.source_name):'')+'</span></td></tr>';
+  const dateText=start&&end?('開始 '+esc(start)+'<br>終了 '+esc(end)):'休み日程 未取得';
+  return '<tr><td><b>'+p.lane+'号艇 '+esc(p.name)+'</b><br><span class="small muted">登録 '+esc(p.reg)+'</span></td><td>'+show(current)+'</td><td>'+show(unserved)+'</td><td>'+show(previous)+'</td><td>'+show(snap?.accident_points)+'</td><td>'+show(snap?.accident_rate)+'</td><td style="min-width:112px;white-space:normal;overflow-wrap:anywhere"><b>'+esc(suspension)+'</b><br><span class="small muted">'+dateText+'</span></td><td style="min-width:150px;white-space:normal;overflow-wrap:anywhere"><span class="small">'+latestText+'</span><br><span class="small muted">'+esc(accidentStatus)+(snap?.source_name?'／'+esc(snap.source_name):'')+'</span></td></tr>';
  }).join('');
  const verified=snapshots.filter(x=>x.data_status==='verified').length;
  const missing=roster.length-verified;
