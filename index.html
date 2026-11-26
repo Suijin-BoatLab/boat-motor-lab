@@ -351,6 +351,10 @@ table{min-width:520px}
       <div class="field"><label for="analysisRaceDate">開催日</label><input id="analysisRaceDate" type="date"></div>
       <div class="field"><label for="analysisRaceVenue">競艇場</label><select id="analysisRaceVenue"><option>桐生</option><option>戸田</option><option>江戸川</option><option>平和島</option><option>多摩川</option><option>浜名湖</option><option>蒲郡</option><option>常滑</option><option>津</option><option>三国</option><option>びわこ</option><option>住之江</option><option>尼崎</option><option>鳴門</option><option>丸亀</option><option>児島</option><option>宮島</option><option>徳山</option><option>下関</option><option>若松</option><option>芦屋</option><option>福岡</option><option>唐津</option><option>大村</option></select></div>
       <div class="field"><label for="analysisRaceNo">レース番号</label><select id="analysisRaceNo"><option value="1">1R</option><option value="2">2R</option><option value="3">3R</option><option value="4">4R</option><option value="5">5R</option><option value="6">6R</option><option value="7">7R</option><option value="8">8R</option><option value="9">9R</option><option value="10">10R</option><option value="11">11R</option><option value="12">12R</option></select></div>
+      <div class="field"><label for="analysisWindDir">風向</label><select id="analysisWindDir"><option value="">未入力</option><option>向かい風</option><option>追い風</option><option>左横風</option><option>右横風</option></select></div>
+      <div class="field"><label for="analysisWindSpeed">風速（m/s）</label><input id="analysisWindSpeed" type="number" min="0" step="0.1" placeholder="未入力"></div>
+      <div class="field"><label for="analysisWaveHeight">波高（cm）</label><input id="analysisWaveHeight" type="number" min="0" step="1" placeholder="未入力"></div>
+      <div class="field"><label for="analysisEntry">進入予想</label><input id="analysisEntry" placeholder="例：123/456（未確定なら空欄）"></div>
     </div>
     <div class="actions"><button class="btn primary" id="runAnalysisRace">このレースを分析</button></div>
     <p class="small muted" id="analysisRaceStatus" aria-live="polite">分析するレースを選択してください。</p>
@@ -1626,7 +1630,7 @@ async function loadRaceMotors(){
   return;
  }
  try{
-  const {data,error}=await cloudClient.functions.invoke('analyze-race-motors',{body:{date,venue_code:code,race_no:homeRace}});
+  const {data,error}=await cloudClient.functions.invoke('analyze-race-motors',{body:{date,venue_code:code,race_no:homeRace,wind_direction:$('analysisWindDir').value||null,wind_speed:$('analysisWindSpeed').value===''?null:Number($('analysisWindSpeed').value),wave_height:$('analysisWaveHeight').value===''?null:Number($('analysisWaveHeight').value),entry_prediction:$('analysisEntry').value.trim()||null}});
   if(requestId!==motorRequestId)return;
   if(error){
    let detail='';try{if(typeof error?.context?.text==='function')detail=await error.context.text();else if(typeof error?.context?.body?.text==='function')detail=await error.context.body.text();}catch(_){}
