@@ -182,9 +182,29 @@ Deno.serve(async (req: Request) => {
         summary.push({ ...target, status: "error", saved: 0, message: error instanceof Error ? error.message : "取得エラー" });
       }
     }
+    const checkRows = summary.map((item: any) => ({
+      user_id: auth.user.id,
+      race_date: date,
+      venue_code: item.venue_code,
+      race_no: item.race_no,
+      status: item.status,
+      lap_found: Number(item.metrics?.lap ?? 0) > 0,
+      half_lap_found: Number(item.metrics?.half_lap ?? 0) > 0,
+      turn_found: Number(item.metrics?.turn ?? 0) > 0,
+      straight_found: Number(item.metrics?.straight ?? 0) > 0,
+      saved_boats: Number(item.saved ?? 0),
+      detail: item.message ?? null,
+      checked_at: new Date().toISOString(),
+    }));
+    const { error: checkLogError } = await supabase
+      .from("original_exhibition_collection_checks")
+      .upsert(checkRows, { onConflict: "user_id,race_date,venue_code,race_no" });
+
     return json({
       success: true, date, checked_races: uniqueTargets.length, saved_entries: savedEntries,
-      summary, source: "BOATCAST original exhibition",
+      summary, check_log_saved: !checkLogError,
+      check_log_error: checkLogError?.message ?? null,
+      source: "BOATCAST original exhibition",
       generated_at: new Date().toISOString(),
     });
   } catch (error) {
