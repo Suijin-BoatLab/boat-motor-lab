@@ -1223,47 +1223,37 @@ async function syncSelectedRaceResult(){
   const {data,error}=await cloudClient.functions.invoke('sync-race-results',{body:{date,venue_code:code,race_no:race}});
   if(error){const detail=typeof error?.context?.body?.text==='function'?await error.context.body.text().catch(()=> ''):'';throw new Error(detail||error.message||'結果取得に失敗しました')}
   if(data?.error)throw new Error(data.error);
-  // 取得した公式レース結果の元データから本番Fを検出してF管理へ登録する。
+  // 公式結果の entries[].st_flag を使い、本番FだけをF管理へ登録する。
   let autoFCount=0,autoFSkipped=0,autoFWarning='';
   try{
    const source=data?.source_data??{};
-   const normalizeKey=v=>String(v??'').toLowerCase().replace(/[\s_・-]/g,'');
-   const getField=(obj,aliases)=>{
-    const wanted=aliases.map(normalizeKey);
-    for(const [key,value] of Object.entries(obj||{}))if(wanted.includes(normalizeKey(key)))return value;
-    return undefined;
-   };
-   const candidates=[];
-   const walk=(value)=>{
-    if(Array.isArray(value)){value.forEach(walk);return;}
-    if(!value||typeof value!=='object')return;
-    const obj=value;
-    const st=getField(obj,['actual_st_raw','actual_st','start_timing','start_time','st','スタートタイミング','スタート']);
-    if(st!==undefined&&st!==null&&String(st).trim()!=='')candidates.push({obj,st});
-    Object.values(obj).forEach(walk);
-   };
-   walk(source);
+   const entries=Array.isArray(source?.entries)?source.entries:[];
+   const normalizeF=value=>String(value??'').trim().toUpperCase().replace(/[\\s　]/g,'');
    const found=new Map();
-   for(const item of candidates){
-    const rawSt=String(item.st).trim().toUpperCase();
-    const isF=/^F(?:[.．+＋-]?\d*)?$/.test(rawSt)||/^F[.．]/.test(rawSt);
-    if(!isF)continue;
-    const obj=item.obj;
-    const reg=String(getField(obj,['racer_registration_no','registration_no','regno','touban','登録番号','選手登録番号'])??'').replace(/\D/g,'');
-    const lane=Number(getField(obj,['lane','boat_no','艇番','枠番']));
-    const name=getField(obj,['racer_name','name','選手名']);
-    if(!/^\d{4}$/.test(reg)||!Number.isInteger(lane)||lane<1||lane>6){autoFSkipped++;continue;}
-    found.set(reg+':'+lane,{reg,lane,name:name?String(name):null,rawSt});
+   for(const entry of entries){
+    const flag=normalizeF(entry?.st_flag);
+    if(!/^F(?:[.．+＋-]?\\d*)?$/.test(flag))continue;
+    const reg=String(entry?.regno??entry?.racer_registration_no??'').replace(/\\D/g,'');
+    const lane=Number(entry?.boat??entry?.lane??entry?.boat_no);
+    if(!/^\\d{4}$/.test(reg)||!Number.isInteger(lane)||lane<1||lane>6){autoFSkipped++;continue;}
+    found.set(reg+':'+lane,{reg,lane,name:entry?.name?String(entry.name):null,rawSt:flag});
    }
-   for(const f of found.values()){
+   for(const incident of found.values()){
+    // DBに一意制約がないため、同一レース・同一選手の登録済み記録を先に確認する。
+    const {data:existing,error:lookupError}=await cloudClient.from('racer_f_incidents')
+     .select('id').eq('user_id',cloudUser.id).eq('racer_registration_no',incident.reg)
+     .eq('incident_date',date).eq('venue_code',code).eq('race_no',race)
+     .eq('lane',incident.lane).eq('f_type','本番F').limit(1);
+    if(lookupError)throw lookupError;
+    if(existing?.length){autoFSkipped++;continue;}
     const {error:insertError}=await cloudClient.from('racer_f_incidents').insert({
-     user_id:cloudUser.id,racer_registration_no:f.reg,racer_name:f.name,
-     incident_date:date,venue_code:code,venue_name:homeVenue,race_no:race,lane:f.lane,
+     user_id:cloudUser.id,racer_registration_no:incident.reg,racer_name:incident.name,
+     incident_date:date,venue_code:code,venue_name:homeVenue,race_no:race,lane:incident.lane,
      f_type:'本番F',source_name:'race_result_auto',
-     source_data:{entry_method:'レース結果から自動連携',actual_st_raw:f.rawSt}
+     source_data:{entry_method:'公式レース結果 entries[].st_flag から自動連携',actual_st_flag:incident.rawSt}
     });
-    if(insertError){if(insertError.code==='23505')autoFSkipped++;else throw insertError;}
-    else autoFCount++;
+    if(insertError)throw insertError;
+    autoFCount++;
    }
   }catch(fSyncError){autoFWarning=fSyncError?.message||String(fSyncError);}
   const raw=data?.source_data??{},keys=Object.keys(raw);
