@@ -225,6 +225,9 @@ table{min-width:520px}
     min-height: 42px;
   }
 }
+
+/* Backtest summary: compact two-column cards on phones */
+@media screen and (max-width: 600px) { #backtestSummary.venue-grid { display:grid !important; grid-template-columns:repeat(2,minmax(0,1fr)) !important; gap:10px !important; } #backtestSummary.venue-grid > .panel { width:auto !important; min-width:0 !important; padding:12px !important; } #backtestSummary.venue-grid > .panel h2 { font-size:18px !important; line-height:1.35 !important; overflow-wrap:anywhere !important; } }
 </style>
 </head>
 <body>
