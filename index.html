@@ -46,6 +46,13 @@ footer{color:var(--muted);font-size:11px;text-align:center;padding:24px}
  .stat b{font-size:19px}
 }
 
+/* Keep form fields inside their grid columns on mobile Safari */
+.grid > .field { min-width:0; }
+.grid > .field input,
+.grid > .field select,
+.grid > .field textarea { display:block; width:100%; min-width:0; max-width:100%; }
+.grid > .field input[type="date"] { -webkit-appearance:none; appearance:none; box-sizing:border-box; }
+
 /* Mobile repair: keep the expanded boat details out of the outer boat grid */
 @media screen and (max-width: 700px) {
   #boats .boat .boatgrid { display:grid !important; grid-template-columns:repeat(2,minmax(0,1fr)) !important; }
