@@ -590,7 +590,6 @@ $('refreshFHistory').addEventListener('click',renderFHistory);
       await renderFHistory();return;
     }
     if(data?.done||data?.next_offset===null||n===0){
-      $('fBackfillOffset').value='0';
       status.textContent='一括取得が完了しました。対象 '+total+'名／処理 '+processed+'名／保存 '+saved+'行／取得エラー '+failures+'件。';
       await renderFHistory();return;
     }
