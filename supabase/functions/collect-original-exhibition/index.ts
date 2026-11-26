@@ -107,7 +107,10 @@ Deno.serve(async (req: Request) => {
     const summary: Record<string, unknown>[] = [];
     let savedEntries = 0;
 
-    await Promise.all(uniqueTargets.map(async (target) => {
+    let targetIndex = 0;
+    const workers = Array.from({ length: Math.min(6, uniqueTargets.length) }, async () => {
+      while (targetIndex < uniqueTargets.length) {
+        const target = uniqueTargets[targetIndex++];
       try {
         const race = apiData?.programs?.stadiums?.[String(target.venue_code)]?.races?.[String(target.race_no)];
         if (!race) {
@@ -181,7 +184,9 @@ Deno.serve(async (req: Request) => {
       } catch (error) {
         summary.push({ ...target, status: "error", saved: 0, message: error instanceof Error ? error.message : "取得エラー" });
       }
-    }));
+      }
+    });
+    await Promise.all(workers);
     const checkRows = summary.map((item: any) => ({
       user_id: auth.user.id,
       race_date: date,
