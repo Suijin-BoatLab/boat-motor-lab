@@ -1224,7 +1224,7 @@ async function syncSelectedRaceResult(){
   let autoFCount=0,autoFSkipped=0,autoFWarning='';
   try{
    const source=data?.source_data??{};
-   const normalizeKey=v=>String(v??'').toLowerCase().replace(/[\\s_・-]/g,'');
+   const normalizeKey=v=>String(v??'').toLowerCase().replace(/[\s_・-]/g,'');
    const getField=(obj,aliases)=>{
     const wanted=aliases.map(normalizeKey);
     for(const [key,value] of Object.entries(obj||{}))if(wanted.includes(normalizeKey(key)))return value;
@@ -1243,13 +1243,13 @@ async function syncSelectedRaceResult(){
    const found=new Map();
    for(const item of candidates){
     const rawSt=String(item.st).trim().toUpperCase();
-    const isF=/^F(?:[.．+＋-]?\\d*)?$/.test(rawSt)||/^F[.．]/.test(rawSt)||(/^[-−]0?\\.\\d+$/.test(rawSt));
+    const isF=/^F(?:[.．+＋-]?\d*)?$/.test(rawSt)||/^F[.．]/.test(rawSt);
     if(!isF)continue;
     const obj=item.obj;
-    const reg=String(getField(obj,['racer_registration_no','registration_no','regno','touban','登録番号','選手登録番号'])??'').replace(/\\D/g,'');
+    const reg=String(getField(obj,['racer_registration_no','registration_no','regno','touban','登録番号','選手登録番号'])??'').replace(/\D/g,'');
     const lane=Number(getField(obj,['lane','boat_no','艇番','枠番']));
     const name=getField(obj,['racer_name','name','選手名']);
-    if(!/^\\d{4}$/.test(reg)||!Number.isInteger(lane)||lane<1||lane>6){autoFSkipped++;continue;}
+    if(!/^\d{4}$/.test(reg)||!Number.isInteger(lane)||lane<1||lane>6){autoFSkipped++;continue;}
     found.set(reg+':'+lane,{reg,lane,name:name?String(name):null,rawSt});
    }
    for(const f of found.values()){
