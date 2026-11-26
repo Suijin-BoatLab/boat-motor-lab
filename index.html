@@ -46,6 +46,14 @@ footer{color:var(--muted);font-size:11px;text-align:center;padding:24px}
  .stat b{font-size:19px}
 }
 
+/* Improve contrast of boat lane headings and expandable detail labels */
+#boats .boathead,
+#results .boathead { color:var(--text) !important; }
+#boats .boatgrid details > summary,
+#results .boatgrid details > summary { color:var(--text) !important; }
+#boats .boatgrid details[open] > summary,
+#results .boatgrid details[open] > summary { color:#ffffff !important; }
+
 /* Keep form fields inside their grid columns on mobile Safari */
 .grid > .field { min-width:0; }
 .grid > .field input,
