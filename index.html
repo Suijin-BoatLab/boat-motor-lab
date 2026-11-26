@@ -1532,6 +1532,11 @@ function renderVenues(){
   const live=getVenueLiveRace(homePayload?.programs?.stadiums?.[String(venueCodes[homeVenue])]?.races||{},date,new Date());
   homeRace=live?.number||(nums.includes(1)?1:(nums[0]||1));
   renderRaces();renderVenueRaceCards();showTab('racecards');
+  // 開催一覧カードに表示した次レースへ直接移動する（出走表一覧の先頭1Rには留まらない）。
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+   const target=$('racecard-'+homeRace);
+   if(target)target.scrollIntoView({behavior:'smooth',block:'start'});
+  }));
  });
 }
 function escapeRaceText(v){return String(v??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
