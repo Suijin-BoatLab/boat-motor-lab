@@ -229,6 +229,18 @@ table{min-width:520px}
 /* Backtest summary: compact two-column cards on phones */
 @media screen and (max-width: 600px) { #backtestSummary.venue-grid { display:grid !important; grid-template-columns:repeat(2,minmax(0,1fr)) !important; gap:10px !important; } #backtestSummary.venue-grid > .panel { width:auto !important; min-width:0 !important; padding:12px !important; } #backtestSummary.venue-grid > .panel h2 { font-size:18px !important; line-height:1.35 !important; overflow-wrap:anywhere !important; } }
 
+/* Per-column racecard ranking: best=coral, second=yellow. */
+.racecard-wide-table .racecard-rank-first,
+.racecard-wide-table .racecard-rank-second{
+ display:inline-block;
+ min-width:2.6em;
+ padding:1px 4px;
+ border-radius:2px;
+ line-height:1.35;
+ font-variant-numeric:tabular-nums;
+}
+.racecard-wide-table .racecard-rank-first{background:#ffb9a8;color:#202b3b}
+.racecard-wide-table .racecard-rank-second{background:#ffe28a;color:#202b3b}
 /* Horizontal race-card layout inspired by the supplied race-table references */
 .racecard-scroll-hint{font-size:12px;color:#718097;text-align:right;padding:5px 4px}
 .racecard-wide-scroll,.racecard-series-scroll{overflow-x:auto;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;border:1px solid #dfe4ec;background:#fff;max-width:100%}
@@ -2265,6 +2277,40 @@ function renderVenueRaceCards(){
  $('racecardList').innerHTML=nums.map(n=>{
   const race=rs[String(n)]||{},racers=race.racers||{};
   const previewRacers=race.preview?.racers||{};
+  const racecardMetricDefs={
+   average_start_timing:{field:'average_start_timing',alt:['avg_start_timing','average_st','avg_st'],lower:true},
+   predicted_start_timing:{field:'predicted_start_timing',alt:['predicted_st','expected_start_timing'],lower:true},
+   national_win_rate:{field:'national_win_rate'},
+   national_top_2_percent:{field:'national_top_2_percent'},
+   national_top_3_percent:{field:'national_top_3_percent'},
+   local_win_rate:{field:'local_win_rate'},
+   local_top_2_percent:{field:'local_top_2_percent'},
+   local_top_3_percent:{field:'local_top_3_percent'},
+   motor_top_2_percent:{field:'motor_top_2_percent'},
+   motor_top_3_percent:{field:'motor_top_3_percent'},
+   boat_top_2_percent:{field:'boat_top_2_percent'},
+   boat_top_3_percent:{field:'boat_top_3_percent'},
+   exhibition_time:{field:'exhibition_time',lower:true},
+   exhibition_start_timing:{field:'start_timing',lower:true}
+  };
+  const metricRanks={};
+  Object.entries(racecardMetricDefs).forEach(([key,def])=>{
+   const vals=Object.keys(racers).map(k=>{
+    const p=racers[k]||{},pr=previewRacers[k]||{};
+    const raw=[p[def.field],...(def.alt||[]).map(a=>p[a]),...(key==='exhibition_time'||key==='exhibition_start_timing'?[pr[def.field]]:[])].find(v=>v!==undefined&&v!==null&&v!=='');
+    if(raw===undefined)return null;
+    const num=Number(String(raw).replace(/[％%,]/g,'').trim());
+    return Number.isFinite(num)?num:null;
+   }).filter(v=>v!==null);
+   const ordered=[...new Set(vals)].sort((a,b)=>def.lower?a-b:b-a);
+   metricRanks[key]=ordered.slice(0,2);
+  });
+  const rankedValue=(key,raw,formatted)=>{
+   const def=racecardMetricDefs[key],num=raw===undefined||raw===null||raw===''?NaN:Number(String(raw).replace(/[％%,]/g,'').trim());
+   const rank=Number.isFinite(num)?metricRanks[key]?.indexOf(num):-1;
+   const cls=rank===0?'racecard-rank-first':rank===1?'racecard-rank-second':'';
+   return '<span'+(cls?' class="'+cls+'"':'')+'>'+formatted+'</span>';
+  };
   const rows=Object.keys(racers).sort((a,b)=>Number(a)-Number(b)).map(k=>{
    const p=racers[k]||{},pr=previewRacers[k]||{},lane=Number(p.entry_number||k);
    const rank=p.rank_number_source||p.rank_number||'—';
@@ -2280,13 +2326,13 @@ function renderVenueRaceCards(){
     '<td>'+age+'歳<br>'+weight+'kg</td>'+
     '<td>'+branch+'<br>'+birth+'</td>'+
     '<td>F'+fCount+'<br>L'+lCount+'</td>'+
-    '<td>'+avgSt+'<br>'+val(p.predicted_start_timing,p.predicted_st,p.expected_start_timing)+'</td>'+
-    '<td>'+rate(p.national_win_rate)+'<br>'+rate(p.national_top_2_percent)+'<br>'+rate(p.national_top_3_percent)+'</td>'+
-    '<td>'+rate(p.local_win_rate)+'<br>'+rate(p.local_top_2_percent)+'<br>'+rate(p.local_top_3_percent)+'</td>'+
-    '<td>No. '+val(p.motor_number)+'<br>'+rate(p.motor_top_2_percent)+'<br>'+rate(p.motor_top_3_percent)+'</td>'+
-    '<td>No. '+val(p.boat_number)+'<br>'+rate(p.boat_top_2_percent)+'<br>'+rate(p.boat_top_3_percent)+'</td>'+
+    '<td>'+rankedValue('average_start_timing',p.average_start_timing??p.avg_start_timing??p.average_st??p.avg_st,avgSt)+'<br>'+rankedValue('predicted_start_timing',p.predicted_start_timing??p.predicted_st??p.expected_start_timing,val(p.predicted_start_timing,p.predicted_st,p.expected_start_timing))+'</td>'+
+    '<td>'+rankedValue('national_win_rate',p.national_win_rate,rate(p.national_win_rate))+'<br>'+rankedValue('national_top_2_percent',p.national_top_2_percent,rate(p.national_top_2_percent))+'<br>'+rankedValue('national_top_3_percent',p.national_top_3_percent,rate(p.national_top_3_percent))+'</td>'+
+    '<td>'+rankedValue('local_win_rate',p.local_win_rate,rate(p.local_win_rate))+'<br>'+rankedValue('local_top_2_percent',p.local_top_2_percent,rate(p.local_top_2_percent))+'<br>'+rankedValue('local_top_3_percent',p.local_top_3_percent,rate(p.local_top_3_percent))+'</td>'+
+    '<td>No. '+val(p.motor_number)+'<br>'+rankedValue('motor_top_2_percent',p.motor_top_2_percent,rate(p.motor_top_2_percent))+'<br>'+rankedValue('motor_top_3_percent',p.motor_top_3_percent,rate(p.motor_top_3_percent))+'</td>'+
+    '<td>No. '+val(p.boat_number)+'<br>'+rankedValue('boat_top_2_percent',p.boat_top_2_percent,rate(p.boat_top_2_percent))+'<br>'+rankedValue('boat_top_3_percent',p.boat_top_3_percent,rate(p.boat_top_3_percent))+'</td>'+
     '<td>'+val(pr.weight_adjustment,p.weight_adjustment)+'<br>'+val(pr.tilt_adjustment,pr.tilt_adjustment_source,p.tilt_adjustment,p.tilt_adjustment_source)+'</td>'+
-    '<td>'+val(pr.exhibition_time,p.exhibition_time)+'<br>'+val(pr.start_timing,p.start_timing)+'</td>'+
+    '<td>'+rankedValue('exhibition_time',pr.exhibition_time??p.exhibition_time,val(pr.exhibition_time,p.exhibition_time))+'<br>'+rankedValue('exhibition_start_timing',pr.start_timing??p.start_timing,val(pr.start_timing,p.start_timing))+'</td>'+
    '</tr>';
   }).join('');
   const title=[race.title,race.subtitle].filter(Boolean).map(escapeRaceText).join('｜');
