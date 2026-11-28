@@ -1933,7 +1933,8 @@ function renderVenues(){
   if(official?.status==='一部中止'){const m=String(official.status_detail||'').match(/(\\d+)R以降中止/);if(m&&next&&next.number>=Number(m[1]))next=null;}
   const active=!!data&&!cancelled&&!noEvent,nextRace=cancelled||noEvent?null:next;
   const cutoff=nextRace?.cutoff,minutes=cutoff?Math.ceil((cutoff-now)/60000):null,urgent=minutes!==null&&minutes<=5&&minutes>0;
-  const womensEvent=isWomensEvent(data,rs);\n  const dayRace=Object.values(rs).find(x=>x?.day_number_source||x?.day_number);
+  const womensEvent=isWomensEvent(data,rs);
+  const dayRace=Object.values(rs).find(x=>x?.day_number_source||x?.day_number);
   const dayLabel=dayRace?.day_number_source||(Number.isFinite(Number(dayRace?.day_number))&&Number(dayRace?.day_number)>0?Number(dayRace.day_number)+'日目':'');
   const raceLabel=nextRace?nextRace.number+'R':'—',timeLabel=nextRace?cutoff.toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit',hour12:false})+'締切':'—';
   const status=cancelled?official.status_detail:(noEvent?'開催なし':(active?(nextRace?'投票受付中':'本日終了'):'開催なし'));
