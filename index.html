@@ -2323,7 +2323,7 @@ async function renderVenueRaceCards(){
  const historyRate=(map,number)=>{
   const stat=map.get(Number(number));
   if(!stat||!stat.starts)return 'DB30日 —';
-  return 'DB30日 2連 '+(stat.top2/stat.starts*100).toFixed(1)+'%／3連 '+(stat.top3/stat.starts*100).toFixed(1)+'%';
+  return 'DB30日 '+stat.starts+'走｜2連 '+(stat.top2/stat.starts*100).toFixed(1)+'%／3連 '+(stat.top3/stat.starts*100).toFixed(1)+'%';
  };
  if(cloudClient&&cloudUser){
   try{
