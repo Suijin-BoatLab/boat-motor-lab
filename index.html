@@ -2422,8 +2422,8 @@ async function renderVenueRaceCards(){
     '<td>'+rankedValue('average_start_timing',p.average_start_timing??p.avg_start_timing??p.average_st??p.avg_st,avgSt)+'<br>'+rankedValue('predicted_start_timing',p.predicted_start_timing??p.predicted_st??p.expected_start_timing,val(p.predicted_start_timing,p.predicted_st,p.expected_start_timing))+'</td>'+
     '<td>'+rankedValue('national_win_rate',p.national_win_rate,rate(p.national_win_rate))+'<br>'+rankedValue('national_top_2_percent',p.national_top_2_percent,rate(p.national_top_2_percent))+'<br>'+rankedValue('national_top_3_percent',p.national_top_3_percent,rate(p.national_top_3_percent))+'</td>'+
     '<td>'+rankedValue('local_win_rate',p.local_win_rate,rate(p.local_win_rate))+'<br>'+rankedValue('local_top_2_percent',p.local_top_2_percent,rate(p.local_top_2_percent))+'<br>'+rankedValue('local_top_3_percent',p.local_top_3_percent,rate(p.local_top_3_percent))+'</td>'+
-    '<td>No. '+val(p.motor_number)+'<br>'+rankedValue('motor_top_2_percent',getMotorRate(p,2),rate(getMotorRate(p,2)))+'<br>'+rankedValue('motor_top_3_percent',getMotorRate(p,3),rate(getMotorRate(p,3)))+'<br><small>'+historyRate(motorHistoryStats,p.motor_number)+'</small></td>'+
-    '<td>No. '+val(p.boat_number)+'<br>'+rankedValue('boat_top_2_percent',getBoatRate(p,2),rate(getBoatRate(p,2)))+'<br>'+rankedValue('boat_top_3_percent',getBoatRate(p,3),rate(getBoatRate(p,3)))+'<br><small>'+historyRate(boatHistoryStats,p.boat_number)+'</small></td>'+
+    '<td>No. '+val(p.motor_number)+'<br>'+historyRate(motorHistoryStats,p.motor_number)+'</td>'+
+    '<td>No. '+val(p.boat_number)+'<br>'+historyRate(boatHistoryStats,p.boat_number)+'</td>'+
     '<td>'+val(pr.weight_adjustment,p.weight_adjustment)+'<br>'+val(pr.tilt_adjustment,pr.tilt_adjustment_source,p.tilt_adjustment,p.tilt_adjustment_source)+'</td>'+
     '<td>'+rankedValue('exhibition_time',pr.exhibition_time??p.exhibition_time,val(pr.exhibition_time,p.exhibition_time))+'<br>'+rankedValue('exhibition_start_timing',pr.start_timing??p.start_timing,val(pr.start_timing,p.start_timing))+'</td>'+
    '</tr>';
