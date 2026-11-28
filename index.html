@@ -1945,7 +1945,6 @@ function renderVenues(){
   // DOM再描画前に、タップしたカードに表示されている開催場と次レース番号を確保する。
   const chosenVenue=b.dataset.v;
   const chosenRace=parseInt(b.dataset.race,10);
-  if(homeVenue===chosenVenue){favorites=favorites.includes(homeVenue)?favorites.filter(x=>x!==homeVenue):[...favorites,homeVenue];localStorage.setItem('bml_favs',JSON.stringify(favorites));}
   homeVenue=chosenVenue;
   const selectedRaces=homePayload?.programs?.stadiums?.[String(venueCodes[chosenVenue])]?.races||{};
   const nums=Object.keys(selectedRaces).map(Number).filter(n=>n>=1&&n<=12).sort((a,b)=>a-b);
