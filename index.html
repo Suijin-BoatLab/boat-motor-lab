@@ -1965,6 +1965,49 @@ function renderVenues(){
  });
 }
 function escapeRaceText(v){return String(v??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+async function renderRaceScoreRate({venue,date,section,status,panel}){
+ const venueNo=venueCodes[venue],stadiumKey=String(venueNo);
+ const currentRaces=homePayload?.programs?.stadiums?.[stadiumKey]?.races||{};
+ const first=Object.values(currentRaces).find(x=>x&&x.day_number);
+ const dayNo=Number(first?.day_number||1);
+ status.textContent='今節の過去レース結果を取得しています…';panel.innerHTML='';
+ const files=[{date,races:currentRaces}];
+ const base=new Date(date+'T12:00:00');
+ for(let back=1;back<dayNo;back++){
+  const d=new Date(base);d.setDate(d.getDate()-back);
+  const prevDate=d.toLocaleDateString('sv-SE');
+  try{
+   const compact=prevDate.replaceAll('-','');
+   const response=await fetch('https://boatraceopenapi.github.io/api/v1/'+prevDate.slice(0,4)+'/'+compact+'.json',{cache:'no-store'});
+   if(!response.ok)continue;
+   const payload=await response.json();
+   const races=payload?.programs?.stadiums?.[stadiumKey]?.races;
+   if(races)files.push({date:prevDate,races});
+  }catch(e){}
+ }
+ const pointsByPlace={1:10,2:8,3:6,4:4,5:2,6:1},rows=new Map();
+ for(const file of files){
+  for(const race of Object.values(file.races||{})){
+   const resultRacers=race?.result?.racers;
+   if(!resultRacers||typeof resultRacers!=='object')continue;
+   for(const [lane,rr] of Object.entries(resultRacers)){
+    const reg=String(rr?.number||race?.racers?.[lane]?.number||'').trim();
+    if(!reg)continue;
+    const row=rows.get(reg)||{reg,name:rr?.name||race?.racers?.[lane]?.name||'選手名不明',starts:0,points:0};
+    row.starts++;
+    const place=Number(rr?.place_number);
+    if(Number.isInteger(place)&&place>=1&&place<=6)row.points+=pointsByPlace[place];
+    rows.set(reg,row);
+   }
+  }
+ }
+ const sorted=[...rows.values()].map(x=>({...x,rate:x.starts?x.points/x.starts:0})).sort((a,b)=>b.rate-a.rate||b.points-a.points||a.reg.localeCompare(b.reg));
+ if(!sorted.length){status.textContent='今節の確定結果はまだ取得できていません。レース終了後に再読み込みしてください。';return;}
+ const esc=escapeRaceText;
+ panel.innerHTML='<div class="tablewrap"><table><thead><tr><th>順位</th><th>選手</th><th>得点</th><th>出走</th><th>得点率</th></tr></thead><tbody>'+sorted.map((x,i)=>'<tr><td>'+(i+1)+'</td><td>'+esc(x.name)+'<br><span class="small muted">'+esc(x.reg)+'</span></td><td>'+x.points+'</td><td>'+x.starts+'</td><td><b>'+x.rate.toFixed(2)+'</b></td></tr>').join('')+'</tbody></table></div>';
+ status.textContent='取得できた今節結果 '+files.length+'日分を集計。通常配点による暫定値です。';
+ const note=document.createElement('p');note.className='small muted';note.textContent='注意：1着10・2着8・3着6・4着4・5着2・6着1点で算出。ドリーム・特選などの特別配点、事故減点、欠場の扱いは未反映のため、公式得点率とは異なる場合があります。';panel.appendChild(note);
+}
 function renderVenueRaceCards(){
  const venue=homeVenue,date=$('homeDate').value,rs=homePayload?.programs?.stadiums?.[String(venueCodes[venue])]?.races||{};
  $('racecardVenueTitle').textContent=venue;
@@ -1985,14 +2028,16 @@ function renderVenueRaceCards(){
   const title=[race.title,race.subtitle].filter(Boolean).map(escapeRaceText).join('｜');
   const cutoff=race.closed_at?escapeRaceText(race.closed_at.slice(11,16)+'締切'):'';
   return `<article class="panel" id="racecard-${n}"><div class="racecard-heading"><div><h2>${n}R ${title||'出走表'}</h2><div class="racecard-meta">${cutoff}　${race.day_number_source?escapeRaceText(race.day_number_source):''}</div></div><span class="tag">${Object.keys(racers).length||0}艇</span></div><div class="tablewrap"><table class="racecard-table"><thead><tr><th>枠</th><th>選手</th><th>登録番号</th><th>級別</th><th>全国勝率</th><th>当地勝率</th><th>モーター</th><th>モーター2連率</th></tr></thead><tbody>${rows||'<tr><td colspan="8">出走表データなし</td></tr>'}</tbody></table></div><div class="venue-race-menu">
+ <button type="button" data-score-rate-race="${n}">得点率</button>
  <button type="button" class="active" data-race-menu="entry" data-race-no="${n}">出走表</button>
  <button type="button" data-race-menu="frame" data-race-no="${n}">枠別情報</button>
+ <button type="button" data-prediction-build-race="${n}">予想組み立て</button>
  <button type="button" data-race-menu="odds" data-race-no="${n}">オッズ</button>
  <button type="button" data-race-menu="preview" data-race-no="${n}">直前情報</button>
  <button type="button" data-race-menu="series" data-race-no="${n}">今節成績</button>
  <button type="button" data-analyze-race="${n}">モーター情報</button>
  <button type="button" data-result-race="${n}">結果</button>
- </div><div id="raceMotorInlineSection-${n}" class="hidden"><p class="home-sub" id="raceMotorInlineStatus-${n}">このレースの6艇の機力分析を表示します。</p><div id="raceMotorInlinePanel-${n}"></div></div><div id="raceFInfoPanel-${n}" class="hidden"></div><div id="raceShobugakePanel-${n}" class="hidden"></div><div id="raceResultSection-${n}" class="hidden"><p class="home-sub" id="raceResultStatus-${n}">レース終了後に結果・払戻を取得できます。</p><div id="raceResultPanel-${n}"></div></div></article>`;
+ </div><div id="raceScoreRateSection-${n}" class="hidden panel"><h3>今節 得点率</h3><p class="small muted" id="raceScoreRateStatus-${n}">今節の結果を集計します。</p><div id="raceScoreRatePanel-${n}"></div></div><div id="raceMotorInlineSection-${n}" class="hidden"><p class="home-sub" id="raceMotorInlineStatus-${n}">このレースの6艇の機力分析を表示します。</p><div id="raceMotorInlinePanel-${n}"></div></div><div id="raceFInfoPanel-${n}" class="hidden"></div><div id="raceShobugakePanel-${n}" class="hidden"></div><div id="raceResultSection-${n}" class="hidden"><p class="home-sub" id="raceResultStatus-${n}">レース終了後に結果・払戻を取得できます。</p><div id="raceResultPanel-${n}"></div></div></article>`;
  }).join('');
  let inlineMotorRequest=0;$('racecardList').querySelectorAll('[data-race-menu]').forEach(b=>b.onclick=()=>{
   const n=Number(b.dataset.raceNo),kind=b.dataset.raceMenu;
@@ -2002,6 +2047,22 @@ function renderVenueRaceCards(){
   let box=card.querySelector('.race-menu-notice');
   if(!box){box=document.createElement('div');box.className='race-menu-notice';card.appendChild(box);}
   box.textContent=labels[kind]+'は、この画面構成に合わせて次の段階でデータ接続するよ。';
+ });
+ $('racecardList').querySelectorAll('[data-score-rate-race]').forEach(b=>b.onclick=async()=>{
+  const n=Number(b.dataset.scoreRateRace),section=$('raceScoreRateSection-'+n),status=$('raceScoreRateStatus-'+n),panel=$('raceScoreRatePanel-'+n);
+  if(!section||!status||!panel)return;
+  const opening=section.classList.contains('hidden');section.classList.toggle('hidden',!opening);
+  if(!opening){b.setAttribute('aria-expanded','false');return;}
+  b.setAttribute('aria-expanded','true');
+  if(section.dataset.loaded==='true')return;
+  await renderRaceScoreRate({venue:homeVenue,date,section,status,panel});section.dataset.loaded='true';
+ });
+ $('racecardList').querySelectorAll('[data-prediction-build-race]').forEach(b=>b.onclick=()=>{
+  const n=Number(b.dataset.predictionBuildRace);
+  $('predictionDate').value=date;$('predictionVenue').value=homeVenue;$('predictionRaceNo').value=String(n);
+  $('predictionWindDir').value='';$('predictionWindSpeed').value='';$('predictionWaveHeight').value='';$('predictionEntry').value='';
+  showTab('prediction');
+  $('runPrediction').click();
  });
  $('racecardList').querySelectorAll('[data-analyze-race]').forEach(b=>b.onclick=async()=>{const n=Number(b.dataset.analyzeRace),section=$('raceMotorInlineSection-'+n),panel=$('raceMotorInlinePanel-'+n),status=$('raceMotorInlineStatus-'+n);if(!section||!panel||!status)return;const opening=section.classList.contains('hidden');if(!opening){section.classList.add('hidden');b.setAttribute('aria-expanded','false');return;}section.classList.remove('hidden');b.setAttribute('aria-expanded','true');if(panel.dataset.loaded==='true')return;const request=++inlineMotorRequest;status.textContent=homeVenue+' '+n+'R｜6艇の機力履歴を分析しています…';panel.innerHTML='';homeRace=n;$('homeDate').value=date;try{await loadRaceMotors();if(request!==inlineMotorRequest||section.classList.contains('hidden'))return;panel.innerHTML=$('raceMotorCards').innerHTML||'<div class="racecard-empty">分析データがありません。</div>';panel.dataset.loaded='true';status.textContent=$('raceAnalysisStatus').textContent||'6艇の分析が完了しました。';}catch(e){if(request===inlineMotorRequest)status.textContent='機力分析を取得できませんでした：'+(e.message||'通信エラー');}});
  $('racecardList').querySelectorAll('[data-result-race]').forEach(b=>b.onclick=()=>{const n=Number(b.dataset.resultRace),section=$('raceResultSection-'+n),panel=$('raceResultPanel-'+n),status=$('raceResultStatus-'+n),isOpen=!section.classList.contains('hidden');if(isOpen){section.classList.add('hidden');b.setAttribute('aria-expanded','false');}else{section.classList.remove('hidden');b.setAttribute('aria-expanded','true');if(!panel.innerHTML.trim())syncSelectedRaceResult({date,venue:homeVenue,race:n,statusId:'raceResultStatus-'+n,panelId:'raceResultPanel-'+n,button:b});}});
