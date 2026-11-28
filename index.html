@@ -2310,7 +2310,36 @@ async function renderVenueRaceCards(){
  // 当日のDB保存値を、公式開催データで欠けている項目の補完に使う。
  // 公式データを優先し、DB値は空欄だけを埋める。
  const storedMotorByRaceLane=new Map(),storedEntryByRaceLane=new Map();
+ const motorHistoryStats=new Map(),boatHistoryStats=new Map();
+ const historyStart=new Date(date+'T12:00:00');historyStart.setDate(historyStart.getDate()-29);
+ const historyFrom=historyStart.toLocaleDateString('sv-SE');
+ const addHistoryStat=(map,number,rank)=>{
+  const no=Number(number),place=Number(rank);
+  if(!Number.isFinite(no)||no<=0||!Number.isInteger(place)||place<1||place>6)return;
+  const stat=map.get(no)||{starts:0,top2:0,top3:0,wins:0,placeSum:0};
+  stat.starts++;stat.placeSum+=place;if(place===1)stat.wins++;if(place<=2)stat.top2++;if(place<=3)stat.top3++;
+  map.set(no,stat);
+ };
+ const historyRate=(map,number)=>{
+  const stat=map.get(Number(number));
+  if(!stat||!stat.starts)return 'DB30日 —';
+  return 'DB30日 2連 '+(stat.top2/stat.starts*100).toFixed(1)+'%／3連 '+(stat.top3/stat.starts*100).toFixed(1)+'%';
+ };
  if(cloudClient&&cloudUser){
+  try{
+   let offset=0,historyBatch=[];
+   do{
+    const {data,error}=await cloudClient.from('historical_motor_entries')
+     .select('race_date,race_no,lane,motor_number,boat_number,finish_rank')
+     .eq('venue_code',venueCodes[venue]).gte('race_date',historyFrom).lte('race_date',date)
+     .order('race_date',{ascending:true}).order('race_no',{ascending:true}).order('lane',{ascending:true})
+     .range(offset,offset+999);
+    if(error)throw error;
+    historyBatch=data||[];
+    historyBatch.forEach(x=>{addHistoryStat(motorHistoryStats,x.motor_number,x.finish_rank);addHistoryStat(boatHistoryStats,x.boat_number,x.finish_rank);});
+    offset+=historyBatch.length;
+   }while(historyBatch.length===1000);
+  }catch(error){console.warn('直近30日モーター・ボート成績の集計に失敗しました:',error);}
   try{
    const {data:historyRows,error:historyError}=await cloudClient.from('historical_motor_entries')
     .select('race_no,lane,motor_number,boat_number,exhibition_time,lap_time,half_lap_time,straight_time,turn_time,exhibition_st_raw,exhibition_st,exhibition_st_is_f')
@@ -2392,8 +2421,8 @@ async function renderVenueRaceCards(){
     '<td>'+rankedValue('average_start_timing',p.average_start_timing??p.avg_start_timing??p.average_st??p.avg_st,avgSt)+'<br>'+rankedValue('predicted_start_timing',p.predicted_start_timing??p.predicted_st??p.expected_start_timing,val(p.predicted_start_timing,p.predicted_st,p.expected_start_timing))+'</td>'+
     '<td>'+rankedValue('national_win_rate',p.national_win_rate,rate(p.national_win_rate))+'<br>'+rankedValue('national_top_2_percent',p.national_top_2_percent,rate(p.national_top_2_percent))+'<br>'+rankedValue('national_top_3_percent',p.national_top_3_percent,rate(p.national_top_3_percent))+'</td>'+
     '<td>'+rankedValue('local_win_rate',p.local_win_rate,rate(p.local_win_rate))+'<br>'+rankedValue('local_top_2_percent',p.local_top_2_percent,rate(p.local_top_2_percent))+'<br>'+rankedValue('local_top_3_percent',p.local_top_3_percent,rate(p.local_top_3_percent))+'</td>'+
-    '<td>No. '+val(p.motor_number)+'<br>'+rankedValue('motor_top_2_percent',getMotorRate(p,2),rate(getMotorRate(p,2)))+'<br>'+rankedValue('motor_top_3_percent',getMotorRate(p,3),rate(getMotorRate(p,3)))+'</td>'+
-    '<td>No. '+val(p.boat_number)+'<br>'+rankedValue('boat_top_2_percent',getBoatRate(p,2),rate(getBoatRate(p,2)))+'<br>'+rankedValue('boat_top_3_percent',getBoatRate(p,3),rate(getBoatRate(p,3)))+'</td>'+
+    '<td>No. '+val(p.motor_number)+'<br>'+rankedValue('motor_top_2_percent',getMotorRate(p,2),rate(getMotorRate(p,2)))+'<br>'+rankedValue('motor_top_3_percent',getMotorRate(p,3),rate(getMotorRate(p,3)))+'<br><small>'+historyRate(motorHistoryStats,p.motor_number)+'</small></td>'+
+    '<td>No. '+val(p.boat_number)+'<br>'+rankedValue('boat_top_2_percent',getBoatRate(p,2),rate(getBoatRate(p,2)))+'<br>'+rankedValue('boat_top_3_percent',getBoatRate(p,3),rate(getBoatRate(p,3)))+'<br><small>'+historyRate(boatHistoryStats,p.boat_number)+'</small></td>'+
     '<td>'+val(pr.weight_adjustment,p.weight_adjustment)+'<br>'+val(pr.tilt_adjustment,pr.tilt_adjustment_source,p.tilt_adjustment,p.tilt_adjustment_source)+'</td>'+
     '<td>'+rankedValue('exhibition_time',pr.exhibition_time??p.exhibition_time,val(pr.exhibition_time,p.exhibition_time))+'<br>'+rankedValue('exhibition_start_timing',pr.start_timing??p.start_timing,val(pr.start_timing,p.start_timing))+'</td>'+
    '</tr>';
