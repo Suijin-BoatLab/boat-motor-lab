@@ -2464,22 +2464,32 @@ async function renderVenueRaceCards(){
  };
  if(cloudClient&&cloudUser){
   try{
-   let offset=0,historyBatch=[];
-   do{
-    const {data,error}=await cloudClient.from('historical_motor_entries')
-     .select('race_date,race_no,lane,motor_number,boat_number,finish_rank')
-     .eq('venue_code',venueCodes[venue]).gte('race_date',historyFrom).lte('race_date',date)
-     .order('race_date',{ascending:true}).order('race_no',{ascending:true}).order('lane',{ascending:true})
-     .range(offset,offset+999);
-    if(error)throw error;
-    historyBatch=data||[];
-    historyBatch.forEach(x=>{
-     if(x.race_date>=motorStartDate)addHistoryStat(motorHistoryStats,x.motor_number,x.finish_rank);
-     if(x.race_date>=boatStartDate)addHistoryStat(boatHistoryStats,x.boat_number,x.finish_rank);
-    });
-    offset+=historyBatch.length;
-   }while(historyBatch.length===1000);
-  }catch(error){console.warn('直近30日モーター・ボート成績の集計に失敗しました:',error);}
+   // そのレースに搭載されているモーター・ボート番号だけを対象にする。
+   // 場内の全履歴をページング取得する旧方式を避け、不要な行の転送を抑える。
+   const currentMotorNumbers=[...new Set(Object.values(rs).flatMap(r=>Object.values(r?.racers||{}).map(p=>Number(p?.motor_number)).filter(n=>Number.isInteger(n)&&n>0)))];
+   const currentBoatNumbers=[...new Set(Object.values(rs).flatMap(r=>Object.values(r?.racers||{}).map(p=>Number(p?.boat_number)).filter(n=>Number.isInteger(n)&&n>0)))];
+   const filters=[];
+   if(currentMotorNumbers.length)filters.push('motor_number.in.('+currentMotorNumbers.join(',')+')');
+   if(currentBoatNumbers.length)filters.push('boat_number.in.('+currentBoatNumbers.join(',')+')');
+   if(filters.length){
+    let offset=0,historyBatch=[];
+    do{
+     const {data,error}=await cloudClient.from('historical_motor_entries')
+      .select('race_date,race_no,lane,motor_number,boat_number,finish_rank')
+      .eq('venue_code',venueCodes[venue]).gte('race_date',historyFrom).lte('race_date',date)
+      .or(filters.join(','))
+      .order('race_date',{ascending:true}).order('race_no',{ascending:true}).order('lane',{ascending:true})
+      .range(offset,offset+999);
+     if(error)throw error;
+     historyBatch=data||[];
+     historyBatch.forEach(x=>{
+      if(x.race_date>=motorStartDate)addHistoryStat(motorHistoryStats,x.motor_number,x.finish_rank);
+      if(x.race_date>=boatStartDate)addHistoryStat(boatHistoryStats,x.boat_number,x.finish_rank);
+     });
+     offset+=historyBatch.length;
+    }while(historyBatch.length===1000);
+   }
+  }catch(error){console.warn('モーター・ボート成績の集計に失敗しました:',error);}
   try{
    const {data:historyRows,error:historyError}=await cloudClient.from('historical_motor_entries')
     .select('race_no,lane,motor_number,boat_number,exhibition_time,lap_time,half_lap_time,straight_time,turn_time,exhibition_st_raw,exhibition_st,exhibition_st_is_f')
