@@ -1285,6 +1285,14 @@ async function renderTargetRaces(){
   stats.push(...(data||[]));
  }
  const byKey=new Map(stats.map(x=>[String(x.racer_registration_no)+'|'+Number(x.course_no),x]));
+ // 当日オリジナル展示の保存値を、開催日・場・レース・艇番で照合する。
+ let motorExhibitionByRaceLane=new Map();
+ const {data:motorRows,error:motorRowsError}=await cloudClient.from('historical_motor_entries')
+  .select('race_date,venue_code,race_no,lane,exhibition_time,turn_time')
+  .eq('race_date',date);
+ if(!motorRowsError&&Array.isArray(motorRows)){
+  motorExhibitionByRaceLane=new Map(motorRows.map(x=>[Number(x.venue_code)+'|'+Number(x.race_no)+'|'+Number(x.lane),x]));
+ }
  const rows=[],unavailable=[];
  let attackHistoryMissing=0,attackHistoryAvailable=0,firstRateOverThreshold=0,noAttackRate=0;
  for(const item of racePool){
@@ -1317,7 +1325,8 @@ async function renderTargetRaces(){
   const racers=item.race.racers||{},preview=item.race.preview?.racers||{};
   const p1=preview['1']||{},p2=preview['2']||{},p3=preview['3']||{};
   const num=v=>{if(v===null||v===undefined||v==='')return NaN;const n=Number(v);return Number.isFinite(n)?n:NaN;};
-  const ex1=num(p1.exhibition_time),ex2=num(p2.exhibition_time),turn1=num(p1.turn_time),turn2=num(p2.turn_time),ex3=num(p3.exhibition_time),turn3=num(p3.turn_time);
+  const motorValue=(lane,key)=>motorExhibitionByRaceLane.get(String(venueCodes[item.venue])+'|'+item.raceNo+'|'+lane)?.[key];
+  const ex1=num(p1.exhibition_time??motorValue(1,'exhibition_time')),ex2=num(p2.exhibition_time??motorValue(2,'exhibition_time')),turn1=num(p1.turn_time??motorValue(1,'turn_time')),turn2=num(p2.turn_time??motorValue(2,'turn_time')),ex3=num(p3.exhibition_time??motorValue(3,'exhibition_time')),turn3=num(p3.turn_time??motorValue(3,'turn_time'));
   if(![ex1,ex2,turn1,turn2,ex3,turn3].every(Number.isFinite)){twoHeadMissing.entry++;continue;}
   const reg3=String(racers['3']?.number??racers['3']?.registration_number??'').replace(/\D/g,'');
   const stat3=reg3?byKey.get(reg3+'|3'):null;
@@ -1330,7 +1339,7 @@ async function renderTargetRaces(){
  twoBox.innerHTML=twoHeadRows.length?twoHeadRows.map(r=>'<article class="panel"><div class="racecard-heading"><div><h3>'+r.venue+' '+r.raceNo+'R</h3><div class="racecard-meta">'+(r.race.closed_at?escapeRaceText(r.race.closed_at.slice(11,16)+'締切'):'締切時刻未取得')+'</div></div><span class="tag">2頭型条件一致</span></div><p>2号艇 展示：'+r.ex2.toFixed(2)+'秒（1号艇 '+r.ex1.toFixed(2)+'秒）／回り足：'+r.turn2.toFixed(2)+'秒（1号艇 '+r.turn1.toFixed(2)+'秒）</p><p>3号艇 3コース攻撃率：<b>'+r.attackRate.toFixed(1)+'%</b>（'+r.attackCount+'/'+r.starts+'走）</p><p>3号艇 展示：'+r.ex3.toFixed(2)+'秒／回り足：'+r.turn3.toFixed(2)+'秒</p><div class="racecard-actions"><button class="btn primary" data-twohead-predict="'+r.venue+'|'+r.raceNo+'">このレースを予想</button><button class="btn secondary" data-twohead-card="'+r.venue+'|'+r.raceNo+'">出走表を見る</button></div></article>').join(''):'<div class="racecard-empty">現在のデータで2頭型の全条件を満たすレースはありません。</div>';
  twoBox.querySelectorAll('[data-twohead-predict]').forEach(b=>b.onclick=()=>{const [v,n]=b.dataset.twoheadPredict.split('|');$('predictionDate').value=date;$('predictionVenue').value=v;$('predictionRaceNo').value=n;showTab('prediction');});
  twoBox.querySelectorAll('[data-twohead-card]').forEach(b=>b.onclick=()=>{const [v,n]=b.dataset.twoheadCard.split('|');homeVenue=v;homeRace=Number(n);renderVenueRaceCards();showTab('racecards');});
- twoStatus.textContent='照合完了：候補 '+twoHeadRows.length+'レース／展示・回り足データ不足 '+twoHeadMissing.entry+'レース／3号艇の3コース履歴不足 '+twoHeadMissing.stats+'レース。';
+ twoStatus.textContent='照合完了：候補 '+twoHeadRows.length+'レース／当日保存済み展示データ '+motorExhibitionByRaceLane.size+'艇分を照合／展示・回り足データ不足 '+twoHeadMissing.entry+'レース／3号艇の3コース履歴不足 '+twoHeadMissing.stats+'レース。'+(motorRowsError?' 当日展示データベースの参照エラー：'+motorRowsError.message:'');
 }
 $('predictionBackToSchedule').onclick=()=>showTab('home');
 $('predictionDate').value=new Date().toLocaleDateString('sv-SE');
