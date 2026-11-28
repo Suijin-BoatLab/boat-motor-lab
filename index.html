@@ -1319,7 +1319,7 @@ async function renderTargetRaces(){
   const num=v=>{if(v===null||v===undefined||v==='')return NaN;const n=Number(v);return Number.isFinite(n)?n:NaN;};
   const ex1=num(p1.exhibition_time),ex2=num(p2.exhibition_time),turn1=num(p1.turn_time),turn2=num(p2.turn_time),ex3=num(p3.exhibition_time),turn3=num(p3.turn_time);
   if(![ex1,ex2,turn1,turn2,ex3,turn3].every(Number.isFinite)){twoHeadMissing.entry++;continue;}
-  const reg3=String(racers['3']?.number??racers['3']?.registration_number??'').replace(/\\D/g,'');
+  const reg3=String(racers['3']?.number??racers['3']?.registration_number??'').replace(/\D/g,'');
   const stat3=reg3?byKey.get(reg3+'|3'):null;
   if(!stat3||Number(stat3.course_starts)<10){twoHeadMissing.stats++;continue;}
   const starts=Number(stat3.course_starts),attackCount=Number(stat3.makuri_count)+Number(stat3.makuri_sashi_count),attackRate=attackCount/starts*100;
