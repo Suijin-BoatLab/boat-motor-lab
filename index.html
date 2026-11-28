@@ -1274,9 +1274,9 @@ async function renderTargetRaces(){
  if(!regs.size){status.textContent='開催データから選手登録番号を取得できません。開催情報を更新してください。';box.innerHTML='';return;}
  status.textContent='出走選手 '+regs.size+'名のコース別決まり手率を照合中…';
  const regList=[...regs],stats=[];
- // 1人につき最大6コース分。PostgRESTの応答上限に届かないよう100名ずつ取得する。
- for(let i=0;i<regList.length;i+=100){
-  const batch=regList.slice(i,i+100);
+ // 1人につき最大6コース分。SQL実行時間を抑えるため25名ずつ小分けに取得する。
+ for(let i=0;i<regList.length;i+=25){
+  const batch=regList.slice(i,i+25);
   const {data,error}=await cloudClient.rpc('get_racer_course_decision_method_stats_6m_pre_race',{
    p_target_date:date,
    p_registration_numbers:batch
