@@ -2240,28 +2240,17 @@ async function renderRaceFrameInfo({race,venue,date,panel}){
  const sixFrom=sixStart.toLocaleDateString('sv-SE');
  const month=base.getMonth()+1,year=base.getFullYear();
  const termFrom=month>=11?year+'-11-01':month<=4?(year-1)+'-11-01':year+'-05-01';
- const regs=racers.map(x=>x.reg),records=[];
- try{
-  let offset=0,batch=[];
-  do{
-   const {data,error}=await cloudClient.from('historical_racer_entries')
-    .select('race_date,venue_code,race_no,actual_course,finish_rank,decision_method,racer_registration_no')
-    .in('racer_registration_no',regs).gte('race_date',yearFrom).lte('race_date',date)
-    .order('race_date',{ascending:false}).order('race_no',{ascending:false})
-    .range(offset,offset+999);
-   if(error)throw error;
-   batch=data||[];records.push(...batch);offset+=batch.length;
-  }while(batch.length===1000);
- }catch(error){
-  console.warn('枠別情報の履歴取得に失敗:',error);
-  panel.innerHTML='<p class="frame-info-loading">過去成績を取得できませんでした。時間をおいて再読み込みしてください。</p>';return;
- }
- const byReg=new Map(regs.map(reg=>[reg,records.filter(x=>x.racer_registration_no===reg).sort((a,b)=>String(b.race_date).localeCompare(String(a.race_date))||Number(b.race_no)-Number(a.race_no))]));
+ const regs=racers.map(x=>x.reg);
+ const loadHistory=async()=>{const out=[];let offset=0,batch=[];do{const {data,error}=await cloudClient.from('historical_racer_entries').select('race_date,venue_code,race_no,actual_course,finish_rank,decision_method,racer_registration_no,grade_number').in('racer_registration_no',regs).gte('race_date','2026-01-01').lte('race_date',date).order('race_date',{ascending:false}).order('race_no',{ascending:false}).range(offset,offset+999);if(error)throw error;batch=data||[];out.push(...batch);offset+=batch.length;}while(batch.length===1000);return out;};
+ let records=[];
+ try{records=await loadHistory();}catch(error){console.warn('枠別情報の履歴取得に失敗:',error);panel.innerHTML='<p class="frame-info-loading">過去成績を取得できませんでした。時間をおいて再読み込みしてください。</p>';return;}
+ const makeByReg=()=>new Map(regs.map(reg=>[reg,records.filter(x=>x.racer_registration_no===reg).sort((a,b)=>String(b.race_date).localeCompare(String(a.race_date))||Number(b.race_no)-Number(a.race_no))]));
+ let byReg=makeByReg(),gradeBackfillDone=records.length>0&&records.every(x=>x.grade_number!==null&&x.grade_number!==undefined);
  let mainPeriod='recent10',entryMode='frame',method='all',lowerPeriod='recent10';
- const periods=[['recent10','直近10走'],['six','直近6ヶ月'],['local','当地'],['term','今期']];
- const unavailableMain=[['grade','SG/G1〜3'],['general','一般戦']];
- const lowerPeriods=[['recent10','直近10走*'],['year','直近1年'],['local','当地']];
- const unavailableLower=[['women','女子戦*'],['grade','SG/G1〜3*'],['general','一般戦']];
+ const periods=[['recent10','直近10走'],['six','直近6ヶ月'],['local','当地'],['term','今期'],['general','一般戦']];
+ const unavailableMain=[['grade','SG/G1〜3']];
+ const lowerPeriods=[['recent10','直近10走*'],['year','直近1年'],['local','当地'],['general','一般戦']];
+ const unavailableLower=[['women','女子戦*'],['grade','SG/G1〜3*']];
  const stats=(items)=>{
   const valid=items.filter(x=>Number(x.finish_rank)>=1&&Number(x.finish_rank)<=6);
   const n=valid.length,first=valid.filter(x=>Number(x.finish_rank)===1).length,second=valid.filter(x=>Number(x.finish_rank)===2).length,third=valid.filter(x=>Number(x.finish_rank)===3).length;
@@ -2275,6 +2264,7 @@ async function renderRaceFrameInfo({race,venue,date,panel}){
   else if(period==='local')arr=arr.filter(x=>Number(x.venue_code)===Number(venueCodes[venue]));
   else if(period==='term')arr=arr.filter(x=>x.race_date>=termFrom);
   else if(period==='year')arr=arr.filter(x=>x.race_date>=yearFrom);
+  else if(period==='general')arr=arr.filter(x=>Number(x.grade_number)===5);
   if(methodFilter!=='all')arr=arr.filter(x=>x.decision_method===methodFilter);
   return arr;
  };
@@ -2286,7 +2276,7 @@ async function renderRaceFrameInfo({race,venue,date,panel}){
   fields.forEach(k=>{const vals=rows.map(x=>x.s[k]).filter(v=>v!==null).sort((a,b)=>b-a);best[k]=[...new Set(vals)].slice(0,2);});
   const headers=['枠','レーサー','3連対率','1着率','2着率','3着率'];
   const body=rows.map(({r,s})=>'<tr><td>'+r.lane+'</td><td class="frame-info-racer">'+esc(r.name)+'<br><span class="small muted">'+esc(r.reg)+'</span></td>'+fields.map(k=>{const v=s[k],cls=v!==null&&best[k][0]===v?'racecard-rank-first':v!==null&&best[k][1]===v?'racecard-rank-second':'';return '<td class="frame-info-rate"><span class="'+cls+'">'+rateText(v)+'</span><br><span class="small muted">('+(s.n||0)+'走)</span></td>';}).join('')+'</tr>').join('');
-  return '<div class="frame-info-header"><h3 class="frame-info-title">枠別勝率</h3><label>進入変更 <select class="frame-info-select" id="frameEntryMode"><option value="frame">枠番どおり</option><option value="all">進入変更を含む</option></select></label></div><div class="frame-info-filters" id="frameMainFilters">'+periods.map(([v,t])=>'<button type="button" class="frame-info-chip '+(v===mainPeriod?'active':'')+'" data-main-period="'+v+'">'+t+'</button>').join('')+unavailableMain.map(([v,t])=>'<button type="button" class="frame-info-chip" disabled title="レースグレード情報が履歴DBに未収録">'+t+'</button>').join('')+'</div><div class="frame-info-table-wrap"><table class="frame-info-table"><thead><tr>'+headers.map(x=>'<th>'+x+'</th>').join('')+'</tr></thead><tbody>'+body+'</tbody></table></div><p class="frame-info-note">実績率は保存済み履歴から集計。枠番どおりでは過去の実進入コースが現在の枠番と一致する成績を集計。SG/G1〜3・一般戦はレース格データ未収録のため準備中。</p>';
+  return '<div class="frame-info-header"><h3 class="frame-info-title">枠別勝率</h3><label>進入変更 <select class="frame-info-select" id="frameEntryMode"><option value="frame">枠番どおり</option><option value="all">進入変更を含む</option></select></label></div><div class="frame-info-filters" id="frameMainFilters">'+periods.map(([v,t])=>'<button type="button" class="frame-info-chip '+(v===mainPeriod?'active':'')+'" data-main-period="'+v+'">'+t+'</button>').join('')+unavailableMain.map(([v,t])=>'<button type="button" class="frame-info-chip" disabled title="レースグレード情報が履歴DBに未収録">'+t+'</button>').join('')+'</div><div class="frame-info-table-wrap"><table class="frame-info-table"><thead><tr>'+headers.map(x=>'<th>'+x+'</th>').join('')+'</tr></thead><tbody>'+body+'</tbody></table></div><p class="frame-info-note">実績率は保存済み履歴から集計。枠番どおりでは過去の実進入コースが現在の枠番と一致する成績を集計。SG/G1〜3・一般戦は一般戦はSG・G1・G2・G3・PG1を除いた全期間の実績。</p>';
  };
  const buildLower=()=>{
   const methods=[['all','全て'],['差し','差し'],['まくり','まくり'],['まくり差し','まくり差し']];
@@ -2294,10 +2284,30 @@ async function renderRaceFrameInfo({race,venue,date,panel}){
   const body=rows.map(({r,s})=>'<tr><td>'+r.lane+'</td><td class="frame-info-racer">'+esc(r.name)+'</td><td>'+s.n+'走</td><td>'+rateText(s.firstRate)+'</td><td>'+rateText(s.top2Rate)+'</td><td>'+rateText(s.top3Rate)+'</td></tr>').join('');
   return '<div class="frame-info-section"><h3 class="frame-info-title">先頭艇別連対率</h3><div class="frame-info-filters" id="frameMethodFilters">'+methods.map(([v,t])=>'<button type="button" class="frame-info-chip '+(v===method?'active':'')+'" data-frame-method="'+v+'">'+t+'</button>').join('')+'</div><div class="frame-info-filters" id="frameLowerFilters">'+lowerPeriods.map(([v,t])=>'<button type="button" class="frame-info-chip '+(v===lowerPeriod?'active':'')+'" data-lower-period="'+v+'">'+t+'</button>').join('')+unavailableLower.map(([v,t])=>'<button type="button" class="frame-info-chip" disabled title="レース種別情報が履歴DBに未収録">'+t+'</button>').join('')+'</div><div class="frame-info-table-wrap"><table class="frame-info-table"><thead><tr><th>枠</th><th>レーサー</th><th>対象走数</th><th>1着率</th><th>2連対率</th><th>3連対率</th></tr></thead><tbody>'+body+'</tbody></table></div><p class="frame-info-note">決まり手別は、その決まり手で決着したレースに出走した際の各選手の着順実績。データが存在する範囲で集計。</p></div>';
  };
+ const ensureGradeHistory=async()=>{
+  if(gradeBackfillDone)return true;
+  panel.innerHTML='<p class="frame-info-loading">一般戦を正確に集計するため、2026年1月からのレース格データを取得しています。しばらくお待ちください…</p>';
+  try{
+   const addDays=(s,n)=>{const d=new Date(s+'T00:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10);};
+   let from='2026-01-01';
+   while(from<=date){
+    const remaining=Math.floor((Date.parse(date+'T00:00:00Z')-Date.parse(from+'T00:00:00Z'))/86400000);
+    const to=addDays(from,Math.min(29,remaining));
+    const {error}=await cloudClient.functions.invoke('backfill-race-grade-history',{body:{date_from:from,date_to:to}});
+    if(error)throw error;
+    from=addDays(to,1);
+   }
+   records=await loadHistory();byReg=makeByReg();gradeBackfillDone=true;return true;
+  }catch(error){
+   console.warn('レース格データの取得に失敗:',error);
+   panel.innerHTML='<p class="frame-info-loading">一般戦のレース格データを取得できませんでした。通信状態を確認して、もう一度お試しください。</p>';
+   return false;
+  }
+ };
  const render=()=>{
   panel.innerHTML=buildMain()+buildLower();
-  panel.querySelectorAll('[data-main-period]').forEach(btn=>btn.onclick=()=>{mainPeriod=btn.dataset.mainPeriod;render();});
-  panel.querySelectorAll('[data-lower-period]').forEach(btn=>btn.onclick=()=>{lowerPeriod=btn.dataset.lowerPeriod;render();});
+  panel.querySelectorAll('[data-main-period]').forEach(btn=>btn.onclick=async()=>{mainPeriod=btn.dataset.mainPeriod;if(mainPeriod==='general'&&!await ensureGradeHistory())return;render();});
+  panel.querySelectorAll('[data-lower-period]').forEach(btn=>btn.onclick=async()=>{lowerPeriod=btn.dataset.lowerPeriod;if(lowerPeriod==='general'&&!await ensureGradeHistory())return;render();});
   panel.querySelectorAll('[data-frame-method]').forEach(btn=>btn.onclick=()=>{method=btn.dataset.frameMethod;render();});
   const select=panel.querySelector('#frameEntryMode');if(select){select.value=entryMode;select.onchange=()=>{entryMode=select.value;render();};}
  };
