@@ -397,6 +397,12 @@ table{min-width:520px}
   <p class="small muted" id="targetsStatus" aria-live="polite">開催情報を読み込んでいます。</p>
   <div id="targetsList"></div>
  </div>
+ <div class="panel" style="margin-top:16px">
+  <div class="racecard-heading"><div><h2>2頭型｜2号艇1着候補</h2><div class="racecard-meta">2号艇の展示・回り足優位 ＋ 3号艇の3コース攻撃率</div></div></div>
+  <p class="small muted">暫定条件：2号艇が1号艇より展示タイム・回り足とも0.03秒以上良い／3号艇の過去180日間の3コース攻撃率（まくり＋まくり差し）が15％以上かつ10走以上／3号艇の展示タイム・回り足が2号艇より各0.03秒以上劣る。</p>
+  <p class="small muted" id="twoHeadStatus" aria-live="polite">既存データを照合します。</p>
+  <div id="twoHeadList"></div>
+ </div>
  <div class="notice">率は対象日の前日までの過去6か月間を対象に、選手本人の実際の進入コース別に算出しています。対象日当日の結果は含みません。抽出時は枠なりを前提とし、直前情報の展示進入6艇分が揃い、1〜6コースの有効な組み合わせで枠なり以外と確認できたレースは除外します。展示進入は本番進入と異なる場合があります。展示進入未取得のレースは枠なり未確認として暫定判定します。履歴がない選手・コースは判定対象外です。表示率の横に分子／出走数を表示します。</div>
 </section>
 <section id="prediction" class="hidden">
@@ -1305,6 +1311,26 @@ async function renderTargetRaces(){
  box.querySelectorAll('[data-target-predict]').forEach(b=>b.onclick=()=>{const [v,n]=b.dataset.targetPredict.split('|');$('predictionDate').value=date;$('predictionVenue').value=v;$('predictionRaceNo').value=n;showTab('prediction');});
  box.querySelectorAll('[data-target-card]').forEach(b=>b.onclick=()=>{const [v,n]=b.dataset.targetCard.split('|');homeVenue=v;homeRace=Number(n);renderVenueRaceCards();showTab('racecards');});
  status.textContent='照合完了：出走選手 '+regs.size+'名／取得 '+stats.length+'件／展示進入枠なり '+frameNariConfirmed+'レース／非枠なり除外 '+nonFrameNariExcluded+'レース／展示進入未確認 '+entryUnknown+'レース／1号艇履歴不足 '+unavailable.length+'レース／1号艇逃げ率50％超 '+firstRateOverThreshold+'レース／2〜6号艇コース履歴あり '+attackHistoryAvailable+'艇分・不足 '+attackHistoryMissing+'艇分／攻め手率20％未満 '+noAttackRate+'レース／候補 '+rows.length+'レース';
+ // 2頭型は既存の抽出ロジックとは独立して判定する。
+ const twoHeadRows=[],twoHeadMissing={entry:0,stats:0};
+ for(const item of racePool){
+  const racers=item.race.racers||{},preview=item.race.preview?.racers||{};
+  const p1=preview['1']||{},p2=preview['2']||{},p3=preview['3']||{};
+  const num=v=>{if(v===null||v===undefined||v==='')return NaN;const n=Number(v);return Number.isFinite(n)?n:NaN;};
+  const ex1=num(p1.exhibition_time),ex2=num(p2.exhibition_time),turn1=num(p1.turn_time),turn2=num(p2.turn_time),ex3=num(p3.exhibition_time),turn3=num(p3.turn_time);
+  if(![ex1,ex2,turn1,turn2,ex3,turn3].every(Number.isFinite)){twoHeadMissing.entry++;continue;}
+  const reg3=String(racers['3']?.number??racers['3']?.registration_number??'').replace(/\\D/g,'');
+  const stat3=reg3?byKey.get(reg3+'|3'):null;
+  if(!stat3||Number(stat3.course_starts)<10){twoHeadMissing.stats++;continue;}
+  const starts=Number(stat3.course_starts),attackCount=Number(stat3.makuri_count)+Number(stat3.makuri_sashi_count),attackRate=attackCount/starts*100;
+  if(ex2>ex1-0.03||turn2>turn1-0.03||attackRate<15||ex3<ex2+0.03||turn3<turn2+0.03)continue;
+  twoHeadRows.push({...item,ex1,ex2,turn1,turn2,ex3,turn3,attackCount,starts,attackRate});
+ }
+ const twoBox=$('twoHeadList'),twoStatus=$('twoHeadStatus');
+ twoBox.innerHTML=twoHeadRows.length?twoHeadRows.map(r=>'<article class="panel"><div class="racecard-heading"><div><h3>'+r.venue+' '+r.raceNo+'R</h3><div class="racecard-meta">'+(r.race.closed_at?escapeRaceText(r.race.closed_at.slice(11,16)+'締切'):'締切時刻未取得')+'</div></div><span class="tag">2頭型条件一致</span></div><p>2号艇 展示：'+r.ex2.toFixed(2)+'秒（1号艇 '+r.ex1.toFixed(2)+'秒）／回り足：'+r.turn2.toFixed(2)+'秒（1号艇 '+r.turn1.toFixed(2)+'秒）</p><p>3号艇 3コース攻撃率：<b>'+r.attackRate.toFixed(1)+'%</b>（'+r.attackCount+'/'+r.starts+'走）</p><p>3号艇 展示：'+r.ex3.toFixed(2)+'秒／回り足：'+r.turn3.toFixed(2)+'秒</p><div class="racecard-actions"><button class="btn primary" data-twohead-predict="'+r.venue+'|'+r.raceNo+'">このレースを予想</button><button class="btn secondary" data-twohead-card="'+r.venue+'|'+r.raceNo+'">出走表を見る</button></div></article>').join(''):'<div class="racecard-empty">現在のデータで2頭型の全条件を満たすレースはありません。</div>';
+ twoBox.querySelectorAll('[data-twohead-predict]').forEach(b=>b.onclick=()=>{const [v,n]=b.dataset.twoheadPredict.split('|');$('predictionDate').value=date;$('predictionVenue').value=v;$('predictionRaceNo').value=n;showTab('prediction');});
+ twoBox.querySelectorAll('[data-twohead-card]').forEach(b=>b.onclick=()=>{const [v,n]=b.dataset.twoheadCard.split('|');homeVenue=v;homeRace=Number(n);renderVenueRaceCards();showTab('racecards');});
+ twoStatus.textContent='照合完了：候補 '+twoHeadRows.length+'レース／展示・回り足データ不足 '+twoHeadMissing.entry+'レース／3号艇の3コース履歴不足 '+twoHeadMissing.stats+'レース。';
 }
 $('predictionBackToSchedule').onclick=()=>showTab('home');
 $('predictionDate').value=new Date().toLocaleDateString('sv-SE');
