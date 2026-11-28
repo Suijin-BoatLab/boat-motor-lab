@@ -1974,15 +1974,15 @@ function renderVenueRaceCards(){
   }).join('');
   const title=[race.title,race.subtitle].filter(Boolean).map(escapeRaceText).join('｜');
   const cutoff=race.closed_at?escapeRaceText(race.closed_at.slice(11,16)+'締切'):'';
-  return '<article class="panel" id="racecard-'+n+'"><div class="racecard-heading"><div><h2>'+n+'R '+(title||'出走表')+'</h2><div class="racecard-meta">'+cutoff+'　'+(race.day_number_source?escapeRaceText(race.day_number_source):'')+'</div></div><span class="tag">'+(Object.keys(racers).length||0)+'艇</span></div><div class="tablewrap"><table class="racecard-table"><thead><tr><th>枠</th><th>選手</th><th>登録番号</th><th>級別</th><th>全国勝率</th><th>当地勝率</th><th>モーター</th><th>モーター2連率</th></tr></thead><tbody>'+(rows||'<tr><td colspan="8">出走表データなし</td></tr>')+'</tbody></table></div><div class="venue-race-menu">
- <button type="button" class="active" data-race-menu="entry" data-race-no="'+n+'">出走表</button>
- <button type="button" data-race-menu="frame" data-race-no="'+n+'">枠別情報</button>
- <button type="button" data-race-menu="odds" data-race-no="'+n+'">オッズ</button>
- <button type="button" data-race-menu="preview" data-race-no="'+n+'">直前情報</button>
- <button type="button" data-race-menu="series" data-race-no="'+n+'">今節成績</button>
- <button type="button" data-analyze-race="'+n+'">モーター情報</button>
- <button type="button" data-result-race="'+n+'">結果</button>
- </div><div id="raceMotorInlineSection-'+n+'" class="hidden"><p class="home-sub" id="raceMotorInlineStatus-'+n+'">このレースの6艇の機力分析を表示します。</p><div id="raceMotorInlinePanel-'+n+'"></div></div><div id="raceFInfoPanel-'+n+'" class="hidden"></div><div id="raceShobugakePanel-'+n+'" class="hidden"></div><div id="raceResultSection-'+n+'" class="hidden"><p class="home-sub" id="raceResultStatus-'+n+'">レース終了後に結果・払戻を取得できます。</p><div id="raceResultPanel-'+n+'"></div></div></article>';
+  return `<article class="panel" id="racecard-${n}"><div class="racecard-heading"><div><h2>${n}R ${title||'出走表'}</h2><div class="racecard-meta">${cutoff}　${race.day_number_source?escapeRaceText(race.day_number_source):''}</div></div><span class="tag">${Object.keys(racers).length||0}艇</span></div><div class="tablewrap"><table class="racecard-table"><thead><tr><th>枠</th><th>選手</th><th>登録番号</th><th>級別</th><th>全国勝率</th><th>当地勝率</th><th>モーター</th><th>モーター2連率</th></tr></thead><tbody>${rows||'<tr><td colspan="8">出走表データなし</td></tr>'}</tbody></table></div><div class="venue-race-menu">
+ <button type="button" class="active" data-race-menu="entry" data-race-no="${n}">出走表</button>
+ <button type="button" data-race-menu="frame" data-race-no="${n}">枠別情報</button>
+ <button type="button" data-race-menu="odds" data-race-no="${n}">オッズ</button>
+ <button type="button" data-race-menu="preview" data-race-no="${n}">直前情報</button>
+ <button type="button" data-race-menu="series" data-race-no="${n}">今節成績</button>
+ <button type="button" data-analyze-race="${n}">モーター情報</button>
+ <button type="button" data-result-race="${n}">結果</button>
+ </div><div id="raceMotorInlineSection-${n}" class="hidden"><p class="home-sub" id="raceMotorInlineStatus-${n}">このレースの6艇の機力分析を表示します。</p><div id="raceMotorInlinePanel-${n}"></div></div><div id="raceFInfoPanel-${n}" class="hidden"></div><div id="raceShobugakePanel-${n}" class="hidden"></div><div id="raceResultSection-${n}" class="hidden"><p class="home-sub" id="raceResultStatus-${n}">レース終了後に結果・払戻を取得できます。</p><div id="raceResultPanel-${n}"></div></div></article>`;
  }).join('');
  let inlineMotorRequest=0;$('racecardList').querySelectorAll('[data-race-menu]').forEach(b=>b.onclick=()=>{
   const n=Number(b.dataset.raceNo),kind=b.dataset.raceMenu;
