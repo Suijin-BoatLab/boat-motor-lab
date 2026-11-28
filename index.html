@@ -260,6 +260,9 @@ table{min-width:520px}
 .frame-info-table th{background:#f1f4f8;color:#65738a;font-weight:800}
 .frame-info-table .frame-info-racer{text-align:left;color:#1472c5;font-weight:800;min-width:90px}
 .frame-info-table .frame-info-rate{font-weight:700;font-variant-numeric:tabular-nums}
+.frame-info-table .racecard-rank-first,.frame-info-table .racecard-rank-second{display:inline-block;min-width:2.8em;padding:2px 4px;border-radius:3px;line-height:1.35}
+.frame-info-table .racecard-rank-first{background:#ffb9a8;color:#202b3b}
+.frame-info-table .racecard-rank-second{background:#ffe28a;color:#202b3b}
 .frame-info-note{font-size:11px;line-height:1.5;color:#778397;margin:9px 2px}
 .frame-info-select{border:1px solid #d8dee8;background:#fff;border-radius:8px;padding:8px 10px;color:#334155;font-weight:700}
 .frame-info-header{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
@@ -2209,8 +2212,8 @@ function escapeRaceText(v){return String(v??'—').replace(/[&<>"']/g,c=>({'&':'
 async function renderRaceFrameInfo({race,venue,date,panel}){
  const esc=escapeRaceText;
  const racers=Object.entries(race?.racers||{}).map(([key,p])=>({
-  lane:Number(p?.entry_number||key),name:p?.name||'—',reg:String(p?.number||p?.racer_registration_no||'').replace(/\\D/g,'')
- })).filter(x=>x.lane>=1&&x.lane<=6&&/^\\d{4}$/.test(x.reg)).sort((a,b)=>a.lane-b.lane);
+  lane:Number(p?.entry_number||key),name:p?.name||'—',reg:String(p?.number||p?.racer_registration_no||'').replace(/\D/g,'')
+ })).filter(x=>x.lane>=1&&x.lane<=6&&/^\d{4}$/.test(x.reg)).sort((a,b)=>a.lane-b.lane);
  if(!cloudClient||!cloudUser){panel.innerHTML='<p class="frame-info-loading">選手履歴を読み込むにはログインが必要です。</p>';return;}
  if(!racers.length){panel.innerHTML='<p class="frame-info-loading">出走選手の登録番号を取得できません。</p>';return;}
  panel.innerHTML='<p class="frame-info-loading">選手ごとの過去成績を取得しています…</p>';
