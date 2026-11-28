@@ -391,13 +391,13 @@ table{min-width:520px}
 <section id="targets" class="hidden">
  <div class="racecard-toolbar"><button class="btn secondary" id="targetsBack">← 開催一覧へ戻る</button><span class="muted small" id="targetsDateLabel"></span></div>
  <h1>狙い目レース</h1>
- <p class="muted small">当日展示データから、4コース・6コースの攻め条件に近いレースを全国24場からまとめて表示します。</p>
+ <p class="muted small">選手個人のコース別決まり手率から、第1条件に一致するレースを全国24場から抽出します。</p>
  <div class="panel">
-  <div class="racecard-heading"><div><h2>候補レース一覧</h2><div class="racecard-meta">展示データが公開されたレースから順次判定</div></div><button class="btn secondary" id="refreshTargets">候補を更新</button></div>
+  <div class="racecard-heading"><div><h2>候補レース一覧</h2><div class="racecard-meta">1号艇の逃げ率50％以下 ＋ 2〜6号艇の差し・まくり・まくり差し率のいずれか20％以上</div></div><button class="btn secondary" id="refreshTargets">候補を更新</button></div>
   <p class="small muted" id="targetsStatus" aria-live="polite">開催情報を読み込んでいます。</p>
   <div id="targetsList"></div>
  </div>
- <div class="notice">ここに表示するのは、当日展示タイムで確認できる条件に一致した「候補」です。選手のコース別まくり率や平均STなど、別途履歴照合が必要な条件は未確認のまま表示し、最終判定とは区別します。</div>
+ <div class="notice">率は保存済みの過去レース履歴から、選手本人の実際の進入コース別に算出しています。履歴がない選手・コースは判定対象外です。表示率の横に分子／出走数を表示します。</div>
 </section>
 <section id="prediction" class="hidden">
  <div class="racecard-toolbar"><button class="btn secondary" id="predictionBackToSchedule">← 開催一覧へ戻る</button><span class="muted small">予想システム</span></div>
@@ -1225,34 +1225,63 @@ async function runAnalysisForSelectedRace(){
 $('runAnalysisRace').onclick=runAnalysisForSelectedRace;
 $('targetsBack').onclick=()=>showTab('home');
 $('refreshTargets').onclick=renderTargetRaces;
-function renderTargetRaces(){
+async function renderTargetRaces(){
  const date=$('homeDate').value||$('predictionDate').value;
  $('targetsDateLabel').textContent=date;
  const box=$('targetsList'),status=$('targetsStatus');
  if(!homePayload?.programs?.stadiums){status.textContent='先に開催一覧で開催情報を更新してください。';box.innerHTML='';return;}
- const rows=[];
+ if(!cloudClient){status.textContent='選手別の過去決まり手率を照合するため、保存・設定でログインしてください。';box.innerHTML='';return;}
+ const racePool=[];
+ const regs=new Set();
  for(const venue of venues){
   const rs=homePayload.programs.stadiums[String(venueCodes[venue])]?.races||{};
   for(const [raceNo,race] of Object.entries(rs)){
-   const preview=race?.preview?.racers||{};
-   const p=n=>preview[String(n)]||{};
-   const num=(v)=>v===null||v===undefined||v===''?null:Number(v);
-   const ex=n=>num(p(n).exhibition_time),st=n=>num(p(n).straight_time);
-   const reasons=[];
-   const s4=st(4),s3=st(3),e4=ex(4),e3=ex(3);
-   const e6=ex(6),e5=ex(5),s6=st(6),s5=st(5);
-   if(s4!==null&&s3!==null&&s4<=s3-.10)reasons.push('4号艇の直線が3号艇より0.10秒以上速い');
-   if(e4!==null&&e3!==null&&e4<=e3-.10)reasons.push('4号艇の展示が3号艇より0.10秒以上速い');
-   const e6beats14=[1,2,3,4].every(n=>e6!==null&&ex(n)!==null&&e6<ex(n));
-   const s6beats14=[1,2,3,4].every(n=>s6!==null&&st(n)!==null&&s6<st(n));
-   if(s6!==null&&s5!==null&&s6<=s5-.12&&e6beats14)reasons.push('6号艇：直線差0.12秒以上＋展示が1〜4号艇より速い');
-   if(e6!==null&&e5!==null&&e6<=e5-.12&&s6beats14)reasons.push('6号艇：展示差0.12秒以上＋直線が1〜4号艇より速い');
-   if(reasons.length)rows.push({venue,raceNo:Number(raceNo),reasons,cutoff:race.closed_at||''});
+   const racers=race?.racers||{};
+   const laneRegs={};
+   for(let lane=1;lane<=6;lane++){
+    const p=racers[String(lane)]||{};
+    const reg=String(p.number??p.registration_number??'').replace(/\D/g,'');
+    if(/^\d{4}$/.test(reg)){laneRegs[lane]=reg;regs.add(reg);}
+   }
+   racePool.push({venue,raceNo:Number(raceNo),race,laneRegs});
   }
  }
- rows.sort((a,b)=>(a.cutoff||'').localeCompare(b.cutoff||''));
- status.textContent=date+'｜展示条件に一致 '+rows.length+'レース';
- box.innerHTML=rows.length?rows.map(r=>'<article class="panel"><div class="racecard-heading"><div><h2>'+r.venue+' '+r.raceNo+'R</h2><div class="racecard-meta">'+(r.cutoff?escapeRaceText(r.cutoff.slice(11,16)+'締切'):'締切時刻未取得')+'</div></div><span class="tag">展示条件一致</span></div><ul>'+r.reasons.map(x=>'<li>'+escapeRaceText(x)+'</li>').join('')+'</ul><div class="racecard-actions"><button class="btn primary" data-target-predict="'+r.venue+'|'+r.raceNo+'">このレースを予想</button><button class="btn secondary" data-target-card="'+r.venue+'|'+r.raceNo+'">出走表を見る</button></div></article>').join(''):'<div class="racecard-empty">現在、当日展示条件に一致するレースはありません。展示データの公開後に「候補を更新」を押してください。</div>';
+ if(!regs.size){status.textContent='開催データから選手登録番号を取得できません。開催情報を更新してください。';box.innerHTML='';return;}
+ status.textContent='出走選手 '+regs.size+'名のコース別決まり手率を照合中…';
+ const regList=[...regs],stats=[];
+ for(let i=0;i<regList.length;i+=300){
+  const {data,error}=await cloudClient.from('racer_course_decision_method_stats')
+   .select('racer_registration_no,racer_name,course_no,course_starts,nige_count,sashi_count,makuri_count,makuri_sashi_count,nige_rate,sashi_rate,makuri_rate,makuri_sashi_rate')
+   .in('racer_registration_no',regList.slice(i,i+300));
+  if(error){status.textContent='選手別決まり手率を取得できません：'+error.message;box.innerHTML='';return;}
+  stats.push(...(data||[]));
+ }
+ const byKey=new Map(stats.map(x=>[String(x.racer_registration_no)+'|'+Number(x.course_no),x]));
+ const rows=[],unavailable=[];
+ for(const item of racePool){
+  const firstReg=item.laneRegs[1],first=firstReg?byKey.get(firstReg+'|1'):null;
+  if(!first||Number(first.course_starts)<=0){unavailable.push(item);continue;}
+  const firstRate=Number(first.nige_rate);
+  if(!Number.isFinite(firstRate)||firstRate>50)continue;
+  const attacks=[];
+  for(let lane=2;lane<=6;lane++){
+   const reg=item.laneRegs[lane],x=reg?byKey.get(reg+'|'+lane):null;
+   if(!x||Number(x.course_starts)<=0)continue;
+   const vals=[
+    ['差し',Number(x.sashi_rate),Number(x.sashi_count)],
+    ['まくり',Number(x.makuri_rate),Number(x.makuri_count)],
+    ['まくり差し',Number(x.makuri_sashi_rate),Number(x.makuri_sashi_count)]
+   ];
+   for(const [method,rate,count] of vals)if(Number.isFinite(rate)&&rate>=20)attacks.push({lane,name:x.racer_name||'選手',method,rate,count,starts:Number(x.course_starts)});
+  }
+  if(attacks.length)rows.push({...item,firstRate,firstCount:Number(first.nige_count),firstStarts:Number(first.course_starts),attacks});
+ }
+ rows.sort((a,b)=>(a.race.closed_at||'').localeCompare(b.race.closed_at||''));
+ status.textContent=date+'｜第1条件一致 '+rows.length+'レース'+(unavailable.length?'｜1号艇の履歴不足 '+unavailable.length+'レース':'');
+ box.innerHTML=rows.length?rows.map(r=>{
+  const attackText=r.attacks.map(a=>'<li>'+a.lane+'号艇 '+escapeRaceText(a.name)+'：'+a.method+'率 <b>'+a.rate.toFixed(1)+'%</b>（'+a.count+'/'+a.starts+'走）</li>').join('');
+  return '<article class="panel"><div class="racecard-heading"><div><h2>'+r.venue+' '+r.raceNo+'R</h2><div class="racecard-meta">'+(r.race.closed_at?escapeRaceText(r.race.closed_at.slice(11,16)+'締切'):'締切時刻未取得')+'</div></div><span class="tag">第1条件一致</span></div><p>1号艇の逃げ率：<b>'+r.firstRate.toFixed(1)+'%</b>（'+r.firstCount+'/'+r.firstStarts+'走）</p><p>攻め手のある選手</p><ul>'+attackText+'</ul><div class="racecard-actions"><button class="btn primary" data-target-predict="'+r.venue+'|'+r.raceNo+'">このレースを予想</button><button class="btn secondary" data-target-card="'+r.venue+'|'+r.raceNo+'">出走表を見る</button></div></article>';
+ }).join(''):'<div class="racecard-empty">第1条件に一致するレースはありません。データ不足のレースは候補に含めていません。</div>';
  box.querySelectorAll('[data-target-predict]').forEach(b=>b.onclick=()=>{const [v,n]=b.dataset.targetPredict.split('|');$('predictionDate').value=date;$('predictionVenue').value=v;$('predictionRaceNo').value=n;showTab('prediction');});
  box.querySelectorAll('[data-target-card]').forEach(b=>b.onclick=()=>{const [v,n]=b.dataset.targetCard.split('|');homeVenue=v;homeRace=Number(n);renderVenueRaceCards();showTab('racecards');});
 }
