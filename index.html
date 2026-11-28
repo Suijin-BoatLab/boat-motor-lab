@@ -2323,8 +2323,8 @@ async function renderVenueRaceCards(){
  };
  const historyRate=(map,number)=>{
   const stat=map.get(Number(number));
-  if(!stat||!stat.starts)return '<small class="racecard-db-history">DB30日 —</small>';
-  return '<small class="racecard-db-history">DB30日 '+stat.starts+'走<br>2連 '+(stat.top2/stat.starts*100).toFixed(1)+'%<br>3連 '+(stat.top3/stat.starts*100).toFixed(1)+'%</small>';
+  if(!stat||!stat.starts)return '<small class="racecard-db-history">—</small>';
+  return '<small class="racecard-db-history">'+stat.starts+'走<br>2連 '+(stat.top2/stat.starts*100).toFixed(1)+'%<br>3連 '+(stat.top3/stat.starts*100).toFixed(1)+'%</small>';
  };
  if(cloudClient&&cloudUser){
   try{
