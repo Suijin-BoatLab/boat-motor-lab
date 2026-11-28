@@ -267,6 +267,23 @@ table{min-width:520px}
 .frame-info-select{border:1px solid #d8dee8;background:#fff;border-radius:8px;padding:8px 10px;color:#334155;font-weight:700}
 .frame-info-header{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .frame-info-loading{padding:18px;text-align:center;color:#718097}
+/* 枠別情報：スマートフォンでも表全体を横スクロールせず表示 */
+.frame-info-panel{padding:10px;overflow:visible}
+.frame-info-filters{display:flex;flex-wrap:wrap;overflow:visible;white-space:normal;gap:6px}
+.frame-info-chip{font-size:12px;padding:7px 10px;flex:0 1 auto}
+.frame-info-table-wrap{overflow:visible;width:100%}
+.frame-info-table{width:100%;min-width:0;table-layout:fixed;font-size:10px}
+.frame-info-table th,.frame-info-table td{padding:7px 3px;white-space:normal;overflow-wrap:anywhere;word-break:normal;line-height:1.35}
+.frame-info-table th:first-child,.frame-info-table td:first-child{width:8%}
+.frame-info-table th:nth-child(2),.frame-info-table td:nth-child(2){width:22%}
+.frame-info-table th:nth-child(n+3),.frame-info-table td:nth-child(n+3){width:17.5%}
+.frame-info-table .frame-info-racer{min-width:0;font-size:10px;overflow-wrap:anywhere}
+.frame-info-table .frame-info-rate{font-size:10px}
+.frame-info-table .small{font-size:9px}
+.frame-info-table .racecard-rank-first,.frame-info-table .racecard-rank-second{min-width:0;padding:2px 3px}
+.frame-info-header{align-items:flex-start}
+.frame-info-title{font-size:17px;margin-bottom:8px}
+
 
 .racecard-wide-table th,.racecard-wide-table td,.racecard-series-table th,.racecard-series-table td{min-width:92px;padding:10px 9px;text-align:center;vertical-align:middle;white-space:nowrap;border-right:1px solid #e4e8ef;border-bottom:1px solid #e4e8ef;line-height:1.55}
 .racecard-wide-table th,.racecard-series-table th{position:sticky;top:0;z-index:2;background:#f5f7fa;color:#68758a;font-weight:800}
@@ -2264,12 +2281,12 @@ async function renderRaceFrameInfo({race,venue,date,panel}){
  const rateText=v=>v===null?'—':v.toFixed(1)+'%';
  const buildMain=()=>{
   const rows=racers.map(r=>({r,s:stats(periodItems(r.reg,r.lane,mainPeriod,entryMode))}));
-  const fields=['top3Rate','top2Rate','firstRate','secondRate','thirdRate'];
+  const fields=['top3Rate','firstRate','secondRate','thirdRate'];
   const best={};
   fields.forEach(k=>{const vals=rows.map(x=>x.s[k]).filter(v=>v!==null).sort((a,b)=>b-a);best[k]=[...new Set(vals)].slice(0,2);});
-  const headers=['枠','レーサー','AI3連対率','3連対率','1着率','2着率','3着率'];
-  const body=rows.map(({r,s})=>'<tr><td>'+r.lane+'</td><td class="frame-info-racer">'+esc(r.name)+'<br><span class="small muted">'+esc(r.reg)+'</span></td><td>—</td>'+fields.map(k=>{const v=s[k],cls=v!==null&&best[k][0]===v?'racecard-rank-first':v!==null&&best[k][1]===v?'racecard-rank-second':'';return '<td class="frame-info-rate"><span class="'+cls+'">'+rateText(v)+'</span><br><span class="small muted">('+(s.n||0)+'走)</span></td>';}).join('')+'</tr>').join('');
-  return '<div class="frame-info-header"><h3 class="frame-info-title">AI3連対率・枠別勝率</h3><label>進入変更 <select class="frame-info-select" id="frameEntryMode"><option value="frame">枠番どおり</option><option value="all">進入変更を含む</option></select></label></div><div class="frame-info-filters" id="frameMainFilters">'+periods.map(([v,t])=>'<button type="button" class="frame-info-chip '+(v===mainPeriod?'active':'')+'" data-main-period="'+v+'">'+t+'</button>').join('')+unavailableMain.map(([v,t])=>'<button type="button" class="frame-info-chip" disabled title="レースグレード情報が履歴DBに未収録">'+t+'</button>').join('')+'</div><div class="frame-info-table-wrap"><table class="frame-info-table"><thead><tr>'+headers.map(x=>'<th>'+x+'</th>').join('')+'</tr></thead><tbody>'+body+'</tbody></table></div><p class="frame-info-note">AI3連対率は予測モデルとの接続前のため未表示。実績率は保存済み履歴から集計。枠番どおりでは過去の実進入コースが現在の枠番と一致する成績を集計。SG/G1〜3・一般戦はレース格データ未収録のため準備中。</p>';
+  const headers=['枠','レーサー','3連対率','1着率','2着率','3着率'];
+  const body=rows.map(({r,s})=>'<tr><td>'+r.lane+'</td><td class="frame-info-racer">'+esc(r.name)+'<br><span class="small muted">'+esc(r.reg)+'</span></td>'+fields.map(k=>{const v=s[k],cls=v!==null&&best[k][0]===v?'racecard-rank-first':v!==null&&best[k][1]===v?'racecard-rank-second':'';return '<td class="frame-info-rate"><span class="'+cls+'">'+rateText(v)+'</span><br><span class="small muted">('+(s.n||0)+'走)</span></td>';}).join('')+'</tr>').join('');
+  return '<div class="frame-info-header"><h3 class="frame-info-title">枠別勝率</h3><label>進入変更 <select class="frame-info-select" id="frameEntryMode"><option value="frame">枠番どおり</option><option value="all">進入変更を含む</option></select></label></div><div class="frame-info-filters" id="frameMainFilters">'+periods.map(([v,t])=>'<button type="button" class="frame-info-chip '+(v===mainPeriod?'active':'')+'" data-main-period="'+v+'">'+t+'</button>').join('')+unavailableMain.map(([v,t])=>'<button type="button" class="frame-info-chip" disabled title="レースグレード情報が履歴DBに未収録">'+t+'</button>').join('')+'</div><div class="frame-info-table-wrap"><table class="frame-info-table"><thead><tr>'+headers.map(x=>'<th>'+x+'</th>').join('')+'</tr></thead><tbody>'+body+'</tbody></table></div><p class="frame-info-note">実績率は保存済み履歴から集計。枠番どおりでは過去の実進入コースが現在の枠番と一致する成績を集計。SG/G1〜3・一般戦はレース格データ未収録のため準備中。</p>';
  };
  const buildLower=()=>{
   const methods=[['all','全て'],['差し','差し'],['まくり','まくり'],['まくり差し','まくり差し']];
