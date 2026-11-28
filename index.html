@@ -1802,7 +1802,7 @@ function renderVenues(){
   const dayRace=Object.values(rs).find(x=>x?.day_number_source||x?.day_number);
   const dayLabel=dayRace?.day_number_source||(Number.isFinite(Number(dayRace?.day_number))&&Number(dayRace?.day_number)>0?Number(dayRace.day_number)+'日目':'');
   const raceLabel=nextRace?nextRace.number+'R':'—',timeLabel=nextRace?cutoff.toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit',hour12:false})+'締切':'—';
-  const status=cancelled||noEvent?official.status_detail:(active?(nextRace?'投票受付中':'本日終了'):'開催なし');
+  const status=cancelled?official.status_detail:(noEvent?'開催なし':(active?(nextRace?'投票受付中':'本日終了'):'開催なし'));
   const lowerLabel=cancelled||noEvent?'—':(nextRace?(dayLabel?dayLabel+'　':'')+raceLabel+'　'+timeLabel:(dayLabel||raceLabel));
   return '<button class="venue-card '+(active?'active':'')+((cancelled||noEvent)?' cancelled':'')+'" data-v="'+v+'" data-race="'+(nextRace?nextRace.number:'')+'"><strong>'+v+(favorites.includes(v)?' ♥':'')+'</strong><span class="venue-meta '+(nextRace?'grade':'')+'">'+status+'</span><span class="venue-meta '+(urgent?'cutoff-urgent':'venue-cutoff')+'">'+lowerLabel+'</span></button>';
  }).join('');
