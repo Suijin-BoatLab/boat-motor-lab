@@ -2330,7 +2330,7 @@ async function renderVenueRaceCards(){
   const race=rs[String(n)]||{},previewRacers=race.preview?.racers||{};
   const racers=Object.fromEntries(Object.entries(race.racers||{}).map(([k,p])=>{
    const lane=Number(p?.entry_number||k),key=n+'|'+lane;
-   const stored=storedEntryByLane.get(key)||{},history=storedMotorByRaceLane.get(key)||{};
+   const stored=storedEntryByRaceLane.get(key)||{},history=storedMotorByRaceLane.get(key)||{};
    const merged={...stored,...history,...p};
    for(const field of ['motor_number','boat_number','exhibition_time','lap_time','half_lap_time','straight_time','turn_time','exhibition_st_raw','exhibition_st','exhibition_st_is_f','motor_place2_rate','motor_place3_rate','boat_place2_rate','boat_place3_rate']){
     if((merged[field]===undefined||merged[field]===null||merged[field]==='')&&stored[field]!==undefined&&stored[field]!==null&&stored[field]!=='')merged[field]=stored[field];
