@@ -249,12 +249,27 @@ table{min-width:520px}
 
 .venue-meta.venue-cutoff{font-weight:800;font-variant-numeric:tabular-nums}
 .venue-meta.cutoff-urgent{color:#d92d20!important;font-weight:950;font-variant-numeric:tabular-nums}
+
+/* Simple BOATERS-inspired schedule home */
+.home-page{padding:0 2px 22px}.home-datebar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:8px 0 20px}.home-date-step{border:1px solid #e2e7ef;background:#fff;color:#606b7b;border-radius:28px;min-height:48px;padding:0 15px;font-weight:750;white-space:nowrap}.home-date-current{display:flex;align-items:center;justify-content:center;gap:8px;min-width:0}.home-date-current strong{font-size:17px;color:#202b3b;white-space:nowrap}.home-date-current input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}.home-date-current button{border:0;background:#edf2fb;color:#3267d5;border-radius:18px;padding:7px 10px;font-weight:800}.home-schedule-heading{display:flex;align-items:center;justify-content:space-between;margin:8px 0 6px}.home-schedule-heading h1{font-size:21px;margin:0;font-weight:850}.home-refresh{border:1px solid #e2e7ef;background:#fff;border-radius:50%;width:42px;height:42px;font-size:24px;color:#3267d5}.home-page .home-sub{font-size:13px;margin:4px 0 14px}.home-page .venue-grid{gap:1px;background:#e0e3e8;border:1px solid #e0e3e8}.home-page .venue-card{border:0;border-radius:0;min-height:116px;padding:9px 5px;background:#fff;color:#202b3b;justify-content:flex-start;gap:6px}.home-page .venue-card.active{border:0;outline:2px solid #3267d5;outline-offset:-2px;padding:9px 5px}.home-page .venue-card.cancelled,.home-page .venue-card:disabled{background:#f0f1f3;color:#b5bbc5}.home-page .venue-card strong{font-size:17px;font-weight:850}.home-page .venue-meta{background:transparent;font-size:12px;color:#515b6b;font-weight:650}.home-page .venue-meta.grade{background:transparent;color:#3267d5;font-size:13px}.home-page .venue-meta.cutoff-urgent{color:#d92d20!important}.home-page .venue-card:focus-visible{outline:3px solid #3267d5;outline-offset:-3px}
+@media(max-width:480px){.home-datebar{gap:5px}.home-date-step{padding:0 10px;min-height:44px;font-size:13px}.home-date-current{gap:5px}.home-date-current strong{font-size:15px}.home-date-current button{font-size:12px;padding:6px 8px}.home-page .venue-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.home-page .venue-card{min-height:104px;padding:8px 3px}.home-page .venue-card strong{font-size:15px}.home-page .venue-meta{font-size:10px}}
 </style>
 </head>
 <body>
 <header><div class="brand">BOAT <span>MOTOR</span> LAB</div><div class="sub">MOTOR PERFORMANCE & RACE HISTORY</div><nav><button class="active" data-tab="home">🚩<br>開催一覧</button><button data-tab="targets">🎯<br>狙い目レース</button><button data-tab="prediction">🎯<br>予想</button><button data-tab="entry">✍️<br>データ入力</button><button data-tab="analysis">📊<br>機力分析</button><button data-tab="history">🗂️<br>記録一覧</button><button data-tab="fHistory">🚩<br>F情報</button><button data-tab="backtest">🎯<br>検証</button><button data-tab="backup">☁️<br>保存・設定</button></nav></header>
 <main>
-<section id="home"><div class="home-toolbar"><b id="homeDateLabel">開催日</b><input id="homeDate" type="date"><button class="btn primary" id="reloadSchedule">開催情報更新</button></div><p class="home-sub" id="scheduleStatus">開催情報を取得しています…</p><div class="home-title">全国24場 開催一覧</div><div class="venue-grid" id="venueGrid"></div><div class="panel hidden"><div class="home-title" id="selectedVenueTitle">競艇場を選択</div><div class="race-pills" id="racePills"></div></div><div class="hidden" aria-hidden="true"><div id="selectedRaceTitle">機力分析</div><p id="raceAnalysisStatus"></p><button id="openSelectedRaceEntry" type="button">このレースを入力</button><div id="raceMotorCards"></div></div></section>
+<section id="home" class="home-page">
+ <div class="home-datebar">
+  <button class="home-date-step" id="homePrevDay" type="button" aria-label="前日">‹ <span>前日</span></button>
+  <div class="home-date-current"><strong id="homeDateLabel">開催日</strong><input id="homeDate" type="date" aria-label="開催日を選択"><button id="homeToday" type="button">本日</button></div>
+  <button class="home-date-step" id="homeNextDay" type="button" aria-label="翌日"><span>翌日</span> ›</button>
+ </div>
+ <div class="home-schedule-heading"><h1>全国24場の開催状況</h1><button class="home-refresh" id="reloadSchedule" type="button" aria-label="開催情報を更新">↻</button></div>
+ <p class="home-sub" id="scheduleStatus">開催情報を取得しています…</p>
+ <div class="venue-grid" id="venueGrid"></div>
+ <div class="panel hidden"><div class="home-title" id="selectedVenueTitle">競艇場を選択</div><div class="race-pills" id="racePills"></div></div>
+ <div class="hidden" aria-hidden="true"><div id="selectedRaceTitle">機力分析</div><p id="raceAnalysisStatus"></p><button id="openSelectedRaceEntry" type="button">このレースを入力</button><div id="raceMotorCards"></div></div>
+</section>
 <section id="racecards" class="hidden">
  <div class="racecard-toolbar"><button class="btn secondary" id="backToVenues">← 開催場一覧へ戻る</button><span class="muted small" id="racecardDateLabel"></span></div>
  <div class="panel">
@@ -1832,7 +1847,12 @@ let homePayload=null,homeVenue='',homeRace=1,favorites=[],scheduleRequestId=0,mo
 const localDate=()=>{const d=new Date();return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10)};
 $('homeDate').value=localDate();$('homeDateLabel').textContent=$('homeDate').value;
 document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>{showTab(b.dataset.tab);document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('active',x===b));}));
-$('reloadSchedule').onclick=loadSchedule;$('homeDate').onchange=()=>{ $('homeDateLabel').textContent=$('homeDate').value;loadSchedule(); };
+$('reloadSchedule').onclick=loadSchedule;
+$('homeDate').onchange=()=>{ $('homeDateLabel').textContent=$('homeDate').value;loadSchedule(); };
+$('homePrevDay').onclick=()=>shiftHomeDate(-1);
+$('homeNextDay').onclick=()=>shiftHomeDate(1);
+$('homeToday').onclick=()=>{ $('homeDate').value=localDate();$('homeDateLabel').textContent=$('homeDate').value;loadSchedule(); };
+function shiftHomeDate(days){const input=$('homeDate');const d=new Date((input.value||localDate())+'T12:00:00');d.setDate(d.getDate()+days);input.value=d.toLocaleDateString('sv-SE');$('homeDateLabel').textContent=input.value;loadSchedule();}
 async function loadSchedule(){const requestId=++scheduleRequestId,d=$('homeDate').value,compact=d.replaceAll('-','');$('scheduleStatus').textContent='全国24場の開催情報を取得中…（最大15秒）';try{const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),15000);let r;try{r=await fetch('https://boatraceopenapi.github.io/api/v1/'+d.slice(0,4)+'/'+compact+'.json',{cache:'no-store',signal:controller.signal});}finally{clearTimeout(timeout)}if(requestId!==scheduleRequestId)return;if(!r.ok)throw Error(r.status===404?'開催データがまだ公開されていないか、開催がありません':'開催情報取得エラー '+r.status);const payload=await r.json();if(requestId!==scheduleRequestId)return;homePayload=payload;officialVenueStatusMap={};renderVenues();await loadOfficialVenueStatus(d);if(requestId!==scheduleRequestId)return;renderVenues();const st=homePayload?.programs?.stadiums||{};const first=venues.find((v,i)=>Object.keys(st[String(i+1)]?.races||{}).length>0);if(first){homeVenue=first;const nums=Object.keys(st[String(venueCodes[first])] ?.races||{}).map(Number).filter(n=>n>=1&&n<=12).sort((a,b)=>a-b);homeRace=nums.includes(1)?1:(nums[0]||1);renderVenues();renderRaces();}else{homeVenue='';$('selectedVenueTitle').textContent='開催中の競艇場がありません';$('racePills').innerHTML='';$('raceMotorCards').innerHTML='';$('selectedRaceTitle').textContent='6艇のモーター機力比較';$('raceAnalysisStatus').textContent='この日の出走データはありません。';}$('scheduleStatus').textContent=d+' の開催情報';}catch(e){if(requestId!==scheduleRequestId)return;homePayload=null;homeVenue='';renderVenues();$('selectedVenueTitle').textContent='開催情報を表示できません';$('racePills').innerHTML='';$('raceMotorCards').innerHTML='';$('selectedRaceTitle').textContent='6艇のモーター機力比較';$('raceAnalysisStatus').textContent='開催情報を取得できません。';$('scheduleStatus').textContent=(e.name==='AbortError'?'通信が15秒以内に完了しませんでした。通信先APIまたは通信環境を確認してください':(e.message||'不明なエラー'))+'。日付を変えるか、時間をおいて再読み込みしてください。';}}
 function raceCutoffDate(race,date){
  const raw=String(race?.closed_at||'').trim();
