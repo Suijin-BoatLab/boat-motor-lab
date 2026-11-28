@@ -2269,7 +2269,7 @@ async function renderVenueRaceCards(){
  // Match each entrant to the saved racer profile by registration number so birthplace
  // comes from the player master rather than the often-incomplete race-day feed.
  const profileByReg={};
- const registrationNumbers=[...new Set(Object.values(rs).flatMap(r=>Object.values(r?.racers||{}).map(p=>String(p?.number??p?.registration_number??'').replace(/\\D/g,'')).filter(x=>/^\\d{4}$/.test(x))))];
+ const registrationNumbers=[...new Set(Object.values(rs).flatMap(r=>Object.values(r?.racers||{}).map(p=>String(p?.number??p?.registration_number??'').replace(/\D/g,'')).filter(x=>/^\d{4}$/.test(x))))];
  if(cloudClient&&cloudUser&&registrationNumbers.length){
   try{
    for(let i=0;i<registrationNumbers.length;i+=100){
@@ -2277,7 +2277,7 @@ async function renderVenueRaceCards(){
     const {data,error}=await cloudClient.from('racer_master').select('racer_registration_no,hometown,profile_data').eq('user_id',cloudUser.id).in('racer_registration_no',batch);
     if(error)throw error;
     (data||[]).forEach(profile=>{
-     const reg=String(profile.racer_registration_no||'').replace(/\\D/g,'');
+     const reg=String(profile.racer_registration_no||'').replace(/\D/g,'');
      const details=profile.profile_data&&typeof profile.profile_data==='object'?profile.profile_data:{};
      const hometown=profile.hometown||details.hometown||details.birthplace||details.birthplace_name||details.home_town||'';
      if(reg&&hometown)profileByReg[reg]=hometown;
@@ -2339,7 +2339,7 @@ async function renderVenueRaceCards(){
    const fCount=val(p.f_count,p.f_count_current,p.f_count_total),lCount=val(p.l_count,p.l_count_current,p.l_count_total);
    const age=val(p.age,p.age_years),weight=val(pr.weight,p.weight);
    const placeVal=(...items)=>{const found=items.find(x=>x!==undefined&&x!==null&&x!=='');if(found===undefined)return '—';const raw=String(found).trim();const label=/^\d+$/.test(raw)?branchLabel(raw):'';return escapeRaceText(label||raw)};
-   const reg=String(p.number??p.registration_number??'').replace(/\\D/g,'');
+   const reg=String(p.number??p.registration_number??'').replace(/\D/g,'');
    const branch=placeVal(p.branch_name,p.branch_number,p.branch),birth=placeVal(p.birthplace,p.home_town,p.home,profileByReg[reg]);
    return '<tr>'+
     '<td class="racecard-sticky-lane"><span class="racecard-lane l'+lane+'">'+lane+'</span></td>'+
