@@ -1253,10 +1253,12 @@ async function renderTargetRaces(){
  if(!regs.size){status.textContent='開催データから選手登録番号を取得できません。開催情報を更新してください。';box.innerHTML='';return;}
  status.textContent='出走選手 '+regs.size+'名のコース別決まり手率を照合中…';
  const regList=[...regs],stats=[];
- for(let i=0;i<regList.length;i+=300){
+ // 1人につき最大6コース分。PostgRESTの応答上限に届かないよう100名ずつ取得する。
+ for(let i=0;i<regList.length;i+=100){
+  const batch=regList.slice(i,i+100);
   const {data,error}=await cloudClient.rpc('get_racer_course_decision_method_stats_6m_pre_race',{
    p_target_date:date,
-   p_registration_numbers:regList.slice(i,i+300)
+   p_registration_numbers:batch
   });
   if(error){status.textContent='選手別決まり手率を取得できません：'+error.message;box.innerHTML='';return;}
   stats.push(...(data||[]));
@@ -1285,6 +1287,7 @@ async function renderTargetRaces(){
  }).join(''):'<div class="racecard-empty">設定した2条件を両方満たすレースはありません。データ不足のレースは候補に含めていません。</div>';
  box.querySelectorAll('[data-target-predict]').forEach(b=>b.onclick=()=>{const [v,n]=b.dataset.targetPredict.split('|');$('predictionDate').value=date;$('predictionVenue').value=v;$('predictionRaceNo').value=n;showTab('prediction');});
  box.querySelectorAll('[data-target-card]').forEach(b=>b.onclick=()=>{const [v,n]=b.dataset.targetCard.split('|');homeVenue=v;homeRace=Number(n);renderVenueRaceCards();showTab('racecards');});
+ status.textContent='照合完了：出走選手 '+regs.size+'名／取得 '+stats.length+'件／候補 '+rows.length+'レース'+(unavailable.length?'／1号艇の履歴不足 '+unavailable.length+'レース':'');
 }
 $('predictionBackToSchedule').onclick=()=>showTab('home');
 $('predictionDate').value=new Date().toLocaleDateString('sv-SE');
