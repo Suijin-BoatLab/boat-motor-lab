@@ -2553,7 +2553,7 @@ async function renderVenueRaceCards(){
  <button type="button" data-result-race="${n}">結果</button>
  </div><div id="raceFrameInfoPanel-${n}" class="hidden frame-info-panel"></div><div id="raceScoreRateSection-${n}" class="hidden panel"><h3>今節 得点率</h3><p class="small muted" id="raceScoreRateStatus-${n}">今節の結果を集計します。</p><div id="raceScoreRatePanel-${n}"></div></div><div id="raceMotorInlineSection-${n}" class="hidden"><p class="home-sub" id="raceMotorInlineStatus-${n}">このレースの6艇の機力分析を表示します。</p><div id="raceMotorInlinePanel-${n}"></div></div><div id="raceFInfoPanel-${n}" class="hidden"></div><div id="raceShobugakePanel-${n}" class="hidden"></div><div id="raceResultSection-${n}" class="hidden"><p class="home-sub" id="raceResultStatus-${n}">レース終了後に結果・払戻を取得できます。</p><div id="raceResultPanel-${n}"></div></div></article>`;
  }).join('');
- let inlineMotorRequest=0;$('racecardList').querySelectorAll('[data-race-menu]').forEach(b=>b.onclick=()=>{
+ let inlineMotorRequest=0;$('racecardList').querySelectorAll('[data-race-menu]').forEach(b=>b.onclick=async()=>{
   const n=Number(b.dataset.raceNo),kind=b.dataset.raceMenu;
   if(kind==='entry'){const section=$('raceEntrySection-'+n);if(!section)return;const opening=section.classList.contains('hidden');section.classList.toggle('hidden',!opening);b.setAttribute('aria-expanded',String(opening));b.classList.toggle('active',opening);if(opening)section.scrollIntoView({behavior:'smooth',block:'nearest'});return;}
   if(kind==='frame'){
