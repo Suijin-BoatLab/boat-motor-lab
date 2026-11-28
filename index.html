@@ -1355,6 +1355,8 @@ async function renderTargetRaces(){
    const summary=data.summary||[],saved=summary.filter(x=>x.status==='saved').length,missing=summary.length-saved;
    twoStatus.textContent='展示データ取得完了：'+saved+'レース保存／未掲載・データなし等 '+missing+'レース。保存データで2頭型を再判定します…';
    await renderTargetRaces();
+   const refreshedCollectBtn=$('collectTwoHeadData');
+   if(refreshedCollectBtn){refreshedCollectBtn.disabled=false;refreshedCollectBtn.textContent='不足レースの展示・回り足データを取得';}
   }catch(e){
    twoStatus.textContent='展示データ取得に失敗しました：'+(e?.message||String(e));
    collectBtn.disabled=false;collectBtn.textContent='不足レースの展示・回り足データを取得';
