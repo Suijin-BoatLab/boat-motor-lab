@@ -397,7 +397,7 @@ table{min-width:520px}
   <p class="small muted" id="targetsStatus" aria-live="polite">開催情報を読み込んでいます。</p>
   <div id="targetsList"></div>
  </div>
- <div class="notice">率は対象日の前日までの過去6か月間を対象に、選手本人の実際の進入コース別に算出しています。対象日当日の結果は含みません。抽出時は枠なりを前提とし、直前情報の展示進入で明確に枠なり以外と分かるレースは除外します。展示進入は本番進入と異なる場合があります。展示進入未取得のレースは枠なり未確認として暫定判定します。履歴がない選手・コースは判定対象外です。表示率の横に分子／出走数を表示します。</div>
+ <div class="notice">率は対象日の前日までの過去6か月間を対象に、選手本人の実際の進入コース別に算出しています。対象日当日の結果は含みません。抽出時は枠なりを前提とし、直前情報の展示進入6艇分が揃い、1〜6コースの有効な組み合わせで枠なり以外と確認できたレースは除外します。展示進入は本番進入と異なる場合があります。展示進入未取得のレースは枠なり未確認として暫定判定します。履歴がない選手・コースは判定対象外です。表示率の横に分子／出走数を表示します。</div>
 </section>
 <section id="prediction" class="hidden">
  <div class="racecard-toolbar"><button class="btn secondary" id="predictionBackToSchedule">← 開催一覧へ戻る</button><span class="muted small">予想システム</span></div>
@@ -1251,13 +1251,18 @@ async function renderTargetRaces(){
    // preview.course_number is the exhibition entry, not the final race entry.
    // Explicit non-frame-nari exhibition entries are excluded; unavailable preview stays provisional.
    const previewRacers=race?.preview?.racers||{};
-   const previewCourses=[1,2,3,4,5,6].map(lane=>Number(previewRacers[String(lane)]?.course_number));
-   const hasAnyPreviewCourse=previewCourses.some(n=>Number.isInteger(n)&&n>=1&&n<=6);
+   const previewCourses=[1,2,3,4,5,6].map(lane=>{
+    const raw=previewRacers[String(lane)]?.course_number;
+    return raw==null||raw===''?NaN:Number(raw);
+   });
    const hasAllPreviewCourses=previewCourses.every(n=>Number.isInteger(n)&&n>=1&&n<=6);
-   const isExplicitNonFrameNari=hasAnyPreviewCourse&&previewCourses.some((course,i)=>Number.isInteger(course)&&course>=1&&course<=6&&course!==i+1);
+   const isValidCoursePermutation=hasAllPreviewCourses&&new Set(previewCourses).size===6;
+   // Only exclude when all six exhibition courses form a valid 1-6 permutation
+   // and at least one boat is explicitly outside its lane. Partial/malformed data is unknown.
+   const isExplicitNonFrameNari=isValidCoursePermutation&&previewCourses.some((course,i)=>course!==i+1);
    if(isExplicitNonFrameNari){nonFrameNariExcluded++;continue;}
-   if(hasAllPreviewCourses)frameNariConfirmed++;else entryUnknown++;
-   racePool.push({venue,raceNo:Number(raceNo),race,laneRegs,frameNariConfirmed:hasAllPreviewCourses});
+   if(isValidCoursePermutation)frameNariConfirmed++;else entryUnknown++;
+   racePool.push({venue,raceNo:Number(raceNo),race,laneRegs,frameNariConfirmed:isValidCoursePermutation});
   }
  }
  if(!regs.size){status.textContent='開催データから選手登録番号を取得できません。開催情報を更新してください。';box.innerHTML='';return;}
@@ -1297,7 +1302,7 @@ async function renderTargetRaces(){
  }).join(''):'<div class="racecard-empty">設定した2条件を両方満たすレースはありません。データ不足のレースは候補に含めていません。</div>';
  box.querySelectorAll('[data-target-predict]').forEach(b=>b.onclick=()=>{const [v,n]=b.dataset.targetPredict.split('|');$('predictionDate').value=date;$('predictionVenue').value=v;$('predictionRaceNo').value=n;showTab('prediction');});
  box.querySelectorAll('[data-target-card]').forEach(b=>b.onclick=()=>{const [v,n]=b.dataset.targetCard.split('|');homeVenue=v;homeRace=Number(n);renderVenueRaceCards();showTab('racecards');});
- status.textContent='照合完了：出走選手 '+regs.size+'名／取得 '+stats.length+'件／枠なり確認 '+frameNariConfirmed+'レース／非枠なり除外 '+nonFrameNariExcluded+'レース／進入未確認 '+entryUnknown+'レース／候補 '+rows.length+'レース'+(unavailable.length?'／1号艇の履歴不足 '+unavailable.length+'レース':'');
+ status.textContent='照合完了：出走選手 '+regs.size+'名／取得 '+stats.length+'件／展示進入枠なり '+frameNariConfirmed+'レース／非枠なり除外 '+nonFrameNariExcluded+'レース／展示進入未確認 '+entryUnknown+'レース／候補 '+rows.length+'レース'+(unavailable.length?'／1号艇の履歴不足 '+unavailable.length+'レース':'');
 }
 $('predictionBackToSchedule').onclick=()=>showTab('home');
 $('predictionDate').value=new Date().toLocaleDateString('sv-SE');
