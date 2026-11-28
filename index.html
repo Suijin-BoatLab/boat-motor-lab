@@ -1782,7 +1782,7 @@ function getVenueLiveRace(racesForVenue,date,now=new Date()){
 }
 async function loadOfficialVenueStatus(date){
  officialVenueStatusMap={};
- try{const url=SUPABASE_URL+'/rest/v1/official_venue_status?race_date=eq.'+encodeURIComponent(date)+'&select=venue_code,venue_name,status,status_detail,official_updated_at,checked_at';const r=await fetch(url,{cache:'no-store',headers:{apikey:SUPABASE_PUBLISHABLE_KEY,Authorization:'Bearer '+SUPABASE_PUBLISHABLE_KEY}});if(!r.ok)throw new Error('公式開催状況の取得に失敗しました（'+r.status+'）');const rows=await r.json();for(const x of rows||[])officialVenueStatusMap[String(x.venue_code)]=x;}catch(e){console.warn('official venue status',e);}
+ try{const url=SUPABASE_URL+'/rest/v1/official_venue_status?race_date=eq.'+encodeURIComponent(date)+'&select=venue_code,venue_name,status,status_detail,official_updated_at,checked_at';const r=await fetch(url,{cache:'no-store',headers:{apikey:SUPABASE_PUBLISHABLE_KEY}});if(!r.ok)throw new Error('公式開催状況の取得に失敗しました（'+r.status+'）');const rows=await r.json();for(const x of rows||[])officialVenueStatusMap[String(x.venue_code)]=x;}catch(e){console.warn('official venue status',e);}
 }
 function getVenueOfficialStatus(data,venue){
  const official=officialVenueStatusMap[String(venueCodes[venue])];if(official)return official;
