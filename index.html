@@ -2307,9 +2307,37 @@ async function renderVenueRaceCards(){
  $('racecardDaySelect').onchange=()=>{ $('homeDate').value=$('racecardDaySelect').value; $('homeDateLabel').textContent=$('homeDate').value;loadSchedule(); };
  const nums=Object.keys(rs).map(Number).filter(n=>n>=1&&n<=12).sort((a,b)=>a-b);
  if(!nums.length){$('racecardList').innerHTML='<div class="panel racecard-empty">この競艇場の出走表データはありません。</div>';return;}
+ // 当日のDB保存値を、公式開催データで欠けている項目の補完に使う。
+ // 公式データを優先し、DB値は空欄だけを埋める。
+ const storedMotorByRaceLane=new Map(),storedEntryByRaceLane=new Map();
+ if(cloudClient&&cloudUser){
+  try{
+   const {data:historyRows,error:historyError}=await cloudClient.from('historical_motor_entries')
+    .select('race_no,lane,motor_number,boat_number,exhibition_time,lap_time,half_lap_time,straight_time,turn_time,exhibition_st_raw,exhibition_st,exhibition_st_is_f')
+    .eq('race_date',date).eq('venue_code',venueCodes[venue]);
+   if(historyError)throw historyError;
+   (historyRows||[]).forEach(x=>storedMotorByRaceLane.set(Number(x.race_no)+'|'+Number(x.lane),x));
+  }catch(error){console.warn('当日モーター・ボート履歴の補完データを取得できませんでした:',error);}
+  try{
+   const {data:savedRaces,error:savedError}=await cloudClient.from('race_records')
+    .select('race_no,race_entries(lane,motor_number,motor_place_rate,motor_place2_rate,motor_place3_rate,boat_number,boat_place_rate,boat_place2_rate,boat_place3_rate)')
+    .eq('user_id',cloudUser.id).eq('race_date',date).eq('venue_code',venueCodes[venue]);
+   if(savedError)throw savedError;
+   (savedRaces||[]).forEach(r=>(r.race_entries||[]).forEach(x=>storedEntryByRaceLane.set(Number(r.race_no)+'|'+Number(x.lane),x)));
+  }catch(error){console.warn('保存済みモーター・ボート率の補完データを取得できませんでした:',error);}
+ }
  $('racecardList').innerHTML=nums.map(n=>{
-  const race=rs[String(n)]||{},racers=race.racers||{};
-  const previewRacers=race.preview?.racers||{};
+  const race=rs[String(n)]||{},previewRacers=race.preview?.racers||{};
+  const racers=Object.fromEntries(Object.entries(race.racers||{}).map(([k,p])=>{
+   const lane=Number(p?.entry_number||k),key=n+'|'+lane;
+   const stored=storedEntryByLane.get(key)||{},history=storedMotorByRaceLane.get(key)||{};
+   const merged={...stored,...history,...p};
+   for(const field of ['motor_number','boat_number','exhibition_time','lap_time','half_lap_time','straight_time','turn_time','exhibition_st_raw','exhibition_st','exhibition_st_is_f','motor_place2_rate','motor_place3_rate','boat_place2_rate','boat_place3_rate']){
+    if((merged[field]===undefined||merged[field]===null||merged[field]==='')&&stored[field]!==undefined&&stored[field]!==null&&stored[field]!=='')merged[field]=stored[field];
+    if((merged[field]===undefined||merged[field]===null||merged[field]==='')&&history[field]!==undefined&&history[field]!==null&&history[field]!=='')merged[field]=history[field];
+   }
+   return [k,merged];
+  }));
   const racecardMetricDefs={
    average_start_timing:{field:'average_start_timing',alt:['avg_start_timing','average_st','avg_st'],lower:true},
    predicted_start_timing:{field:'predicted_start_timing',alt:['predicted_st','expected_start_timing'],lower:true},
