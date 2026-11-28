@@ -1254,7 +1254,7 @@ async function renderTargetRaces(){
  status.textContent='出走選手 '+regs.size+'名のコース別決まり手率を照合中…';
  const regList=[...regs],stats=[];
  for(let i=0;i<regList.length;i+=300){
-  const {data,error}=await cloudClient.from('racer_course_decision_method_stats')
+  const {data,error}=await cloudClient.from('racer_course_decision_method_stats_6m')
    .select('racer_registration_no,racer_name,course_no,course_starts,nige_count,sashi_count,makuri_count,makuri_sashi_count,nige_rate,sashi_rate,makuri_rate,makuri_sashi_rate')
    .in('racer_registration_no',regList.slice(i,i+300));
   if(error){status.textContent='選手別決まり手率を取得できません：'+error.message;box.innerHTML='';return;}
