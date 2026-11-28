@@ -2434,6 +2434,8 @@ async function renderVenueRaceCards(){
  $('racecardDaySelect').onchange=()=>{ $('homeDate').value=$('racecardDaySelect').value; $('homeDateLabel').textContent=$('homeDate').value;loadSchedule(); };
  const nums=Object.keys(rs).map(Number).filter(n=>n>=1&&n<=12).sort((a,b)=>a-b);
  if(!nums.length){$('racecardList').innerHTML='<div class="panel racecard-empty">この競艇場の出走表データはありません。</div>';return;}
+ // 補完データの取得完了を待たず、まずレース一覧を即時表示する。
+ $('racecardList').innerHTML=nums.map(n=>'<article class="panel racecard-loading" id="racecard-'+n+'"><h2>'+n+'R</h2><p class="home-sub">出走表を読み込んでいます…</p></article>').join('');
  // 当日のDB保存値を、公式開催データで欠けている項目の補完に使う。
  // 公式データを優先し、DB値は空欄だけを埋める。
  const storedMotorByRaceLane=new Map(),storedEntryByRaceLane=new Map();
