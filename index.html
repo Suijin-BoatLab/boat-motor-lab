@@ -2292,15 +2292,16 @@ async function renderRaceFrameInfo({race,venue,date,panel}){
    let from='2026-01-01';
    while(from<=date){
     const remaining=Math.floor((Date.parse(date+'T00:00:00Z')-Date.parse(from+'T00:00:00Z'))/86400000);
-    const to=addDays(from,Math.min(29,remaining));
-    const {error}=await cloudClient.functions.invoke('backfill-race-grade-history',{body:{date_from:from,date_to:to}});
+    const to=addDays(from,Math.min(6,remaining));
+    const {data,error}=await cloudClient.functions.invoke('backfill-race-grade-history',{body:{date_from:from,date_to:to}});
     if(error)throw error;
+    if(data?.failed_days?.length){const first=data.failed_days[0];throw new Error(first.date+'：'+first.error);}
     from=addDays(to,1);
    }
    records=await loadHistory();byReg=makeByReg();gradeBackfillDone=true;return true;
   }catch(error){
    console.warn('レース格データの取得に失敗:',error);
-   panel.innerHTML='<p class="frame-info-loading">一般戦のレース格データを取得できませんでした。通信状態を確認して、もう一度お試しください。</p>';
+   panel.innerHTML='<p class="frame-info-loading">一般戦のレース格データを取得できませんでした。'+esc(error instanceof Error?error.message:'原因不明')+'。もう一度お試しください。</p>';
    return false;
   }
  };
