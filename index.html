@@ -814,8 +814,14 @@ const raceKey=r=>`${r.venue||''}::${r.date||''}::${r.raceNo||''}`;
 const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 function getMotorRate(racer,place){
  const keys=place===2
-  ?['motor_top_2_percent','racer_assigned_motor_top_2_percent','motor_2ren_rate','motor_place_rate','motor_quinella_rate']
-  :['motor_top_3_percent','racer_assigned_motor_top_3_percent','motor_3ren_rate','motor_top3_rate','motor_top_3_rate'];
+  ?['motor_top_2_percent','racer_assigned_motor_top_2_percent','motor_2ren_rate','motor_place2_rate','motor_place_rate','motor_quinella_rate']
+  :['motor_top_3_percent','racer_assigned_motor_top_3_percent','motor_3ren_rate','motor_place3_rate','motor_top3_rate','motor_top_3_rate'];
+ const values=keys.map(k=>racer?.[k]).filter(v=>v!==undefined&&v!==null&&v!=='');
+ const positive=values.find(v=>Number.isFinite(Number(v))&&Number(v)>0);
+ return positive??null;
+}
+function getBoatRate(racer,place){
+ const keys=place===2?['boat_top_2_percent','boat_place2_rate','boat_place_rate']:['boat_top_3_percent','boat_place3_rate'];
  const values=keys.map(k=>racer?.[k]).filter(v=>v!==undefined&&v!==null&&v!=='');
  const positive=values.find(v=>Number.isFinite(Number(v))&&Number(v)>0);
  return positive??null;
@@ -1174,7 +1180,7 @@ $('fetchRace').onclick=async()=>{
   const boatEls=$('boats').querySelectorAll('.boat'),resultEls=$('results').querySelectorAll('.boat');let entryFilled=0,resultFilled=0,weatherFilled=0;
   for(let i=0;i<6;i++){
    const key=String(i+1),b=base[key]||{},pr=preR[key]||{},rr=resR[key]||{},el=boatEls[i];
-   const vals={racer:b.name,motor:b.motor_number,registration:b.number,racerClass:rankLabel(b.rank_number),branch:branchLabel(b.branch_number),nationalWin:b.national_win_rate,national2:b.national_top_2_percent,national3:b.national_top_3_percent,localWin:b.local_win_rate,local2:b.local_top_2_percent,local3:b.local_top_3_percent,motor2:getMotorRate(b,2),motor3:getMotorRate(b,3),boatNo:b.boat_number,boat2:b.boat_top_2_percent,boat3:b.boat_top_3_percent,weight:pr.weight??b.weight,weightAdj:pr.weight_adjustment,tilt:pr.tilt_adjustment??pr.tilt_adjustment_source??pr.tilt??b.tilt_adjustment??b.tilt_adjustment_source,propeller:pr.propeller,parts:Array.isArray(pr.parts)?pr.parts.map(partLabel).join(' / '):'',exhibition:pr.exhibition_time,exSt:formatST(pr.start_timing)};
+   const vals={racer:b.name,motor:b.motor_number,registration:b.number,racerClass:rankLabel(b.rank_number),branch:branchLabel(b.branch_number),nationalWin:b.national_win_rate,national2:b.national_top_2_percent,national3:b.national_top_3_percent,localWin:b.local_win_rate,local2:b.local_top_2_percent,local3:b.local_top_3_percent,motor2:getMotorRate(b,2),motor3:getMotorRate(b,3),boatNo:b.boat_number,boat2:getBoatRate(b,2),boat3:getBoatRate(b,3),weight:pr.weight??b.weight,weightAdj:pr.weight_adjustment,tilt:pr.tilt_adjustment??pr.tilt_adjustment_source??pr.tilt??b.tilt_adjustment??b.tilt_adjustment_source,propeller:pr.propeller,parts:Array.isArray(pr.parts)?pr.parts.map(partLabel).join(' / '):'',exhibition:pr.exhibition_time,exSt:formatST(pr.start_timing)};
    el.querySelectorAll('[data-k]').forEach(x=>{if(vals[x.dataset.k]!==undefined&&vals[x.dataset.k]!==null&&vals[x.dataset.k]!==''){x.value=String(vals[x.dataset.k]);entryFilled++}});
    const rel=resultEls[i];rel.querySelectorAll('[data-k]').forEach(x=>{
     if(x.dataset.k==='rank'&&Number.isInteger(Number(rr.place_number))&&rr.place_number>=1&&rr.place_number<=6){x.value=String(rr.place_number);resultFilled++}
@@ -1216,7 +1222,7 @@ $('fetchAllRaces').onclick=async()=>{
    let entryChanged=false,resultChanged=false;
    for(let i=0;i<6;i++){
     const k=String(i+1),b=base[k]||{},pr=preR[k]||{},rr=resR[k]||{};
-    const entryValues={racer:b.name,motor:b.motor_number,registration:b.number,racerClass:rankLabel(b.rank_number),branch:branchLabel(b.branch_number),nationalWin:b.national_win_rate,national2:b.national_top_2_percent,national3:b.national_top_3_percent,localWin:b.local_win_rate,local2:b.local_top_2_percent,local3:b.local_top_3_percent,motor2:getMotorRate(b,2),motor3:getMotorRate(b,3),boatNo:b.boat_number,boat2:b.boat_top_2_percent,boat3:b.boat_top_3_percent,weight:pr.weight??b.weight,weightAdj:pr.weight_adjustment,tilt:pr.tilt_adjustment??pr.tilt_adjustment_source??pr.tilt??b.tilt_adjustment??b.tilt_adjustment_source,propeller:pr.propeller,parts:Array.isArray(pr.parts)?pr.parts.map(partLabel).join(' / '):'',exhibition:pr.exhibition_time,exSt:formatST(pr.start_timing)};
+    const entryValues={racer:b.name,motor:b.motor_number,registration:b.number,racerClass:rankLabel(b.rank_number),branch:branchLabel(b.branch_number),nationalWin:b.national_win_rate,national2:b.national_top_2_percent,national3:b.national_top_3_percent,localWin:b.local_win_rate,local2:b.local_top_2_percent,local3:b.local_top_3_percent,motor2:getMotorRate(b,2),motor3:getMotorRate(b,3),boatNo:b.boat_number,boat2:getBoatRate(b,2),boat3:getBoatRate(b,3),weight:pr.weight??b.weight,weightAdj:pr.weight_adjustment,tilt:pr.tilt_adjustment??pr.tilt_adjustment_source??pr.tilt??b.tilt_adjustment??b.tilt_adjustment_source,propeller:pr.propeller,parts:Array.isArray(pr.parts)?pr.parts.map(partLabel).join(' / '):'',exhibition:pr.exhibition_time,exSt:formatST(pr.start_timing)};
     for(const [field,value] of Object.entries(entryValues)){
      if(value!==undefined&&value!==null&&value!==''&&String(boats[i][field]??'')!==String(value)){boats[i][field]=String(value);entryChanged=true;entryRowsUpdated++;}
     }
@@ -2054,7 +2060,7 @@ async function cloudBackfillExisting(){
     for(let i=0;i<6;i++){
      const key=String(i+1),b=base[key]||{},pr=preR[key]||{},rr=resR[key]||{};
      let boat=r.boats.find(x=>Number(x.lane)===i+1);if(!boat){boat={lane:i+1};r.boats.push(boat)}
-     const vals={racer:b.name,motor:b.motor_number,registration:b.number,racerClass:rankLabel(b.rank_number),branch:branchLabel(b.branch_number),nationalWin:b.national_win_rate,national2:b.national_top_2_percent,national3:b.national_top_3_percent,localWin:b.local_win_rate,local2:b.local_top_2_percent,local3:b.local_top_3_percent,motor2:getMotorRate(b,2),motor3:getMotorRate(b,3),boatNo:b.boat_number,boat2:b.boat_top_2_percent,boat3:b.boat_top_3_percent,weight:pr.weight??b.weight,weightAdj:pr.weight_adjustment,tilt:pr.tilt_adjustment??pr.tilt_adjustment_source??pr.tilt??b.tilt_adjustment??b.tilt_adjustment_source,propeller:pr.propeller,parts:Array.isArray(pr.parts)?pr.parts.map(partLabel).join(' / '):'',exhibition:pr.exhibition_time,exSt:pr.start_timing===undefined?'':formatST(pr.start_timing)};
+     const vals={racer:b.name,motor:b.motor_number,registration:b.number,racerClass:rankLabel(b.rank_number),branch:branchLabel(b.branch_number),nationalWin:b.national_win_rate,national2:b.national_top_2_percent,national3:b.national_top_3_percent,localWin:b.local_win_rate,local2:b.local_top_2_percent,local3:b.local_top_3_percent,motor2:getMotorRate(b,2),motor3:getMotorRate(b,3),boatNo:b.boat_number,boat2:getBoatRate(b,2),boat3:getBoatRate(b,3),weight:pr.weight??b.weight,weightAdj:pr.weight_adjustment,tilt:pr.tilt_adjustment??pr.tilt_adjustment_source??pr.tilt??b.tilt_adjustment??b.tilt_adjustment_source,propeller:pr.propeller,parts:Array.isArray(pr.parts)?pr.parts.map(partLabel).join(' / '):'',exhibition:pr.exhibition_time,exSt:pr.start_timing===undefined?'':formatST(pr.start_timing)};
      if(vals.tilt!==undefined&&vals.tilt!==null&&vals.tilt!==''){tiltFound++;if(Number(vals.tilt)===0)tiltZero++;}Object.entries(vals).forEach(([k,v])=>put(boat,k,v));
      let res=r.results.find(x=>Number(x.lane)===i+1);if(!res){res={lane:i+1};r.results.push(res)}
      put(res,'rank',rr.place_number);put(res,'actualSt',rr.start_timing===undefined?'':formatST(rr.start_timing));put(res,'course',rr.course_number);
@@ -2315,8 +2321,8 @@ async function renderVenueRaceCards(){
    local_top_3_percent:{field:'local_top_3_percent'},
    motor_top_2_percent:{field:'motor_top_2_percent',alt:['racer_assigned_motor_top_2_percent','motor_2ren_rate','motor_place_rate','motor_quinella_rate']},
    motor_top_3_percent:{field:'motor_top_3_percent',alt:['racer_assigned_motor_top_3_percent','motor_3ren_rate','motor_top3_rate','motor_top_3_rate']},
-   boat_top_2_percent:{field:'boat_top_2_percent'},
-   boat_top_3_percent:{field:'boat_top_3_percent'},
+   boat_top_2_percent:{field:'boat_top_2_percent',alt:['boat_place2_rate','boat_place_rate']},
+   boat_top_3_percent:{field:'boat_top_3_percent',alt:['boat_place3_rate']},
    exhibition_time:{field:'exhibition_time',lower:true},
    exhibition_start_timing:{field:'start_timing',lower:true}
   };
@@ -2359,7 +2365,7 @@ async function renderVenueRaceCards(){
     '<td>'+rankedValue('national_win_rate',p.national_win_rate,rate(p.national_win_rate))+'<br>'+rankedValue('national_top_2_percent',p.national_top_2_percent,rate(p.national_top_2_percent))+'<br>'+rankedValue('national_top_3_percent',p.national_top_3_percent,rate(p.national_top_3_percent))+'</td>'+
     '<td>'+rankedValue('local_win_rate',p.local_win_rate,rate(p.local_win_rate))+'<br>'+rankedValue('local_top_2_percent',p.local_top_2_percent,rate(p.local_top_2_percent))+'<br>'+rankedValue('local_top_3_percent',p.local_top_3_percent,rate(p.local_top_3_percent))+'</td>'+
     '<td>No. '+val(p.motor_number)+'<br>'+rankedValue('motor_top_2_percent',getMotorRate(p,2),rate(getMotorRate(p,2)))+'<br>'+rankedValue('motor_top_3_percent',getMotorRate(p,3),rate(getMotorRate(p,3)))+'</td>'+
-    '<td>No. '+val(p.boat_number)+'<br>'+rankedValue('boat_top_2_percent',p.boat_top_2_percent,rate(p.boat_top_2_percent))+'<br>'+rankedValue('boat_top_3_percent',p.boat_top_3_percent,rate(p.boat_top_3_percent))+'</td>'+
+    '<td>No. '+val(p.boat_number)+'<br>'+rankedValue('boat_top_2_percent',getBoatRate(p,2),rate(getBoatRate(p,2)))+'<br>'+rankedValue('boat_top_3_percent',getBoatRate(p,3),rate(getBoatRate(p,3)))+'</td>'+
     '<td>'+val(pr.weight_adjustment,p.weight_adjustment)+'<br>'+val(pr.tilt_adjustment,pr.tilt_adjustment_source,p.tilt_adjustment,p.tilt_adjustment_source)+'</td>'+
     '<td>'+rankedValue('exhibition_time',pr.exhibition_time??p.exhibition_time,val(pr.exhibition_time,p.exhibition_time))+'<br>'+rankedValue('exhibition_start_timing',pr.start_timing??p.start_timing,val(pr.start_timing,p.start_timing))+'</td>'+
    '</tr>';
