@@ -280,6 +280,10 @@ table{min-width:520px}
  .home-datebar{margin-bottom:5px!important}
  .home-page .home-sub{margin-bottom:4px!important}
 }
+
+/* BOATERS-inspired venue race list */
+.venue-race-page{padding:0 0 24px}.venue-race-top{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;background:#edf0f4;padding:10px 12px;margin:0 -8px}.venue-race-top h1{margin:0;text-align:center;font-size:21px}.venue-back{border:0;background:transparent;color:#27364a;font-weight:800;font-size:14px;white-space:nowrap}.venue-race-top select{width:auto;max-width:150px;padding:8px;border-radius:8px;background:#fff;color:#27364a;border:1px solid #dce2eb;font-size:13px}.venue-race-event{display:flex;align-items:center;gap:10px;padding:13px 12px;border-bottom:1px solid #e2e6ec;background:#fff;color:#202b3b}.venue-grade{background:#8ba1bd;color:#fff;border-radius:5px;padding:5px 9px;font-size:12px;font-weight:850}.venue-race-event strong{font-size:15px}.venue-race-tabs{display:flex;gap:0;border-bottom:1px solid #e1e5eb;background:#fff;margin:0 -8px 12px}.venue-race-tabs button{border:0;background:transparent;padding:12px 18px;font-weight:800;color:#7c8798}.venue-race-tabs button.active{color:#202b3b;border-bottom:3px solid #202b3b}.venue-race-tabs button:disabled{opacity:.5}.venue-race-page .panel{border-radius:0;margin:0 0 12px;background:#fff;color:#202b3b;border-color:#e0e5ec;box-shadow:none}.venue-race-page .racecard-heading{padding:10px 12px;margin:0;background:#f6f7f9}.venue-race-page .racecard-heading h2{font-size:20px;margin:0;color:#202b3b}.venue-race-page .racecard-meta{font-size:13px;color:#4d5869}.venue-race-page .racecard-table{min-width:0;width:100%;font-size:14px}.venue-race-page .racecard-table th,.venue-race-page .racecard-table td{padding:10px 5px}.venue-race-page .racecard-table th:nth-child(3),.venue-race-page .racecard-table th:nth-child(5),.venue-race-page .racecard-table th:nth-child(6),.venue-race-page .racecard-table th:nth-child(8),.venue-race-page .racecard-table td:nth-child(3),.venue-race-page .racecard-table td:nth-child(5),.venue-race-page .racecard-table td:nth-child(6),.venue-race-page .racecard-table td:nth-child(8){display:none}.venue-race-page .racecard-table td:nth-child(2){color:#1472c5;font-weight:800}.venue-race-menu{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:14px 12px;background:#f7f8fa}.venue-race-menu button{border:1.5px solid #30343a;background:#fff;border-radius:28px;padding:10px 4px;color:#202124;font-weight:800;font-size:13px;min-height:44px}.venue-race-menu button:active,.venue-race-menu button.active{background:#edf3ff;border-color:#3267d5;color:#2458b8}.race-menu-notice{padding:12px;background:#f3f6fb;color:#66758a;font-size:13px;border-top:1px solid #e2e7ef}
+@media(max-width:600px){.venue-race-top h1{font-size:19px}.venue-race-top select{max-width:130px}.venue-race-event strong{font-size:14px}.venue-race-page .racecard-table{font-size:13px}.venue-race-page .racecard-table th,.venue-race-page .racecard-table td{padding:9px 3px}.venue-race-menu{gap:7px;padding:12px 9px}.venue-race-menu button{font-size:12px;min-height:42px;padding:8px 2px}}
 </style>
 </head>
 <body>
@@ -297,11 +301,10 @@ table{min-width:520px}
  <div class="panel hidden"><div class="home-title" id="selectedVenueTitle">競艇場を選択</div><div class="race-pills" id="racePills"></div></div>
  <div class="hidden" aria-hidden="true"><div id="selectedRaceTitle">機力分析</div><p id="raceAnalysisStatus"></p><button id="openSelectedRaceEntry" type="button">このレースを入力</button><div id="raceMotorCards"></div></div>
 </section>
-<section id="racecards" class="hidden">
- <div class="racecard-toolbar"><button class="btn secondary" id="backToVenues">← 開催場一覧へ戻る</button><span class="muted small" id="racecardDateLabel"></span></div>
- <div class="panel">
-  <div class="racecard-heading"><div><h1 id="racecardVenueTitle">出走表</h1><p class="muted small">選択した競艇場の1R〜12Rを一覧表示します。各レースの出走選手・級別・勝率・モーター情報を確認できます。</p></div></div>
- </div>
+<section id="racecards" class="hidden venue-race-page">
+ <div class="venue-race-top"><button class="venue-back" id="backToVenues" type="button">‹ 開催一覧</button><h1 id="racecardVenueTitle">桐生</h1><select id="racecardDaySelect" aria-label="開催日を選択"></select></div>
+ <div class="venue-race-event"><span class="venue-grade" id="racecardGrade">一般</span><strong id="racecardEventTitle">開催情報を読み込んでいます</strong></div>
+ <div class="venue-race-tabs" aria-label="レース情報メニュー"><button class="active" type="button">レース一覧</button><button type="button" disabled>レース結果</button></div>
  <div id="racecardList"></div>
 </section>
 <section id="entry" class="hidden">
@@ -1954,8 +1957,12 @@ function renderVenues(){
 function escapeRaceText(v){return String(v??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function renderVenueRaceCards(){
  const venue=homeVenue,date=$('homeDate').value,rs=homePayload?.programs?.stadiums?.[String(venueCodes[venue])]?.races||{};
- $('racecardVenueTitle').textContent=venue+'｜出走表一覧';
- $('racecardDateLabel').textContent=date;
+ $('racecardVenueTitle').textContent=venue;
+ $('racecardDaySelect').innerHTML='<option value="'+date+'">'+escapeRaceText(date)+' 開催</option>';
+ const firstRace=rs[String(Object.keys(rs).sort((a,b)=>Number(a)-Number(b))[0])]||{};
+ $('racecardGrade').textContent=escapeRaceText(firstRace.grade||firstRace.race_grade||'一般');
+ $('racecardEventTitle').textContent=escapeRaceText(firstRace.title||firstRace.subtitle||'開催情報');
+ $('racecardDaySelect').onchange=()=>{ $('homeDate').value=$('racecardDaySelect').value; $('homeDateLabel').textContent=$('homeDate').value;loadSchedule(); };
  const nums=Object.keys(rs).map(Number).filter(n=>n>=1&&n<=12).sort((a,b)=>a-b);
  if(!nums.length){$('racecardList').innerHTML='<div class="panel racecard-empty">この競艇場の出走表データはありません。</div>';return;}
  $('racecardList').innerHTML=nums.map(n=>{
@@ -1967,9 +1974,26 @@ function renderVenueRaceCards(){
   }).join('');
   const title=[race.title,race.subtitle].filter(Boolean).map(escapeRaceText).join('｜');
   const cutoff=race.closed_at?escapeRaceText(race.closed_at.slice(11,16)+'締切'):'';
-  return '<article class="panel" id="racecard-'+n+'"><div class="racecard-heading"><div><h2>'+n+'R '+(title||'出走表')+'</h2><div class="racecard-meta">'+cutoff+'　'+(race.day_number_source?escapeRaceText(race.day_number_source):'')+'</div></div><span class="tag">'+(Object.keys(racers).length||0)+'艇</span></div><div class="tablewrap"><table class="racecard-table"><thead><tr><th>枠</th><th>選手</th><th>登録番号</th><th>級別</th><th>全国勝率</th><th>当地勝率</th><th>モーター</th><th>モーター2連率</th></tr></thead><tbody>'+(rows||'<tr><td colspan="8">出走表データなし</td></tr>')+'</tbody></table></div><div class="racecard-actions"><button class="btn primary" data-analyze-race="'+n+'">📊 機力分析</button><button class="btn secondary" data-finfo-race="'+n+'">🚩 F情報</button><button class="btn secondary" data-shobugake-race="'+n+'">🔥 勝負がけ</button><button class="btn secondary" data-entry-race="'+n+'">✍️ データ入力</button><button class="btn secondary" data-result-race="'+n+'">🏁 結果・払戻</button></div><div id="raceMotorInlineSection-'+n+'" class="hidden"><p class="home-sub" id="raceMotorInlineStatus-'+n+'">このレースの6艇の機力分析を表示します。</p><div id="raceMotorInlinePanel-'+n+'"></div></div><div id="raceFInfoPanel-'+n+'" class="hidden"></div><div id="raceShobugakePanel-'+n+'" class="hidden"></div><div id="raceResultSection-'+n+'" class="hidden"><p class="home-sub" id="raceResultStatus-'+n+'">レース終了後に結果・払戻を取得できます。</p><div id="raceResultPanel-'+n+'"></div></div></article>';
+  return '<article class="panel" id="racecard-'+n+'"><div class="racecard-heading"><div><h2>'+n+'R '+(title||'出走表')+'</h2><div class="racecard-meta">'+cutoff+'　'+(race.day_number_source?escapeRaceText(race.day_number_source):'')+'</div></div><span class="tag">'+(Object.keys(racers).length||0)+'艇</span></div><div class="tablewrap"><table class="racecard-table"><thead><tr><th>枠</th><th>選手</th><th>登録番号</th><th>級別</th><th>全国勝率</th><th>当地勝率</th><th>モーター</th><th>モーター2連率</th></tr></thead><tbody>'+(rows||'<tr><td colspan="8">出走表データなし</td></tr>')+'</tbody></table></div><div class="venue-race-menu">
+ <button type="button" class="active" data-race-menu="entry" data-race-no="'+n+'">出走表</button>
+ <button type="button" data-race-menu="frame" data-race-no="'+n+'">枠別情報</button>
+ <button type="button" data-race-menu="odds" data-race-no="'+n+'">オッズ</button>
+ <button type="button" data-race-menu="preview" data-race-no="'+n+'">直前情報</button>
+ <button type="button" data-race-menu="series" data-race-no="'+n+'">今節成績</button>
+ <button type="button" data-analyze-race="'+n+'">モーター情報</button>
+ <button type="button" data-result-race="'+n+'">結果</button>
+ </div><div id="raceMotorInlineSection-'+n+'" class="hidden"><p class="home-sub" id="raceMotorInlineStatus-'+n+'">このレースの6艇の機力分析を表示します。</p><div id="raceMotorInlinePanel-'+n+'"></div></div><div id="raceFInfoPanel-'+n+'" class="hidden"></div><div id="raceShobugakePanel-'+n+'" class="hidden"></div><div id="raceResultSection-'+n+'" class="hidden"><p class="home-sub" id="raceResultStatus-'+n+'">レース終了後に結果・払戻を取得できます。</p><div id="raceResultPanel-'+n+'"></div></div></article>';
  }).join('');
- let inlineMotorRequest=0;$('racecardList').querySelectorAll('[data-analyze-race]').forEach(b=>b.onclick=async()=>{const n=Number(b.dataset.analyzeRace),section=$('raceMotorInlineSection-'+n),panel=$('raceMotorInlinePanel-'+n),status=$('raceMotorInlineStatus-'+n);if(!section||!panel||!status)return;const opening=section.classList.contains('hidden');if(!opening){section.classList.add('hidden');b.setAttribute('aria-expanded','false');return;}section.classList.remove('hidden');b.setAttribute('aria-expanded','true');if(panel.dataset.loaded==='true')return;const request=++inlineMotorRequest;status.textContent=homeVenue+' '+n+'R｜6艇の機力履歴を分析しています…';panel.innerHTML='';homeRace=n;$('homeDate').value=date;try{await loadRaceMotors();if(request!==inlineMotorRequest||section.classList.contains('hidden'))return;panel.innerHTML=$('raceMotorCards').innerHTML||'<div class="racecard-empty">分析データがありません。</div>';panel.dataset.loaded='true';status.textContent=$('raceAnalysisStatus').textContent||'6艇の分析が完了しました。';}catch(e){if(request===inlineMotorRequest)status.textContent='機力分析を取得できませんでした：'+(e.message||'通信エラー');}});
+ let inlineMotorRequest=0;$('racecardList').querySelectorAll('[data-race-menu]').forEach(b=>b.onclick=()=>{
+  const n=Number(b.dataset.raceNo),kind=b.dataset.raceMenu;
+  if(kind==='entry'){const card=$('racecard-'+n);card?.scrollIntoView({behavior:'smooth',block:'start'});return;}
+  const labels={frame:'枠別情報',odds:'オッズ',preview:'直前情報',series:'今節成績'};
+  const card=$('racecard-'+n);if(!card)return;
+  let box=card.querySelector('.race-menu-notice');
+  if(!box){box=document.createElement('div');box.className='race-menu-notice';card.appendChild(box);}
+  box.textContent=labels[kind]+'は、この画面構成に合わせて次の段階でデータ接続するよ。';
+ });
+ $('racecardList').querySelectorAll('[data-analyze-race]').forEach(b=>b.onclick=async()=>{const n=Number(b.dataset.analyzeRace),section=$('raceMotorInlineSection-'+n),panel=$('raceMotorInlinePanel-'+n),status=$('raceMotorInlineStatus-'+n);if(!section||!panel||!status)return;const opening=section.classList.contains('hidden');if(!opening){section.classList.add('hidden');b.setAttribute('aria-expanded','false');return;}section.classList.remove('hidden');b.setAttribute('aria-expanded','true');if(panel.dataset.loaded==='true')return;const request=++inlineMotorRequest;status.textContent=homeVenue+' '+n+'R｜6艇の機力履歴を分析しています…';panel.innerHTML='';homeRace=n;$('homeDate').value=date;try{await loadRaceMotors();if(request!==inlineMotorRequest||section.classList.contains('hidden'))return;panel.innerHTML=$('raceMotorCards').innerHTML||'<div class="racecard-empty">分析データがありません。</div>';panel.dataset.loaded='true';status.textContent=$('raceAnalysisStatus').textContent||'6艇の分析が完了しました。';}catch(e){if(request===inlineMotorRequest)status.textContent='機力分析を取得できませんでした：'+(e.message||'通信エラー');}});
  $('racecardList').querySelectorAll('[data-result-race]').forEach(b=>b.onclick=()=>{const n=Number(b.dataset.resultRace),section=$('raceResultSection-'+n),panel=$('raceResultPanel-'+n),status=$('raceResultStatus-'+n),isOpen=!section.classList.contains('hidden');if(isOpen){section.classList.add('hidden');b.setAttribute('aria-expanded','false');}else{section.classList.remove('hidden');b.setAttribute('aria-expanded','true');if(!panel.innerHTML.trim())syncSelectedRaceResult({date,venue:homeVenue,race:n,statusId:'raceResultStatus-'+n,panelId:'raceResultPanel-'+n,button:b});}});
  $('racecardList').querySelectorAll('[data-shobugake-race]').forEach(b=>b.onclick=()=>{const n=Number(b.dataset.shobugakeRace),race=rs[String(n)]||{};const panel=$('raceShobugakePanel-'+n);panel.classList.remove('hidden');loadRaceShobugake({date,venue:homeVenue,raceNo:n,racers:race.racers||{},panel,button:b});});
  $('racecardList').querySelectorAll('[data-finfo-race]').forEach(b=>b.onclick=()=>{const n=Number(b.dataset.finfoRace),race=rs[String(n)]||{};const panel=$('raceFInfoPanel-'+n);panel.classList.remove('hidden');loadRaceFInfo({date,venue:homeVenue,raceNo:n,racers:race.racers||{},panel});});
