@@ -1266,16 +1266,18 @@ async function renderTargetRaces(){
  for(const item of racePool){
   const firstReg=item.laneRegs[1],first=firstReg?byKey.get(firstReg+'|1'):null;
   if(!first||Number(first.course_starts)<=0){unavailable.push(item);continue;}
-  const firstRate=Number(first.nige_rate);
-  if(!Number.isFinite(firstRate)||firstRate>50)continue;
+  const firstStarts=Number(first.course_starts),firstNige=Number(first.nige_count);
+  const firstRate=firstStarts>0?firstNige/firstStarts*100:NaN;
+  if(!Number.isFinite(firstRate)||firstNige/firstStarts>0.5)continue;
   const attacks=[];
   for(let lane=2;lane<=6;lane++){
    const reg=item.laneRegs[lane],x=reg?byKey.get(reg+'|'+lane):null;
    if(!x||Number(x.course_starts)<=0)continue;
-   const vals=[['差し',Number(x.sashi_rate),Number(x.sashi_count)],['まくり',Number(x.makuri_rate),Number(x.makuri_count)],['まくり差し',Number(x.makuri_sashi_rate),Number(x.makuri_sashi_count)]];
-   for(const [method,rate,count] of vals)if(Number.isFinite(rate)&&rate>=20)attacks.push({lane,name:x.racer_name||'選手',method,rate,count,starts:Number(x.course_starts)});
+   const starts=Number(x.course_starts);
+   const vals=[['差し',Number(x.sashi_count)],['まくり',Number(x.makuri_count)],['まくり差し',Number(x.makuri_sashi_count)]];
+   for(const [method,count] of vals){const rate=starts>0?count/starts*100:NaN;if(Number.isFinite(rate)&&count/starts>=0.2)attacks.push({lane,name:x.racer_name||'選手',method,rate,count,starts});}
   }
-  if(attacks.length)rows.push({...item,firstRate,firstCount:Number(first.nige_count),firstStarts:Number(first.course_starts),attacks});
+  if(attacks.length)rows.push({...item,firstRate,firstCount:firstNige,firstStarts,attacks});
  }
  box.innerHTML=rows.length?rows.map(r=>{
   const attackText=r.attacks.map(a=>'<li>'+a.lane+'号艇 '+escapeRaceText(a.name)+'：'+a.method+'率 <b>'+a.rate.toFixed(1)+'%</b>（'+a.count+'/'+a.starts+'走）</li>').join('');
