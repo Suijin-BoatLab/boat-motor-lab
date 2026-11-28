@@ -2319,7 +2319,8 @@ function renderVenueRaceCards(){
    const avgSt=val(p.average_start_timing,p.avg_start_timing,p.average_st,p.avg_st);
    const fCount=val(p.f_count,p.f_count_current,p.f_count_total),lCount=val(p.l_count,p.l_count_current,p.l_count_total);
    const age=val(p.age,p.age_years),weight=val(pr.weight,p.weight);
-   const branch=val(p.branch_name,p.branch_number,p.branch),birth=val(p.birthplace,p.home_town,p.home);
+   const placeVal=(...items)=>{const found=items.find(x=>x!==undefined&&x!==null&&x!=='');if(found===undefined)return '—';const raw=String(found).trim();const label=/^\d+$/.test(raw)?branchLabel(raw):'';return escapeRaceText(label||raw)};
+   const branch=placeVal(p.branch_name,p.branch_number,p.branch),birth=placeVal(p.birthplace,p.home_town,p.home);
    return '<tr>'+
     '<td class="racecard-sticky-lane"><span class="racecard-lane l'+lane+'">'+lane+'</span></td>'+
     '<td class="racecard-racer"><b>'+val(p.name)+'</b><small>'+val(p.number)+'</small><strong>'+val(rank)+'</strong></td>'+
