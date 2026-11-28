@@ -229,6 +229,28 @@ table{min-width:520px}
 /* Backtest summary: compact two-column cards on phones */
 @media screen and (max-width: 600px) { #backtestSummary.venue-grid { display:grid !important; grid-template-columns:repeat(2,minmax(0,1fr)) !important; gap:10px !important; } #backtestSummary.venue-grid > .panel { width:auto !important; min-width:0 !important; padding:12px !important; } #backtestSummary.venue-grid > .panel h2 { font-size:18px !important; line-height:1.35 !important; overflow-wrap:anywhere !important; } }
 
+/* Horizontal race-card layout inspired by the supplied race-table references */
+.racecard-scroll-hint{font-size:12px;color:#718097;text-align:right;padding:5px 4px}
+.racecard-wide-scroll,.racecard-series-scroll{overflow-x:auto;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;border:1px solid #dfe4ec;background:#fff;max-width:100%}
+.racecard-wide-table,.racecard-series-table{border-collapse:separate;border-spacing:0;width:max-content;min-width:100%;font-size:13px;color:#202b3b;background:#fff}
+.racecard-wide-table{min-width:1420px}
+.racecard-wide-table th,.racecard-wide-table td,.racecard-series-table th,.racecard-series-table td{min-width:92px;padding:10px 9px;text-align:center;vertical-align:middle;white-space:nowrap;border-right:1px solid #e4e8ef;border-bottom:1px solid #e4e8ef;line-height:1.55}
+.racecard-wide-table th,.racecard-series-table th{position:sticky;top:0;z-index:2;background:#f5f7fa;color:#68758a;font-weight:800}
+.racecard-wide-table .racecard-sticky-lane,.racecard-series-table .racecard-sticky-lane{position:sticky;left:0;z-index:4;min-width:44px;width:44px;background:#f0f1f3}
+.racecard-wide-table thead .racecard-sticky-lane,.racecard-series-table thead .racecard-sticky-lane{z-index:6;background:#eef1f5}
+.racecard-wide-table .racecard-racer,.racecard-series-table .racecard-racer{position:sticky;left:44px;z-index:3;min-width:138px;text-align:left;background:#fff;box-shadow:2px 0 3px rgba(20,35,55,.07)}
+.racecard-wide-table thead .racecard-racer,.racecard-series-table thead .racecard-racer{z-index:5;background:#f5f7fa}
+.racecard-wide-table .racecard-racer small,.racecard-wide-table .racecard-racer strong{display:block;font-size:11px;color:#68758a}
+.racecard-wide-table .racecard-racer b,.racecard-series-table .racecard-racer b{color:#1472c5}
+.racecard-wide-table td:nth-child(n+7){font-variant-numeric:tabular-nums}
+.racecard-wide-table td:nth-child(7),.racecard-wide-table td:nth-child(8),.racecard-wide-table td:nth-child(9),.racecard-wide-table td:nth-child(10),.racecard-wide-table td:nth-child(11),.racecard-wide-table td:nth-child(12){min-width:112px}
+.racecard-wide-table .racecard-lane,.racecard-series-table .racecard-lane{width:30px;height:34px;border-radius:0}
+.racecard-series-wrap{margin-top:14px}
+.racecard-series-wrap h3{font-size:15px;margin:0 0 7px;color:#59677c}
+.racecard-series-table{min-width:980px}
+.racecard-series-table td{min-width:104px;height:82px}
+.racecard-series-cell{font-size:12px;font-weight:700;color:#59677c}
+@media(max-width:600px){.racecard-wide-table{min-width:1420px}.racecard-wide-table th,.racecard-wide-table td,.racecard-series-table th,.racecard-series-table td{padding:9px 8px;font-size:12px}.racecard-wide-table .racecard-racer,.racecard-series-table .racecard-racer{min-width:128px}.racecard-scroll-hint{font-size:11px}}
 /* Venue selection -> race-card screen */
 .racecard-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .racecard-toolbar .btn{flex:0 0 auto}
@@ -2020,14 +2042,34 @@ function renderVenueRaceCards(){
  if(!nums.length){$('racecardList').innerHTML='<div class="panel racecard-empty">この競艇場の出走表データはありません。</div>';return;}
  $('racecardList').innerHTML=nums.map(n=>{
   const race=rs[String(n)]||{},racers=race.racers||{};
+  const previewRacers=race.preview?.racers||{};
   const rows=Object.keys(racers).sort((a,b)=>Number(a)-Number(b)).map(k=>{
-   const p=racers[k]||{},lane=Number(p.entry_number||k);
+   const p=racers[k]||{},pr=previewRacers[k]||{},lane=Number(p.entry_number||k);
    const rank=p.rank_number_source||p.rank_number||'—';
-   return '<tr><td><span class="racecard-lane l'+lane+'">'+lane+'</span></td><td>'+escapeRaceText(p.name)+'</td><td>'+escapeRaceText(p.number)+'</td><td>'+escapeRaceText(rank)+'</td><td>'+escapeRaceText(p.national_win_rate)+'</td><td>'+escapeRaceText(p.local_win_rate)+'</td><td>'+escapeRaceText(p.motor_number)+'</td><td>'+escapeRaceText(p.motor_top_2_percent)+'</td></tr>';
+   const val=(...items)=>{const found=items.find(x=>x!==undefined&&x!==null&&x!=='');return found===undefined?'—':escapeRaceText(found)};
+   const rate=(...items)=>{const found=items.find(x=>x!==undefined&&x!==null&&x!=='');return found===undefined?'—':escapeRaceText(String(found).replace(/％/g,'%'))};
+   const avgSt=val(p.average_start_timing,p.avg_start_timing,p.average_st,p.avg_st);
+   const fCount=val(p.f_count,p.f_count_current,p.f_count_total),lCount=val(p.l_count,p.l_count_current,p.l_count_total);
+   const age=val(p.age,p.age_years),weight=val(pr.weight,p.weight);
+   const branch=val(p.branch_name,p.branch_number,p.branch),birth=val(p.birthplace,p.home_town,p.home);
+   return '<tr>'+
+    '<td class="racecard-sticky-lane"><span class="racecard-lane l'+lane+'">'+lane+'</span></td>'+
+    '<td class="racecard-racer"><b>'+val(p.name)+'</b><small>'+val(p.number)+'</small><strong>'+val(rank)+'</strong></td>'+
+    '<td>'+age+'歳<br>'+weight+'kg</td>'+
+    '<td>'+branch+'<br>'+birth+'</td>'+
+    '<td>F'+fCount+'<br>L'+lCount+'</td>'+
+    '<td>'+avgSt+'<br>'+val(p.predicted_start_timing,p.predicted_st,p.expected_start_timing)+'</td>'+
+    '<td>'+rate(p.national_win_rate)+'<br>'+rate(p.national_top_2_percent)+'<br>'+rate(p.national_top_3_percent)+'</td>'+
+    '<td>'+rate(p.local_win_rate)+'<br>'+rate(p.local_top_2_percent)+'<br>'+rate(p.local_top_3_percent)+'</td>'+
+    '<td>No. '+val(p.motor_number)+'<br>'+rate(p.motor_top_2_percent)+'<br>'+rate(p.motor_top_3_percent)+'</td>'+
+    '<td>No. '+val(p.boat_number)+'<br>'+rate(p.boat_top_2_percent)+'<br>'+rate(p.boat_top_3_percent)+'</td>'+
+    '<td>'+val(pr.weight_adjustment,p.weight_adjustment)+'<br>'+val(pr.tilt_adjustment,pr.tilt_adjustment_source,p.tilt_adjustment,p.tilt_adjustment_source)+'</td>'+
+    '<td>'+val(pr.exhibition_time,p.exhibition_time)+'<br>'+val(pr.start_timing,p.start_timing)+'</td>'+
+   '</tr>';
   }).join('');
   const title=[race.title,race.subtitle].filter(Boolean).map(escapeRaceText).join('｜');
   const cutoff=race.closed_at?escapeRaceText(race.closed_at.slice(11,16)+'締切'):'';
-  return `<article class="panel" id="racecard-${n}"><div class="racecard-heading"><div><h2>${n}R ${title||'出走表'}</h2><div class="racecard-meta">${cutoff}　${race.day_number_source?escapeRaceText(race.day_number_source):''}</div></div><span class="tag">${Object.keys(racers).length||0}艇</span></div><div class="tablewrap"><table class="racecard-table"><thead><tr><th>枠</th><th>選手</th><th>登録番号</th><th>級別</th><th>全国勝率</th><th>当地勝率</th><th>モーター</th><th>モーター2連率</th></tr></thead><tbody>${rows||'<tr><td colspan="8">出走表データなし</td></tr>'}</tbody></table></div><div class="venue-race-menu">
+  return `<article class="panel" id="racecard-${n}"><div class="racecard-heading"><div><h2>${n}R ${title||'出走表'}</h2><div class="racecard-meta">${cutoff}　${race.day_number_source?escapeRaceText(race.day_number_source):''}</div></div><span class="tag">${Object.keys(racers).length||0}艇</span></div><div class="racecard-scroll-hint">表は左右にスワイプして確認できます　›</div><div class="racecard-wide-scroll" tabindex="0" aria-label="出走表。左右にスクロールできます"><table class="racecard-wide-table"><thead><tr><th class="racecard-sticky-lane">枠</th><th>選手・級別</th><th>年齢／体重</th><th>支部／出身</th><th>F／L</th><th>平均ST／予測ST</th><th>全国勝率<br>2連率<br>3連率</th><th>当地勝率<br>2連率<br>3連率</th><th>モーターNo.<br>2連率<br>3連率</th><th>ボートNo.<br>2連率<br>3連率</th><th>体重調整／チルト</th><th>展示タイム／展示ST</th></tr></thead><tbody>${rows||'<tr><td colspan="12">出走表データなし</td></tr>'}</tbody></table></div><div class="racecard-series-wrap"><h3>節間成績</h3><div class="racecard-series-scroll"><table class="racecard-series-table"><thead><tr><th class="racecard-sticky-lane">枠</th><th>選手</th><th>初日</th><th>2日目</th><th>3日目</th><th>4日目</th><th>5日目</th><th>最終日</th><th>早見</th></tr></thead><tbody>${Object.keys(racers).sort((a,b)=>Number(a)-Number(b)).map(k=>{const p=racers[k]||{},lane=Number(p.entry_number||k);return '<tr><td class="racecard-sticky-lane"><span class="racecard-lane l'+lane+'">'+lane+'</span></td><td class="racecard-racer"><b>'+escapeRaceText(p.name||'—')+'</b></td>'+Array.from({length:6},(_,i)=>'<td class="racecard-series-cell" data-series-reg="'+escapeRaceText(p.number||'')+'" data-series-day="'+(i+1)+'">—</td>').join('')+'<td>'+escapeRaceText(p.early_race||p.early_race_no||'—')+'</td></tr>';}).join('')}</tbody></table></div><p class="small muted" id="racecardSeriesStatus-${n}">節間成績を確認しています。</p></div><div class="venue-race-menu">
  <button type="button" class="active" data-race-menu="entry" data-race-no="${n}">出走表</button>
  <button type="button" data-race-menu="frame" data-race-no="${n}">枠別情報</button>
  <button type="button" data-race-menu="odds" data-race-no="${n}">オッズ</button>
