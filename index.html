@@ -249,7 +249,7 @@ table{min-width:520px}
 .racecard-series-wrap h3{font-size:15px;margin:0 0 7px;color:#59677c}
 .racecard-series-table{min-width:980px}
 .racecard-series-table td{min-width:104px;height:82px}
-.racecard-series-cell{font-size:12px;font-weight:700;color:#59677c}
+.racecard-series-cell{font-size:12px;font-weight:700;color:#59677c}.racecard-series-chip{display:grid;grid-template-columns:repeat(2,minmax(38px,1fr));gap:2px 5px;align-items:center;justify-items:center;padding:4px 3px;margin:2px auto;min-width:72px;border:1px solid #e2e7ef;border-radius:4px;background:#fff}.racecard-series-chip b{grid-column:1/-1;display:block;width:100%;padding:2px 0;background:#2875bf;color:#fff}.racecard-series-chip span{font-variant-numeric:tabular-nums}.racecard-series-chip strong{grid-column:1/-1;color:#1472c5}
 @media(max-width:600px){.racecard-wide-table{min-width:1420px}.racecard-wide-table th,.racecard-wide-table td,.racecard-series-table th,.racecard-series-table td{padding:9px 8px;font-size:12px}.racecard-wide-table .racecard-racer,.racecard-series-table .racecard-racer{min-width:128px}.racecard-scroll-hint{font-size:11px}}
 /* Venue selection -> race-card screen */
 .racecard-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
@@ -2030,6 +2030,54 @@ async function renderRaceScoreRate({venue,date,section,status,panel}){
  status.textContent='取得できた今節結果 '+files.length+'日分を集計。通常配点による暫定値です。';
  const note=document.createElement('p');note.className='small muted';note.textContent='注意：1着10・2着8・3着6・4着4・5着2・6着1点で算出。ドリーム・特選などの特別配点、事故減点、欠場の扱いは未反映のため、公式得点率とは異なる場合があります。';panel.appendChild(note);
 }
+async function loadRacecardSeriesHistory({date,venue,races,dayNo}){
+ const statusEls=document.querySelectorAll('[id^="racecardSeriesStatus-"]');
+ statusEls.forEach(x=>x.textContent='節間成績を取得しています…');
+ const venueNo=venueCodes[venue],byDay=new Map();
+ const addDay=(day,raceSet)=>{
+  const byReg=new Map();
+  for(const [raceNo,race] of Object.entries(raceSet||{})){
+   const base=race?.racers||{},results=race?.result?.racers||{};
+   for(const [lane,rr] of Object.entries(results)){
+    const reg=String(base[lane]?.number||rr?.number||rr?.racer_registration_no||'').replace(/\D/g,'');
+    if(!/^\d{4}$/.test(reg))continue;
+    const place=Number(rr?.place_number),course=rr?.course_number,st=rr?.start_timing;
+    const item={raceNo:Number(raceNo),place:Number.isInteger(place)&&place>=1&&place<=6?place:null,course:course??null,st:st??null};
+    if(!byReg.has(reg))byReg.set(reg,[]);
+    byReg.get(reg).push(item);
+   }
+  }
+  byDay.set(day,byReg);
+ };
+ addDay(dayNo,races);
+ const baseDate=new Date(date+'T12:00:00');
+ const requests=[];
+ for(let back=1;back<dayNo;back++){
+  const d=new Date(baseDate);d.setDate(d.getDate()-back);
+  const prevDate=d.toLocaleDateString('sv-SE'),compact=prevDate.replaceAll('-','');
+  requests.push((async()=>{
+   try{
+    const response=await fetch('https://boatraceopenapi.github.io/api/v1/'+prevDate.slice(0,4)+'/'+compact+'.json',{cache:'no-store'});
+    if(!response.ok)return;
+    const payload=await response.json();
+    const previous=payload?.programs?.stadiums?.[String(venueNo)]?.races;
+    if(previous)addDay(dayNo-back,previous);
+   }catch(e){console.warn('節間成績の過去日データを取得できませんでした',e);}
+  })());
+ }
+ await Promise.all(requests);
+ const esc=escapeRaceText;
+ document.querySelectorAll('.racecard-series-cell').forEach(cell=>{
+  const reg=String(cell.dataset.seriesReg||'').replace(/\D/g,''),day=Number(cell.dataset.seriesDay);
+  const items=byDay.get(day)?.get(reg)||[];
+  if(!items.length){cell.textContent='—';return;}
+  cell.innerHTML=items.sort((a,b)=>a.raceNo-b.raceNo).map(x=>{
+   const st=x.st===null||x.st===''?'—':esc(typeof x.st==='number'?x.st.toFixed(2):x.st);
+   return '<div class="racecard-series-chip"><b>'+x.raceNo+'R</b><span>'+esc(x.course??'—')+'コース</span><span>'+st+'</span><strong>'+(x.place?x.place+'着':'—')+'</strong></div>';
+  }).join('');
+ });
+ document.querySelectorAll('[id^="racecardSeriesStatus-"]').forEach(x=>x.textContent='取得できた過去 '+byDay.size+'日分の結果を表示しています。結果未公開のレースは「—」です。');
+}
 function renderVenueRaceCards(){
  const venue=homeVenue,date=$('homeDate').value,rs=homePayload?.programs?.stadiums?.[String(venueCodes[venue])]?.races||{};
  $('racecardVenueTitle').textContent=venue;
@@ -2110,6 +2158,9 @@ function renderVenueRaceCards(){
  $('racecardList').querySelectorAll('[data-result-race]').forEach(b=>b.onclick=()=>{const n=Number(b.dataset.resultRace),section=$('raceResultSection-'+n),panel=$('raceResultPanel-'+n),status=$('raceResultStatus-'+n),isOpen=!section.classList.contains('hidden');if(isOpen){section.classList.add('hidden');b.setAttribute('aria-expanded','false');}else{section.classList.remove('hidden');b.setAttribute('aria-expanded','true');if(!panel.innerHTML.trim())syncSelectedRaceResult({date,venue:homeVenue,race:n,statusId:'raceResultStatus-'+n,panelId:'raceResultPanel-'+n,button:b});}});
  $('racecardList').querySelectorAll('[data-shobugake-race]').forEach(b=>b.onclick=()=>{const n=Number(b.dataset.shobugakeRace),race=rs[String(n)]||{};const panel=$('raceShobugakePanel-'+n);panel.classList.remove('hidden');loadRaceShobugake({date,venue:homeVenue,raceNo:n,racers:race.racers||{},panel,button:b});});
  $('racecardList').querySelectorAll('[data-finfo-race]').forEach(b=>b.onclick=()=>{const n=Number(b.dataset.finfoRace),race=rs[String(n)]||{};const panel=$('raceFInfoPanel-'+n);panel.classList.remove('hidden');loadRaceFInfo({date,venue:homeVenue,raceNo:n,racers:race.racers||{},panel});});
+ const firstDayRace=Object.values(rs).find(x=>x?.day_number);
+ const seriesDayNo=Math.max(1,Math.min(6,Number(firstDayRace?.day_number||1)));
+ loadRacecardSeriesHistory({date,venue,races:rs,dayNo:seriesDayNo});
  loadSavedRaceResultsForVenue(date,venue);
  $('racecardList').querySelectorAll('[data-entry-race]').forEach(b=>b.onclick=()=>{const n=Number(b.dataset.entryRace);showTab('entry');$('venue').value=homeVenue;$('raceDate').value=date;$('raceNo').value=String(n);$('fetchMsg').textContent='開催一覧で選択したレースです。「選択レースのデータを取得」から出走表を読み込めます。';});
 }
