@@ -1225,6 +1225,7 @@ async function runAnalysisForSelectedRace(){
 $('runAnalysisRace').onclick=runAnalysisForSelectedRace;
 $('targetsBack').onclick=()=>showTab('home');
 $('refreshTargets').onclick=renderTargetRaces;
+setInterval(async()=>{if(document.visibilityState==='visible'&&$('homeDate').value===localDate()){await loadOfficialVenueStatus(localDate());renderVenues();}},300000);
 async function renderTargetRaces(){
  const date=$('homeDate').value||$('predictionDate').value;
  $('targetsDateLabel').textContent=date;
@@ -1238,6 +1239,7 @@ async function renderTargetRaces(){
   const official=getVenueOfficialStatus(stadium,venue);if(official&&['開催中止','中止順延','順延','開催なし'].includes(official.status))continue;
   const rs=stadium?.races||{};
   for(const [raceNo,race] of Object.entries(rs)){
+   if(official?.status==='一部中止'){const stop=String(official.status_detail||'').match(/(\\d+)R以降中止/);if(stop&&Number(raceNo)>=Number(stop[1]))continue;}
    const racers=race?.racers||{};
    const laneRegs={};
    for(let lane=1;lane<=6;lane++){
