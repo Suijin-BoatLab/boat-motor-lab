@@ -401,6 +401,7 @@ table{min-width:520px}
   <div class="racecard-heading"><div><h2>2頭型｜2号艇1着候補</h2><div class="racecard-meta">2号艇の展示・回り足優位 ＋ 3号艇の3コース攻撃率</div></div></div>
   <p class="small muted">暫定条件：2号艇が1号艇より展示タイム・回り足とも0.03秒以上良い／3号艇の過去180日間の3コース攻撃率（まくり＋まくり差し）が15％以上かつ10走以上／3号艇の展示タイム・回り足が2号艇より各0.03秒以上劣る。</p>
   <p class="small muted" id="twoHeadStatus" aria-live="polite">既存データを照合します。</p>
+  <div class="actions"><button class="btn secondary" id="collectTwoHeadData" type="button">不足レースの展示・回り足データを取得</button></div>
   <div id="twoHeadList"></div>
  </div>
  <div class="notice">率は対象日の前日までの過去6か月間を対象に、選手本人の実際の進入コース別に算出しています。対象日当日の結果は含みません。抽出時は枠なりを前提とし、直前情報の展示進入6艇分が揃い、1〜6コースの有効な組み合わせで枠なり以外と確認できたレースは除外します。展示進入は本番進入と異なる場合があります。展示進入未取得のレースは枠なり未確認として暫定判定します。履歴がない選手・コースは判定対象外です。表示率の横に分子／出走数を表示します。</div>
@@ -1340,6 +1341,25 @@ async function renderTargetRaces(){
  twoBox.querySelectorAll('[data-twohead-predict]').forEach(b=>b.onclick=()=>{const [v,n]=b.dataset.twoheadPredict.split('|');$('predictionDate').value=date;$('predictionVenue').value=v;$('predictionRaceNo').value=n;showTab('prediction');});
  twoBox.querySelectorAll('[data-twohead-card]').forEach(b=>b.onclick=()=>{const [v,n]=b.dataset.twoheadCard.split('|');homeVenue=v;homeRace=Number(n);renderVenueRaceCards();showTab('racecards');});
  twoStatus.textContent='照合完了：候補 '+twoHeadRows.length+'レース／当日保存済み展示データ '+motorExhibitionByRaceLane.size+'艇分を照合／展示・回り足データ不足 '+twoHeadMissing.entry+'レース／3号艇の3コース履歴不足 '+twoHeadMissing.stats+'レース。'+(motorRowsError?' 当日展示データベースの参照エラー：'+motorRowsError.message:'');
+ const collectBtn=$('collectTwoHeadData');
+ collectBtn.disabled=!cloudClient||!cloudUser||racePool.length===0;
+ collectBtn.onclick=async()=>{
+  if(!cloudClient||!cloudUser){twoStatus.textContent='展示データの取得にはログインが必要です。';return;}
+  collectBtn.disabled=true;collectBtn.textContent='展示・回り足データを取得中…';
+  twoStatus.textContent='BOATCASTから対象レースの展示・回り足データを取得しています。完了まで画面を閉じずにお待ちください。';
+  try{
+   const targets=racePool.map(x=>({venue_code:venueCodes[x.venue],race_no:x.raceNo}));
+   const {data,error}=await cloudClient.functions.invoke('collect-original-exhibition',{body:{date,targets}});
+   if(error)throw error;
+   if(data?.error)throw new Error(data.error);
+   const summary=data.summary||[],saved=summary.filter(x=>x.status==='saved').length,missing=summary.length-saved;
+   twoStatus.textContent='展示データ取得完了：'+saved+'レース保存／未掲載・データなし等 '+missing+'レース。保存データで2頭型を再判定します…';
+   await renderTargetRaces();
+  }catch(e){
+   twoStatus.textContent='展示データ取得に失敗しました：'+(e?.message||String(e));
+   collectBtn.disabled=false;collectBtn.textContent='不足レースの展示・回り足データを取得';
+  }
+ };
 }
 $('predictionBackToSchedule').onclick=()=>showTab('home');
 $('predictionDate').value=new Date().toLocaleDateString('sv-SE');
