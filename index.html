@@ -2292,7 +2292,7 @@ async function renderRaceFrameInfo({race,venue,date,panel}){
    let from='2026-01-01';
    while(from<=date){
     const remaining=Math.floor((Date.parse(date+'T00:00:00Z')-Date.parse(from+'T00:00:00Z'))/86400000);
-    const to=addDays(from,Math.min(6,remaining));
+    const to=addDays(from,Math.min(29,remaining));
     const {data,error}=await cloudClient.functions.invoke('backfill-race-grade-history',{body:{date_from:from,date_to:to}});
     if(error)throw error;
     if(data?.failed_days?.length){const first=data.failed_days[0];throw new Error(first.date+'：'+first.error);}
