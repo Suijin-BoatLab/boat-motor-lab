@@ -252,7 +252,7 @@ table{min-width:520px}
 </style>
 </head>
 <body>
-<header><div class="brand">BOAT <span>MOTOR</span> LAB</div><div class="sub">MOTOR PERFORMANCE & RACE HISTORY</div><nav><button class="active" data-tab="home">🚩<br>開催一覧</button><button data-tab="entry">✍️<br>データ入力</button><button data-tab="analysis">📊<br>機力分析</button><button data-tab="history">🗂️<br>記録一覧</button><button data-tab="fHistory">🚩<br>F情報</button><button data-tab="backtest">🎯<br>検証</button><button data-tab="backup">☁️<br>保存・設定</button></nav></header>
+<header><div class="brand">BOAT <span>MOTOR</span> LAB</div><div class="sub">MOTOR PERFORMANCE & RACE HISTORY</div><nav><button class="active" data-tab="home">🚩<br>開催一覧</button><button data-tab="targets">🎯<br>狙い目レース</button><button data-tab="prediction">🎯<br>予想</button><button data-tab="entry">✍️<br>データ入力</button><button data-tab="analysis">📊<br>機力分析</button><button data-tab="history">🗂️<br>記録一覧</button><button data-tab="fHistory">🚩<br>F情報</button><button data-tab="backtest">🎯<br>検証</button><button data-tab="backup">☁️<br>保存・設定</button></nav></header>
 <main>
 <section id="home"><div class="home-toolbar"><b id="homeDateLabel">開催日</b><input id="homeDate" type="date"><button class="btn primary" id="reloadSchedule">開催情報更新</button></div><p class="home-sub" id="scheduleStatus">開催情報を取得しています…</p><div class="home-title">全国24場 開催一覧</div><div class="venue-grid" id="venueGrid"></div><div class="panel hidden"><div class="home-title" id="selectedVenueTitle">競艇場を選択</div><div class="race-pills" id="racePills"></div></div><div class="hidden" aria-hidden="true"><div id="selectedRaceTitle">機力分析</div><p id="raceAnalysisStatus"></p><button id="openSelectedRaceEntry" type="button">このレースを入力</button><div id="raceMotorCards"></div></div></section>
 <section id="racecards" class="hidden">
@@ -388,6 +388,37 @@ table{min-width:520px}
  <div class="notice">出典：<a href="https://www.kyoteibiyori.com/" target="_blank" rel="noopener">ボートレース日和</a>。コメントに記載された表現を原文のまま保存し、独自の勝負がけ判定や予想評価は行いません。</div>
 </section>
 
+<section id="targets" class="hidden">
+ <div class="racecard-toolbar"><button class="btn secondary" id="targetsBack">← 開催一覧へ戻る</button><span class="muted small" id="targetsDateLabel"></span></div>
+ <h1>狙い目レース</h1>
+ <p class="muted small">当日展示データから、4コース・6コースの攻め条件に近いレースを全国24場からまとめて表示します。</p>
+ <div class="panel">
+  <div class="racecard-heading"><div><h2>候補レース一覧</h2><div class="racecard-meta">展示データが公開されたレースから順次判定</div></div><button class="btn secondary" id="refreshTargets">候補を更新</button></div>
+  <p class="small muted" id="targetsStatus" aria-live="polite">開催情報を読み込んでいます。</p>
+  <div id="targetsList"></div>
+ </div>
+ <div class="notice">ここに表示するのは、当日展示タイムで確認できる条件に一致した「候補」です。選手のコース別まくり率や平均STなど、別途履歴照合が必要な条件は未確認のまま表示し、最終判定とは区別します。</div>
+</section>
+<section id="prediction" class="hidden">
+ <div class="racecard-toolbar"><button class="btn secondary" id="predictionBackToSchedule">← 開催一覧へ戻る</button><span class="muted small">予想システム</span></div>
+ <h1>レース予想</h1>
+ <p class="muted small">当日データと過去履歴を照合し、狙いコース・展開材料・6艇の評価をまとめます。データ不足の項目は無理に判定しません。</p>
+ <div class="panel">
+  <h2>予想するレース</h2>
+  <div class="grid">
+   <div class="field"><label for="predictionDate">開催日</label><input id="predictionDate" type="date"></div>
+   <div class="field"><label for="predictionVenue">競艇場</label><select id="predictionVenue"><option>桐生</option><option>戸田</option><option>江戸川</option><option>平和島</option><option>多摩川</option><option>浜名湖</option><option>蒲郡</option><option>常滑</option><option>津</option><option>三国</option><option>びわこ</option><option>住之江</option><option>尼崎</option><option>鳴門</option><option>丸亀</option><option>児島</option><option>宮島</option><option>徳山</option><option>下関</option><option>若松</option><option>芦屋</option><option>福岡</option><option>唐津</option><option>大村</option></select></div>
+   <div class="field"><label for="predictionRaceNo">レース番号</label><select id="predictionRaceNo"><option value="1">1R</option><option value="2">2R</option><option value="3">3R</option><option value="4">4R</option><option value="5">5R</option><option value="6">6R</option><option value="7">7R</option><option value="8">8R</option><option value="9">9R</option><option value="10">10R</option><option value="11">11R</option><option value="12">12R</option></select></div>
+   <div class="field"><label for="predictionWindDir">風向</label><select id="predictionWindDir"><option value="">自動・未入力</option><option>向かい風</option><option>追い風</option><option>左横風</option><option>右横風</option></select></div>
+   <div class="field"><label for="predictionWindSpeed">風速（m/s）</label><input id="predictionWindSpeed" type="number" min="0" step="0.1" placeholder="自動・未入力"></div>
+   <div class="field"><label for="predictionWaveHeight">波高（cm）</label><input id="predictionWaveHeight" type="number" min="0" step="1" placeholder="自動・未入力"></div>
+   <div class="field"><label for="predictionEntry">進入予想</label><input id="predictionEntry" placeholder="例：123/456（未確定なら空欄）"></div>
+  </div>
+  <div class="actions"><button class="btn primary" id="runPrediction">このレースを予想する</button></div>
+  <p class="small muted" id="predictionStatus" aria-live="polite">レースを選択して予想を実行してください。</p>
+ </div>
+ <div id="predictionOutput"></div>
+</section>
 <section id="analysis" class="hidden">
   <div class="racecard-toolbar"><button class="btn secondary" id="backToRaceCards">← 出走表一覧へ戻る</button><span class="muted small" id="analysisBackLabel"></span></div>
   <h1>モーター分析</h1><div class="muted small">モーター指標と選手成績を分けて集計。モーター番号は競艇場ごとに区別し、展示Fは通常ST平均に含めません。</div>
@@ -625,7 +656,7 @@ $('racerMasterSearchBtn')?.addEventListener('click',()=>loadRacerMaster(0));
 $('racerMasterRefresh')?.addEventListener('click',()=>{$('racerMasterSearch').value='';$('racerMasterReg').value='';$('racerMasterGrade').value='';$('racerMasterBranch').value='';$('racerMasterList').innerHTML='';$('racerMasterDetail').classList.add('hidden');$('racerMasterStatus').textContent='選手名または登録番号を入力して検索してください。';});
 $('racerMasterSearch')?.addEventListener('keydown',e=>{if(e.key==='Enter')loadRacerMaster(0);});
 $('racerMasterReg')?.addEventListener('keydown',e=>{if(e.key==='Enter')loadRacerMaster(0);});
-function showTab(tab){document.querySelectorAll('main section').forEach(s=>s.classList.toggle('hidden',s.id!==tab));const navTab=tab==='racecards'?'home':tab;document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===navTab));const nav=document.querySelector('header nav'),activeNav=nav?.querySelector('button[data-tab="'+navTab+'"]');if(nav&&activeNav){const targetLeft=Math.max(0,activeNav.offsetLeft-(nav.clientWidth-activeNav.offsetWidth)/2);nav.scrollTo({left:targetLeft,behavior:'smooth'});}if(tab==='history')renderHistory();if(tab==='fHistory')renderFHistory();if(tab==='shobugake')renderShobugake();if(tab==='backtest')loadBacktestRuns();if(tab==='backup')loadRacerMaster();if(tab==='analysis'){renderAnalysis();loadHistoricalMotorHistory();}if(tab==='backup'){$('backupCount').textContent=races.length+'レース';updateBackupStatus();const notice=$('storageRecoveryNotice');if(notice)notice.classList.toggle('hidden',!startupStorageIssue);}window.scrollTo(0,0)}
+function showTab(tab){document.querySelectorAll('main section').forEach(s=>s.classList.toggle('hidden',s.id!==tab));const navTab=tab==='racecards'?'home':tab;document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===navTab));const nav=document.querySelector('header nav'),activeNav=nav?.querySelector('button[data-tab="'+navTab+'"]');if(nav&&activeNav){const targetLeft=Math.max(0,activeNav.offsetLeft-(nav.clientWidth-activeNav.offsetWidth)/2);nav.scrollTo({left:targetLeft,behavior:'smooth'});}if(tab==='history')renderHistory();if(tab==='fHistory')renderFHistory();if(tab==='shobugake')renderShobugake();if(tab==='backtest')loadBacktestRuns();if(tab==='backup')loadRacerMaster();if(tab==='targets')renderTargetRaces();if(tab==='analysis'){renderAnalysis();loadHistoricalMotorHistory();}if(tab==='backup'){$('backupCount').textContent=races.length+'レース';updateBackupStatus();const notice=$('storageRecoveryNotice');if(notice)notice.classList.toggle('hidden',!startupStorageIssue);}window.scrollTo(0,0)}
 async function loadBacktestRuns(){
  const box=$('backtestRuns');if(!box)return;
  if(!cloudClient||!cloudUser){box.textContent='検証履歴を見るにはログインしてください。';return}
@@ -1192,6 +1223,64 @@ async function runAnalysisForSelectedRace(){
  }finally{btn.disabled=false;btn.textContent='このレースを分析'}
 }
 $('runAnalysisRace').onclick=runAnalysisForSelectedRace;
+$('targetsBack').onclick=()=>showTab('home');
+$('refreshTargets').onclick=renderTargetRaces;
+function renderTargetRaces(){
+ const date=$('homeDate').value||$('predictionDate').value;
+ $('targetsDateLabel').textContent=date;
+ const box=$('targetsList'),status=$('targetsStatus');
+ if(!homePayload?.programs?.stadiums){status.textContent='先に開催一覧で開催情報を更新してください。';box.innerHTML='';return;}
+ const rows=[];
+ for(const venue of venues){
+  const rs=homePayload.programs.stadiums[String(venueCodes[venue])]?.races||{};
+  for(const [raceNo,race] of Object.entries(rs)){
+   const preview=race?.preview?.racers||{};
+   const p=n=>preview[String(n)]||{};
+   const num=(v)=>v===null||v===undefined||v===''?null:Number(v);
+   const ex=n=>num(p(n).exhibition_time),st=n=>num(p(n).straight_time);
+   const reasons=[];
+   const s4=st(4),s3=st(3),e4=ex(4),e3=ex(3);
+   const e6=ex(6),e5=ex(5),s6=st(6),s5=st(5);
+   if(s4!==null&&s3!==null&&s4<=s3-.10)reasons.push('4号艇の直線が3号艇より0.10秒以上速い');
+   if(e4!==null&&e3!==null&&e4<=e3-.10)reasons.push('4号艇の展示が3号艇より0.10秒以上速い');
+   const e6beats14=[1,2,3,4].every(n=>e6!==null&&ex(n)!==null&&e6<ex(n));
+   const s6beats14=[1,2,3,4].every(n=>s6!==null&&st(n)!==null&&s6<st(n));
+   if(s6!==null&&s5!==null&&s6<=s5-.12&&e6beats14)reasons.push('6号艇：直線差0.12秒以上＋展示が1〜4号艇より速い');
+   if(e6!==null&&e5!==null&&e6<=e5-.12&&s6beats14)reasons.push('6号艇：展示差0.12秒以上＋直線が1〜4号艇より速い');
+   if(reasons.length)rows.push({venue,raceNo:Number(raceNo),reasons,cutoff:race.closed_at||''});
+  }
+ }
+ rows.sort((a,b)=>(a.cutoff||'').localeCompare(b.cutoff||''));
+ status.textContent=date+'｜展示条件に一致 '+rows.length+'レース';
+ box.innerHTML=rows.length?rows.map(r=>'<article class="panel"><div class="racecard-heading"><div><h2>'+r.venue+' '+r.raceNo+'R</h2><div class="racecard-meta">'+(r.cutoff?escapeRaceText(r.cutoff.slice(11,16)+'締切'):'締切時刻未取得')+'</div></div><span class="tag">展示条件一致</span></div><ul>'+r.reasons.map(x=>'<li>'+escapeRaceText(x)+'</li>').join('')+'</ul><div class="racecard-actions"><button class="btn primary" data-target-predict="'+r.venue+'|'+r.raceNo+'">このレースを予想</button><button class="btn secondary" data-target-card="'+r.venue+'|'+r.raceNo+'">出走表を見る</button></div></article>').join(''):'<div class="racecard-empty">現在、当日展示条件に一致するレースはありません。展示データの公開後に「候補を更新」を押してください。</div>';
+ box.querySelectorAll('[data-target-predict]').forEach(b=>b.onclick=()=>{const [v,n]=b.dataset.targetPredict.split('|');$('predictionDate').value=date;$('predictionVenue').value=v;$('predictionRaceNo').value=n;showTab('prediction');});
+ box.querySelectorAll('[data-target-card]').forEach(b=>b.onclick=()=>{const [v,n]=b.dataset.targetCard.split('|');homeVenue=v;homeRace=Number(n);renderVenueRaceCards();showTab('racecards');});
+}
+$('predictionBackToSchedule').onclick=()=>showTab('home');
+$('predictionDate').value=new Date().toLocaleDateString('sv-SE');
+$('predictionVenue').value='桐生';
+$('predictionRaceNo').value='1';
+$('runPrediction').onclick=async()=>{
+ const btn=$('runPrediction'),status=$('predictionStatus'),out=$('predictionOutput');
+ if(btn.disabled)return;
+ btn.disabled=true;btn.textContent='予想を作成しています…';status.textContent='出走表・当日展示・選手履歴を照合しています…';out.innerHTML='';
+ try{
+  $('analysisRaceDate').value=$('predictionDate').value;
+  $('analysisRaceVenue').value=$('predictionVenue').value;
+  $('analysisRaceNo').value=$('predictionRaceNo').value;
+  $('analysisWindDir').value=$('predictionWindDir').value;
+  $('analysisWindSpeed').value=$('predictionWindSpeed').value;
+  $('analysisWaveHeight').value=$('predictionWaveHeight').value;
+  $('analysisEntry').value=$('predictionEntry').value;
+  await runAnalysisForSelectedRace();
+  const result=$('analysisRaceResult').innerHTML;
+  const title=$('analysisRaceTitle').textContent;
+  if(!result||!result.trim())throw new Error($('analysisRaceStatus').textContent||'分析結果を取得できませんでした');
+  out.innerHTML='<div class="panel"><h2>'+title+'</h2>'+result+'</div>';
+  status.textContent=$('analysisRaceStatus').textContent||'予想材料の整理が完了しました。';
+ }catch(err){status.textContent='予想を作成できませんでした：'+(err.message||'不明なエラー');}
+ finally{btn.disabled=false;btn.textContent='このレースを予想する';}
+};
 $('analysisRaceDate').value=new Date().toLocaleDateString('sv-SE');
 $('analysisRaceVenue').value='桐生';
 $('analysisRaceNo').value='1';
