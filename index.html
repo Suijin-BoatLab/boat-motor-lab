@@ -303,6 +303,23 @@ table{min-width:520px}
 .racecard-series-chip span:nth-of-type(2){grid-column:3;grid-row:1}
 .racecard-series-chip strong{grid-column:2/4;grid-row:2;font-size:10px;line-height:1.1}
 
+
+/* Show course and finish on the middle row; ST on the bottom row. */
+.racecard-series-chip .series-course{
+ flex:1 1 50% !important;
+ width:50% !important;
+ order:1 !important;
+}
+.racecard-series-chip .series-place{
+ flex:1 1 50% !important;
+ width:50% !important;
+ order:2 !important;
+}
+.racecard-series-chip .series-start{
+ flex:0 0 100% !important;
+ width:100% !important;
+ order:3 !important;
+}
 /* Robust non-grid layout: stack race number, course/ST, and finish without overlap. */
 .racecard-series-chip{
  display:flex !important;
@@ -2230,7 +2247,7 @@ async function loadRacecardSeriesHistory({date,venue,races,dayNo}){
   if(!items.length){cell.textContent='—';return;}
   cell.innerHTML=items.sort((a,b)=>a.raceNo-b.raceNo).map(x=>{
    const st=x.st===null||x.st===''?'—':esc(typeof x.st==='number'?x.st.toFixed(2):x.st);
-   return '<div class="racecard-series-chip"><b>'+x.raceNo+'R</b><span>'+esc(x.course??'—')+'コース</span><span>'+st+'</span><strong>'+(x.place?x.place+'着':'—')+'</strong></div>';
+   return '<div class="racecard-series-chip"><b>'+x.raceNo+'R</b><span class="series-course">'+esc(x.course??'—')+'コース</span><span class="series-start">'+st+'</span><strong class="series-place">'+(x.place?x.place+'着':'—')+'</strong></div>';
   }).join('');
  });
  document.querySelectorAll('[id^="racecardSeriesStatus-"]').forEach(x=>x.textContent='取得できた過去 '+byDay.size+'日分の結果を表示しています。結果未公開のレースは「—」です。');
