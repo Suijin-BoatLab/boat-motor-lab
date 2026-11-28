@@ -2135,14 +2135,18 @@ window.addEventListener('load',()=>cloudInit());
 /* v13 race-first dashboard */
 const venueCodes={'桐生':1,'戸田':2,'江戸川':3,'平和島':4,'多摩川':5,'浜名湖':6,'蒲郡':7,'常滑':8,'津':9,'三国':10,'びわこ':11,'住之江':12,'尼崎':13,'鳴門':14,'丸亀':15,'児島':16,'宮島':17,'徳山':18,'下関':19,'若松':20,'芦屋':21,'福岡':22,'唐津':23,'大村':24};
 const APP_VIEW_KEY='boatMotorLab_view_state_v1';
-function readAppViewState(){try{return JSON.parse(sessionStorage.getItem(APP_VIEW_KEY)||'{}')||{}}catch(_){return {};}}
-function saveAppViewState(extra={}){try{const old=readAppViewState();sessionStorage.setItem(APP_VIEW_KEY,JSON.stringify({...old,...extra,scrollY:window.scrollY,updatedAt:Date.now()}));}catch(_){}}
+function readAppViewState(){try{return JSON.parse(localStorage.getItem(APP_VIEW_KEY)||sessionStorage.getItem(APP_VIEW_KEY)||'{}')||{}}catch(_){return {};}}
+function saveAppViewState(extra={}){try{const old=readAppViewState();const next={...old,...extra,scrollY:window.scrollY,updatedAt:Date.now()};const value=JSON.stringify(next);localStorage.setItem(APP_VIEW_KEY,value);sessionStorage.setItem(APP_VIEW_KEY,value);}catch(_){}}
 let appViewRestored=false;
 let homePayload=null,homeVenue='',homeRace=1,scheduleRequestId=0,motorRequestId=0,officialVenueStatusMap={};
 const localDate=()=>{const d=new Date();return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10)};
 const savedInitialView=readAppViewState();
 $('homeDate').value=/^\\d{4}-\\d{2}-\\d{2}$/.test(savedInitialView.date||'')?savedInitialView.date:localDate();$('homeDateLabel').textContent=$('homeDate').value;
-window.addEventListener('pagehide',()=>saveAppViewState({tab:document.querySelector('main section:not(.hidden)')?.id||'home',venue:homeVenue,race:homeRace,date:$('homeDate')?.value||localDate()}));
+function persistCurrentAppView(){const visible=document.querySelector('main section:not(.hidden)');saveAppViewState({tab:visible?.id||'home',venue:homeVenue,race:homeRace,date:$('homeDate')?.value||localDate()});}
+window.addEventListener('pagehide',persistCurrentAppView);
+window.addEventListener('beforeunload',persistCurrentAppView);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')persistCurrentAppView();});
+window.addEventListener('scroll',()=>{if(!document.querySelector('main section:not(.hidden)'))return;const old=readAppViewState();try{const next={...old,scrollY:window.scrollY,updatedAt:Date.now()};localStorage.setItem(APP_VIEW_KEY,JSON.stringify(next));}catch(_){}},{passive:true});
 document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>{showTab(b.dataset.tab);document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('active',x===b));}));
 $('reloadSchedule').onclick=loadSchedule;
 $('homeDate').onchange=()=>{ $('homeDateLabel').textContent=$('homeDate').value;loadSchedule(); };
@@ -3034,7 +3038,7 @@ $('racerCsvImport').addEventListener('click',async()=>{
  finally{btn.disabled=false;}
 });
 
-const localToday=new Date();$('homeDate').value=[localToday.getFullYear(),String(localToday.getMonth()+1).padStart(2,'0'),String(localToday.getDate()).padStart(2,'0')].join('-');$('homeDateLabel').textContent=$('homeDate').value;
+$('homeDateLabel').textContent=$('homeDate').value||localDate();
 loadSchedule();
 
 </script>
