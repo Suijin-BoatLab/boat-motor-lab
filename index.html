@@ -250,6 +250,41 @@ table{min-width:520px}
 .racecard-series-table{min-width:980px}
 .racecard-series-table td{min-width:104px;height:82px}
 .racecard-series-cell{font-size:12px;font-weight:700;color:#59677c}.racecard-series-chip{display:grid;grid-template-columns:repeat(2,minmax(38px,1fr));gap:2px 5px;align-items:center;justify-items:center;padding:4px 3px;margin:2px auto;min-width:72px;border:1px solid #e2e7ef;border-radius:4px;background:#fff}.racecard-series-chip b{grid-column:1/-1;display:block;width:100%;padding:2px 0;background:#2875bf;color:#fff}.racecard-series-chip span{font-variant-numeric:tabular-nums}.racecard-series-chip strong{grid-column:1/-1;color:#1472c5}
+/* Compact official-style race card: fit the six boats vertically and keep the full table to about three swipes. */
+.racecard-wide-table{min-width:799px;width:799px;table-layout:fixed;font-size:12px}
+.racecard-wide-table th,.racecard-wide-table td{min-width:0;padding:6px 4px;line-height:1.28;white-space:nowrap}
+.racecard-wide-table .racecard-sticky-lane{left:0;width:38px;min-width:38px;max-width:38px;padding:4px 2px}
+.racecard-wide-table .racecard-racer{left:38px;width:110px;min-width:110px;max-width:110px;padding:6px 6px;text-align:left}
+.racecard-wide-table th:nth-child(3),.racecard-wide-table td:nth-child(3){width:72px;min-width:72px}
+.racecard-wide-table th:nth-child(4),.racecard-wide-table td:nth-child(4){width:68px;min-width:68px}
+.racecard-wide-table th:nth-child(5),.racecard-wide-table td:nth-child(5){width:42px;min-width:42px}
+.racecard-wide-table th:nth-child(6),.racecard-wide-table td:nth-child(6){width:60px;min-width:60px}
+.racecard-wide-table th:nth-child(7),.racecard-wide-table td:nth-child(7),
+.racecard-wide-table th:nth-child(8),.racecard-wide-table td:nth-child(8),
+.racecard-wide-table th:nth-child(9),.racecard-wide-table td:nth-child(9),
+.racecard-wide-table th:nth-child(10),.racecard-wide-table td:nth-child(10){width:70px;min-width:70px}
+.racecard-wide-table th:nth-child(11),.racecard-wide-table td:nth-child(11){width:64px;min-width:64px}
+.racecard-wide-table th:nth-child(12),.racecard-wide-table td:nth-child(12){width:65px;min-width:65px}
+.racecard-wide-table .racecard-lane{width:28px;height:30px;font-size:12px}
+.racecard-wide-table .racecard-racer b{font-size:12px;line-height:1.25}
+.racecard-wide-table .racecard-racer small,.racecard-wide-table .racecard-racer strong{font-size:10px;line-height:1.2}
+.racecard-wide-table th{font-size:10px;line-height:1.25;white-space:normal;padding:7px 3px}
+.racecard-wide-table td{font-size:11px}
+.racecard-series-table{min-width:760px;font-size:11px}
+.racecard-series-table th,.racecard-series-table td{min-width:76px;padding:5px 4px;line-height:1.25}
+.racecard-series-table td{height:58px}
+.racecard-series-table .racecard-sticky-lane{left:0;width:38px;min-width:38px;max-width:38px}
+.racecard-series-table .racecard-racer{left:38px;width:110px;min-width:110px;max-width:110px}
+.racecard-series-chip{min-width:58px;padding:3px 2px;margin:1px auto;gap:1px 3px;font-size:10px}
+.racecard-series-chip b{padding:1px 0;font-size:10px}
+.racecard-scroll-hint{font-size:11px;padding:3px 4px}
+@media(max-width:600px){
+ .racecard-wide-table{min-width:799px;width:799px}
+ .racecard-wide-table th,.racecard-wide-table td{padding:5px 3px;font-size:11px}
+ .racecard-wide-table th{font-size:10px}
+ .racecard-series-table{min-width:760px}
+ .racecard-series-table th,.racecard-series-table td{padding:4px 3px;font-size:10px}
+}
 @media(max-width:600px){.racecard-wide-table{min-width:1420px}.racecard-wide-table th,.racecard-wide-table td,.racecard-series-table th,.racecard-series-table td{padding:9px 8px;font-size:12px}.racecard-wide-table .racecard-racer,.racecard-series-table .racecard-racer{min-width:128px}.racecard-scroll-hint{font-size:11px}}
 /* Venue selection -> race-card screen */
 .racecard-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
